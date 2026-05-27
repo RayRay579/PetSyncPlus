@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  TextInput, FlatList, Dimensions, Modal, Alert, Image,
+  TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
   KeyboardAvoidingView, Platform, StatusBar,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -1124,9 +1124,51 @@ function LostPetScreen({ navigation }) {
     }
   };
 
+  const openInMaps = () => {
+    if (!lastKnownLocation) return;
+
+    const { latitude, longitude } = lastKnownLocation;
+    const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+    Linking.openURL(url);
+  };
+
+  const shareAlert = async () => {
+    const locationText = lastKnownLocation
+      ? `${lastKnownLocation.latitude}, ${lastKnownLocation.longitude}`
+      : 'Not captured';
+    const message = `LOST PET ALERT\n${selectedPet.name} is missing.\nBreed/Type: ${selectedPet.breed} / ${selectedPet.species}\nDescription: ${description || 'No description provided.'}\nLast known location: ${locationText}\nPlease keep an eye out and contact me if seen.`;
+
+    await Share.share({ message });
+  };
+
+  const markPetFound = () => {
+    Alert.alert('Pet Found', `${selectedPet.name} has been marked as found.`, [
+      { text: 'OK', onPress: () => navigation.goBack() },
+    ]);
+  };
+
+  const cancelAlert = () => {
+    Alert.alert('Cancel Alert', 'Are you sure you want to cancel this alert?', [
+      { text: 'Keep Alert', style: 'cancel' },
+      { text: 'Cancel Alert', style: 'destructive', onPress: () => navigation.goBack() },
+    ]);
+  };
+
   const petPhotoContent = petPhoto
     ? <Image source={{ uri: petPhoto }} style={{ width: 92, height: 92, borderRadius: 46 }} />
     : <Text style={{ fontSize: 44 }}>{selectedPet.emoji || '🖼️'}</Text>;
+
+  const locationCard = lastKnownLocation ? (
+    <View style={{ marginTop: 12, padding: 12, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
+      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800', marginBottom: 8 }}>Location Captured</Text>
+      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 2 }}>Latitude: {lastKnownLocation.latitude}</Text>
+      <Text style={{ color: C.muted, fontSize: 12 }}>Longitude: {lastKnownLocation.longitude}</Text>
+      <TouchableOpacity style={[s.accentBtn, { marginTop: 12 }]} onPress={openInMaps}>
+        <Text style={s.accentBtnText}>Open in Maps</Text>
+      </TouchableOpacity>
+    </View>
+  ) : null;
 
   if (step === 1) return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
@@ -1159,13 +1201,7 @@ function LostPetScreen({ navigation }) {
         <TouchableOpacity style={[s.accentBtn, { marginTop: 12 }]} onPress={getCurrentLocation} disabled={isGettingLocation}>
           <Text style={s.accentBtnText}>{isGettingLocation ? 'Getting Location...' : 'Use Current Location'}</Text>
         </TouchableOpacity>
-        {lastKnownLocation && (
-          <View style={{ marginTop: 12, padding: 12, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
-            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>Last known location captured</Text>
-            <Text style={{ color: C.text, fontSize: 13 }}>Lat: {lastKnownLocation.latitude}</Text>
-            <Text style={{ color: C.text, fontSize: 13 }}>Lng: {lastKnownLocation.longitude}</Text>
-          </View>
-        )}
+        {locationCard}
         <TouchableOpacity style={s.bigRedBtn} onPress={() => setStep(2)}>
           <Text style={s.bigRedBtnText}>Continue →</Text>
         </TouchableOpacity>
@@ -1190,13 +1226,7 @@ function LostPetScreen({ navigation }) {
             {petPhotoContent}
           </View>
         </Card>
-        {lastKnownLocation && (
-          <View style={{ marginBottom: 16, padding: 12, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
-            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>Last known location captured</Text>
-            <Text style={{ color: C.text, fontSize: 13 }}>Lat: {lastKnownLocation.latitude}</Text>
-            <Text style={{ color: C.text, fontSize: 13 }}>Lng: {lastKnownLocation.longitude}</Text>
-          </View>
-        )}
+        {locationCard}
         <Text style={s.inputLabel}>Describe {selectedPet.name}</Text>
         <TextInput style={s.textAreaInput} value={description} onChangeText={setDescription} placeholder={`E.g. ${selectedPet.name} was wearing a red collar, last seen near the park...`} placeholderTextColor={C.muted} multiline numberOfLines={3} />
         <Text style={s.inputLabel}>Alert Radius</Text>
@@ -1224,47 +1254,61 @@ function LostPetScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[s.screen, { padding: 16 }]} edges={['top', 'bottom']}>
-      <Text style={[s.modalTitle, { color: C.red, textAlign: 'center', fontSize: 28, marginTop: 20 }]}>🚨 ALERT ACTIVE</Text>
-      <Text style={{ color: C.text, textAlign: 'center', marginTop: 8 }}>Nearby PetSync+ users have been notified about {selectedPet.name}</Text>
-      <Card style={{ alignItems: 'center', marginTop: 20, marginBottom: 20 }}>
-        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 10 }}>Alert Summary</Text>
-        <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
-          {petPhoto ? (
-            <Image source={{ uri: petPhoto }} style={{ width: 96, height: 96, borderRadius: 48 }} />
-          ) : (
-            <Text style={{ fontSize: 46 }}>{selectedPet.emoji || '🖼️'}</Text>
-          )}
-        </View>
-      </Card>
-      {lastKnownLocation && (
-        <View style={{ marginBottom: 20, padding: 12, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
-          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>Last known location captured</Text>
-          <Text style={{ color: C.text, fontSize: 13 }}>Lat: {lastKnownLocation.latitude}</Text>
-          <Text style={{ color: C.text, fontSize: 13 }}>Lng: {lastKnownLocation.longitude}</Text>
-        </View>
-      )}
-      <View style={{ flexDirection: 'row', gap: 12, marginTop: 24, marginBottom: 24 }}>
-        {[{ num: '156', label: 'Users Notified' }, { num: `${radius} mi`, label: 'Alert Radius' }].map(stat => (
-          <Card key={stat.label} style={[s.flex, { alignItems: 'center', padding: 20 }]}>
-            <Text style={{ color: C.accent, fontSize: 28, fontWeight: '800' }}>{stat.num}</Text>
-            <Text style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{stat.label}</Text>
-          </Card>
-        ))}
-      </View>
-      <Text style={[s.sectionTitle, { marginBottom: 12 }]}>Share on social media</Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-        {['📘 Facebook', '🏘️ Nextdoor', '🐦 Twitter'].map(btn => (
-          <TouchableOpacity key={btn} style={[s.shareBtn]} onPress={() => Alert.alert('Share', `Opening ${btn.split(' ')[1]}...`)}>
-            <Text style={{ color: C.text, fontSize: 12, fontWeight: '600' }}>{btn}</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 160 }}>
+        <Text style={[s.modalTitle, { color: C.red, textAlign: 'center', fontSize: 28, marginTop: 20 }]}>🚨 ALERT ACTIVE</Text>
+        <Text style={{ color: C.text, textAlign: 'center', marginTop: 8 }}>Nearby PetSync+ users have been notified about {selectedPet.name}</Text>
+        <Card style={{ marginTop: 20, marginBottom: 18, padding: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14, overflow: 'hidden' }}>
+              {petPhoto ? (
+                <Image source={{ uri: petPhoto }} style={{ width: 84, height: 84, borderRadius: 42 }} />
+              ) : (
+                <Text style={{ fontSize: 40 }}>{selectedPet.emoji || '🖼️'}</Text>
+              )}
+            </View>
+            <View style={s.flex}>
+              <Text style={{ color: C.text, fontSize: 20, fontWeight: '800' }}>{selectedPet.name}</Text>
+              <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>{selectedPet.breed} · {selectedPet.species}</Text>
+              <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>Radius: {radius} miles</Text>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border, gap: 8 }}>
+            <View>
+              <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>Description</Text>
+              <Text style={{ color: C.text, fontSize: 13, marginTop: 4 }}>
+                {description || 'No description provided.'}
+              </Text>
+            </View>
+
+            <View>
+              <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>Last known location</Text>
+              {lastKnownLocation ? (
+                <Text style={{ color: C.text, fontSize: 13, marginTop: 4 }}>
+                  {lastKnownLocation.latitude}, {lastKnownLocation.longitude}
+                </Text>
+              ) : (
+                <Text style={{ color: C.text, fontSize: 13, marginTop: 4 }}>Not captured</Text>
+              )}
+            </View>
+          </View>
+        </Card>
+
+        <View style={{ gap: 10, marginBottom: 18 }}>
+          <TouchableOpacity style={s.accentBtn} onPress={openInMaps} disabled={!lastKnownLocation}>
+            <Text style={s.accentBtnText}>Open in Maps</Text>
           </TouchableOpacity>
-        ))}
-      </View>
-      <TouchableOpacity style={s.foundBtn} onPress={() => { Alert.alert('🎉 So happy!', `${selectedPet.name} has been marked as found! Thank you to everyone who helped.`); navigation.goBack(); }}>
-        <Text style={s.foundBtnText}>🎉 {selectedPet.name} is Found!</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={{ alignItems: 'center', marginTop: 16 }} onPress={() => navigation.goBack()}>
-        <Text style={{ color: C.muted, textDecorationLine: 'underline' }}>Cancel Alert</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={s.accentBtn} onPress={shareAlert}>
+            <Text style={s.accentBtnText}>Share Alert</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.foundBtn} onPress={markPetFound}>
+            <Text style={s.foundBtnText}>Mark Pet Found</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.accentBtn} onPress={cancelAlert}>
+            <Text style={s.accentBtnText}>Cancel Alert</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
