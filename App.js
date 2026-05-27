@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import {
+import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  TextInput, FlatList, Dimensions, Modal, Alert,
+  TextInput, FlatList, Dimensions, Modal, Alert, Image,
   KeyboardAvoidingView, Platform, StatusBar,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -10,6 +10,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 // ─────────────────────────────────────────────
 // COLORS & THEME
 // ─────────────────────────────────────────────
@@ -229,6 +231,7 @@ function DashboardScreen({ navigation }) {
       title,
       icon,
       time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      dateKey: now.toDateString(),
     };
 
     setActivityLogs(prev => [newLog, ...prev].slice(0, 5));
@@ -236,6 +239,19 @@ function DashboardScreen({ navigation }) {
 
   const scoreColor = pet.score >= 85 ? C.green : pet.score >= 65 ? C.yellow : C.red;
   const recentActivity = activityLogs.filter(log => log.petId === pet.id);
+  const petActivityDays = [...new Set(recentActivity.map(log => log.dateKey || new Date().toDateString()))].sort((a, b) => new Date(b) - new Date(a));
+  let streakDays = 0;
+  for (let i = 0; i < petActivityDays.length; i += 1) {
+    const expected = new Date();
+    expected.setDate(expected.getDate() - i);
+    const expectedDay = expected.toDateString();
+    if (petActivityDays.includes(expectedDay)) {
+      streakDays += 1;
+    } else {
+      break;
+    }
+  }
+  streakDays = Math.max(1, streakDays);
   const quickActions = pet.species === 'fish'
     ? [
         { icon: '🍽️', label: 'Feed Fish', action: () => addActivityLog('feeding', 'Fish fed', '🍽️') },
@@ -285,23 +301,25 @@ function DashboardScreen({ navigation }) {
         <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
 
         {/* Health Score */}
-        <Card style={s.healthScoreCard}>
-          <View style={s.healthScoreLeft}>
-            <View style={[s.scoreCircle, { borderColor: scoreColor }]}>
-              <Text style={[s.scoreNumber, { color: scoreColor }]}>{pet.score}</Text>
-              <Text style={s.scoreLabel}>/100</Text>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Health')}>
+          <Card style={s.healthScoreCard}>
+            <View style={s.healthScoreLeft}>
+              <View style={[s.scoreCircle, { borderColor: scoreColor }]}>
+                <Text style={[s.scoreNumber, { color: scoreColor }]}>{pet.score}</Text>
+                <Text style={s.scoreLabel}>/100</Text>
+              </View>
             </View>
-          </View>
-          <View style={s.healthScoreRight}>
-            <Text style={s.healthScoreTitle}>{pet.name}'s Health Score</Text>
-            <Text style={s.healthScoreSub}>🐾 {pet.breed} · {pet.age}</Text>
-            <View style={{ marginTop: 8 }}>
-              <Text style={s.healthScoreCheck}>🟢 All vaccines up to date</Text>
-              <Text style={s.healthScoreCheck}>🟡 Weight check due in 5 days</Text>
-              <Text style={s.healthScoreCheck}>🟢 Medications on schedule</Text>
+            <View style={s.healthScoreRight}>
+              <Text style={s.healthScoreTitle}>{pet.name}'s Health Score</Text>
+              <Text style={s.healthScoreSub}>🐾 {pet.breed} · {pet.age}</Text>
+              <View style={{ marginTop: 8 }}>
+                <Text style={s.healthScoreCheck}>🟢 All vaccines up to date</Text>
+                <Text style={s.healthScoreCheck}>🟡 Weight check due in 5 days</Text>
+                <Text style={s.healthScoreCheck}>🟢 Medications on schedule</Text>
+              </View>
             </View>
-          </View>
-        </Card>
+          </Card>
+        </TouchableOpacity>
 
         {/* Quick Actions */}
         <View style={s.section}>
@@ -315,6 +333,21 @@ function DashboardScreen({ navigation }) {
             ))}
           </View>
         </View>
+
+        {/* Streak */}
+        <Card style={s.streakCard}>
+          {recentActivity.length === 0 ? (
+            <View>
+              <Text style={s.streakTitle}>Start your first care streak</Text>
+              <Text style={s.streakSub}>Log a care action to begin building momentum for {pet.name}.</Text>
+            </View>
+          ) : (
+            <View>
+              <Text style={s.streakTitle}>{streakDays} Day Care Streak</Text>
+              <Text style={s.streakSub}>Keep caring for {pet.name} every day.</Text>
+            </View>
+          )}
+        </Card>
 
         {/* Recent Activity */}
         <View style={s.section}>
@@ -1041,6 +1074,9 @@ function AIVetScreen({ navigation }) {
 function LostPetScreen({ navigation }) {
   const [step, setStep] = useState(1);
   const [selectedPet, setSelectedPet] = useState(PETS[0]);
+  const [petPhoto, setPetPhoto] = useState(null);
+  const [lastKnownLocation, setLastKnownLocation] = useState(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [description, setDescription] = useState('');
   const [radius, setRadius] = useState(2);
   const [activated, setActivated] = useState(false);
@@ -1049,6 +1085,48 @@ function LostPetScreen({ navigation }) {
     setStep(3);
     setTimeout(() => { setActivated(true); setStep(4); }, 2000);
   };
+
+  const pickPetPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== 'granted') {
+      Alert.alert('Permission needed', 'Photo library access was denied.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setPetPhoto(result.assets[0].uri);
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    setIsGettingLocation(true);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Location permission is needed');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLastKnownLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  const petPhotoContent = petPhoto
+    ? <Image source={{ uri: petPhoto }} style={{ width: 92, height: 92, borderRadius: 46 }} />
+    : <Text style={{ fontSize: 44 }}>{selectedPet.emoji || '🖼️'}</Text>;
 
   if (step === 1) return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
@@ -1069,6 +1147,25 @@ function LostPetScreen({ navigation }) {
             {selectedPet.id === pet.id && <Text style={{ fontSize: 22 }}>✅</Text>}
           </TouchableOpacity>
         ))}
+        <Card style={{ marginTop: 12, alignItems: 'center' }}>
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 10 }}>Pet Photo</Text>
+          <View style={{ width: 92, height: 92, borderRadius: 46, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            {petPhotoContent}
+          </View>
+          <TouchableOpacity style={s.accentBtn} onPress={pickPetPhoto}>
+            <Text style={s.accentBtnText}>Add / Change Photo</Text>
+          </TouchableOpacity>
+        </Card>
+        <TouchableOpacity style={[s.accentBtn, { marginTop: 12 }]} onPress={getCurrentLocation} disabled={isGettingLocation}>
+          <Text style={s.accentBtnText}>{isGettingLocation ? 'Getting Location...' : 'Use Current Location'}</Text>
+        </TouchableOpacity>
+        {lastKnownLocation && (
+          <View style={{ marginTop: 12, padding: 12, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
+            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>Last known location captured</Text>
+            <Text style={{ color: C.text, fontSize: 13 }}>Lat: {lastKnownLocation.latitude}</Text>
+            <Text style={{ color: C.text, fontSize: 13 }}>Lng: {lastKnownLocation.longitude}</Text>
+          </View>
+        )}
         <TouchableOpacity style={s.bigRedBtn} onPress={() => setStep(2)}>
           <Text style={s.bigRedBtnText}>Continue →</Text>
         </TouchableOpacity>
@@ -1087,6 +1184,19 @@ function LostPetScreen({ navigation }) {
         <View style={s.redAlertBanner}>
           <Text style={s.redAlertText}>🚨 This will notify all PetSync+ users within {radius} miles of you immediately</Text>
         </View>
+        <Card style={{ alignItems: 'center', marginBottom: 16 }}>
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 10 }}>Missing Pet Photo</Text>
+          <View style={{ width: 92, height: 92, borderRadius: 46, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+            {petPhotoContent}
+          </View>
+        </Card>
+        {lastKnownLocation && (
+          <View style={{ marginBottom: 16, padding: 12, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
+            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>Last known location captured</Text>
+            <Text style={{ color: C.text, fontSize: 13 }}>Lat: {lastKnownLocation.latitude}</Text>
+            <Text style={{ color: C.text, fontSize: 13 }}>Lng: {lastKnownLocation.longitude}</Text>
+          </View>
+        )}
         <Text style={s.inputLabel}>Describe {selectedPet.name}</Text>
         <TextInput style={s.textAreaInput} value={description} onChangeText={setDescription} placeholder={`E.g. ${selectedPet.name} was wearing a red collar, last seen near the park...`} placeholderTextColor={C.muted} multiline numberOfLines={3} />
         <Text style={s.inputLabel}>Alert Radius</Text>
@@ -1116,6 +1226,23 @@ function LostPetScreen({ navigation }) {
     <SafeAreaView style={[s.screen, { padding: 16 }]} edges={['top', 'bottom']}>
       <Text style={[s.modalTitle, { color: C.red, textAlign: 'center', fontSize: 28, marginTop: 20 }]}>🚨 ALERT ACTIVE</Text>
       <Text style={{ color: C.text, textAlign: 'center', marginTop: 8 }}>Nearby PetSync+ users have been notified about {selectedPet.name}</Text>
+      <Card style={{ alignItems: 'center', marginTop: 20, marginBottom: 20 }}>
+        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 10 }}>Alert Summary</Text>
+        <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+          {petPhoto ? (
+            <Image source={{ uri: petPhoto }} style={{ width: 96, height: 96, borderRadius: 48 }} />
+          ) : (
+            <Text style={{ fontSize: 46 }}>{selectedPet.emoji || '🖼️'}</Text>
+          )}
+        </View>
+      </Card>
+      {lastKnownLocation && (
+        <View style={{ marginBottom: 20, padding: 12, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>Last known location captured</Text>
+          <Text style={{ color: C.text, fontSize: 13 }}>Lat: {lastKnownLocation.latitude}</Text>
+          <Text style={{ color: C.text, fontSize: 13 }}>Lng: {lastKnownLocation.longitude}</Text>
+        </View>
+      )}
       <View style={{ flexDirection: 'row', gap: 12, marginTop: 24, marginBottom: 24 }}>
         {[{ num: '156', label: 'Users Notified' }, { num: `${radius} mi`, label: 'Alert Radius' }].map(stat => (
           <Card key={stat.label} style={[s.flex, { alignItems: 'center', padding: 20 }]}>
@@ -1367,6 +1494,31 @@ healthScoreCard: {
   healthScoreTitle:  { color: C.text, fontSize: 17, fontWeight: '800' },
   healthScoreSub:    { color: C.muted, fontSize: 13, marginTop: 4 },
   healthScoreCheck:  { color: C.muted, fontSize: 12, marginTop: 2 },
+  streakCard: {
+    marginHorizontal: 16,
+    marginTop: 2,
+    marginBottom: 8,
+    padding: 18,
+    borderRadius: 22,
+    backgroundColor: '#1e1e1e',
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  streakTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  streakSub: {
+    color: C.muted,
+    fontSize: 13,
+    marginTop: 4,
+  },
   recentActivityEmptyCard: {
     backgroundColor: '#1e1e1e',
     borderRadius: 20,
