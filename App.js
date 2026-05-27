@@ -9,7 +9,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 // ─────────────────────────────────────────────
 // COLORS & THEME
 // ─────────────────────────────────────────────
@@ -32,9 +32,10 @@ const C = {
 // MOCK DATA
 // ─────────────────────────────────────────────
 const PETS = [
-  { id: '1', name: 'Max',   breed: 'Golden Retriever', age: '3 yrs', emoji: '🐕', score: 87 },
-  { id: '2', name: 'Luna',  breed: 'Tabby Cat',        age: '2 yrs', emoji: '🐈', score: 92 },
-  { id: '3', name: 'Buddy', breed: 'Beagle',           age: '5 yrs', emoji: '🐶', score: 74 },
+  { id: '1', name: 'Max',   species: 'dog',  breed: 'Golden Retriever', age: '3 yrs', emoji: '🐕', score: 87 },
+  { id: '2', name: 'Luna',  species: 'cat',  breed: 'Tabby Cat',        age: '2 yrs', emoji: '🐈', score: 92 },
+  { id: '3', name: 'Buddy', species: 'dog',  breed: 'Beagle',           age: '5 yrs', emoji: '🐶', score: 74 },
+  { id: '4', name: 'Bubbles', species: 'fish', breed: 'Betta Fish',      age: '1 yr',  emoji: '',    score: 89 },
 ];
 
 const TASKS = [
@@ -80,12 +81,12 @@ const POSTS = [
   { id: '1', author: 'Sarah M.',    petType: 'Golden Retriever Mom', time: '2h ago', content: 'Anyone know a good dog-friendly trail near Ocean County? Max loved Cattus Island but want to try somewhere new! 🐾', emoji: '🌲', likes: 24, comments: 8,  type: 'question'     },
   { id: '2', author: 'Mike R.',     petType: 'Beagle Dad',           time: '4h ago', content: '🚨 MISSING: Bella (Beagle, 3 yrs) — last seen near Lacey Township. Wearing red collar. PLEASE SHARE! 🚨',        emoji: '🚨', likes: 89, comments: 34, type: 'lost_pet',    lost: true },
   { id: '3', author: 'Johnson Fam', petType: 'Multi-pet household',  time: '1d ago', content: 'Rocky just graduated from puppy training! 8 weeks of hard work and this guy nailed every single command 🎓🐶',    emoji: '🎓', likes: 67, comments: 14, type: 'celebration'  },
-  { id: '4', author: 'Vet Dr. Kim', petType: 'Animal Clinic Partner', time: '2d ago', content: 'Summer reminder: sidewalks can reach 150°F on hot days. Test with your hand for 5 seconds — if you can\'t hold it, neither can your pup! 🌡️', emoji: '☀️', likes: 103, comments: 22, type: 'tip' },
+  { id: '4', author: 'Vet Dr. Kim', petType: 'Animal Clinic Partner', time: '2d ago', content: 'Summer reminder: sidewalks can reach 150°F on hot days. Test with your hand for 5 seconds — if you can\'t hold it, neither can your pet! 🌡️', emoji: '☀️', likes: 103, comments: 22, type: 'tip' },
 ];
 
 const AI_SUGGESTIONS = [
-  'My dog is scratching a lot',
-  'Is chocolate really toxic to dogs?',
+  'My pet is scratching a lot',
+  'Is chocolate really toxic to pets?',
   'My cat is not eating today',
   'Signs my pet is overweight?',
 ];
@@ -93,37 +94,121 @@ const AI_SUGGESTIONS = [
 // ─────────────────────────────────────────────
 // REUSABLE COMPONENTS
 // ─────────────────────────────────────────────
-function PetAvatarRow({ pets, selectedId, onSelect }) {
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.petRow} contentContainerStyle={{ paddingHorizontal: 16 }}>
-      {pets.map(pet => (
-        <TouchableOpacity key={pet.id} style={[s.petAvatar, selectedId === pet.id && s.petAvatarActive]} onPress={() => onSelect(pet.id)}>
-          <Text style={s.petAvatarEmoji}>{pet.emoji}</Text>
-          <Text style={s.petAvatarName}>{pet.name}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-}
-
 function Card({ children, style }) {
-  return <View style={[s.card, style]}>{children}</View>;
-}
-
-function Badge({ label, color }) {
   return (
-    <View style={[s.badge, { backgroundColor: color + '25', borderColor: color }]}>
-      <Text style={[s.badgeText, { color }]}>{label}</Text>
+    <View style={[s.card, style]}>
+      {children}
     </View>
   );
 }
+function Badge({ label, color }) {
+  return (
+    <View
+      style={{
+        backgroundColor: color,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
+      }}
+    >
+      <Text
+        style={{
+          color: '#fff',
+          fontSize: 12,
+          fontWeight: '700',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+function PetAvatarRow({ pets, selectedId, onSelect }) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{
+        paddingHorizontal: 20,
+        paddingTop: 18,
+      }}
+    >
+      {pets.map((pet) => {
+        const selected = pet.id === selectedId;
 
+        return (
+          <TouchableOpacity
+            key={pet.id}
+            onPress={() => onSelect(pet.id)}
+            style={{
+              alignItems: 'center',
+              marginRight: 16,
+            }}
+          >
+            <View
+              style={{
+                width: selected ? 82 : 72,
+                height: selected ? 82 : 72,
+
+                borderRadius: 41,
+
+                backgroundColor: selected
+                  ? 'rgba(255,122,26,0.16)'
+                  : '#1e1e1e',
+
+                borderWidth: selected ? 3 : 0,
+
+                borderColor: '#ff7a1a',
+
+                alignItems: 'center',
+                justifyContent: 'center',
+
+                shadowColor: selected ? '#ff7a1a' : '#000',
+
+                shadowOffset: { width: 0, height: 6 },
+
+                shadowOpacity: selected ? 0.28 : 0.08,
+
+                shadowRadius: 14,
+
+                elevation: selected ? 8 : 2,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: selected ? 38 : 32,
+                }}
+              >
+                {pet.emoji}
+              </Text>
+            </View>
+
+            <Text
+              style={{
+                color: selected ? '#fff' : '#a1a1aa',
+
+                fontSize: selected ? 15 : 13,
+
+                fontWeight: selected ? '700' : '500',
+
+                marginTop: 8,
+              }}
+            >
+              {pet.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
 // ─────────────────────────────────────────────
 // SCREEN: DASHBOARD
 // ─────────────────────────────────────────────
 function DashboardScreen({ navigation }) {
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [tasks, setTasks] = useState(TASKS);
+  const [activityLogs, setActivityLogs] = useState([]);
   const pet = PETS.find(p => p.id === selectedPetId);
   const petTasks = tasks.filter(t => t.petId === selectedPetId);
   const pending = petTasks.filter(t => !t.done).length;
@@ -135,7 +220,42 @@ function DashboardScreen({ navigation }) {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: !t.done } : t));
   };
 
+  const addActivityLog = (type, title, icon) => {
+    const now = new Date();
+    const newLog = {
+      id: Date.now().toString(),
+      petId: pet.id,
+      type,
+      title,
+      icon,
+      time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    };
+
+    setActivityLogs(prev => [newLog, ...prev].slice(0, 5));
+  };
+
   const scoreColor = pet.score >= 85 ? C.green : pet.score >= 65 ? C.yellow : C.red;
+  const recentActivity = activityLogs.filter(log => log.petId === pet.id);
+  const quickActions = pet.species === 'fish'
+    ? [
+        { icon: '🍽️', label: 'Feed Fish', action: () => addActivityLog('feeding', 'Fish fed', '🍽️') },
+        { icon: '💧', label: 'Water Change', action: () => addActivityLog('water_change', 'Water changed', '💧') },
+        { icon: '🌡️', label: 'Tank Temp', action: () => addActivityLog('tank_temp', 'Tank temperature checked', '🌡️') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+      ]
+    : pet.species === 'cat'
+      ? [
+          { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+          { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+          { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+          { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+        ]
+      : [
+          { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+          { icon: '🦮', label: 'Log Walk', action: () => addActivityLog('walk', 'Walk logged', '🦮') },
+          { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+          { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+        ];
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -183,6 +303,41 @@ function DashboardScreen({ navigation }) {
           </View>
         </Card>
 
+        {/* Quick Actions */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Quick Actions</Text>
+          <View style={s.quickActionsRow}>
+            {quickActions.map(item => (
+              <TouchableOpacity key={item.label} style={s.quickAction} onPress={item.action}>
+                <Text style={s.quickActionIcon}>{item.icon}</Text>
+                <Text style={s.quickActionLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Recent Activity */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Recent Activity</Text>
+          {recentActivity.length === 0 ? (
+            <Card>
+              <Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>No activity logged yet.</Text>
+            </Card>
+          ) : (
+            recentActivity.map(log => (
+              <Card key={log.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <View style={{ width: 40, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 30 }}>{log.icon}</Text>
+                </View>
+                <View style={s.flex}>
+                  <Text style={s.recordTitle}>{log.title}</Text>
+                  <Text style={s.recordDate}>{log.time}</Text>
+                </View>
+              </Card>
+            ))
+          )}
+        </View>
+
         {/* Today's Tasks */}
         <View style={s.section}>
           <View style={s.sectionHeaderRow}>
@@ -205,109 +360,231 @@ function DashboardScreen({ navigation }) {
           )}
         </View>
 
-        {/* Quick Actions */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Quick Actions</Text>
-          <View style={s.quickActionsRow}>
-            {[
-              { icon: '🍽️', label: 'Log Meal',   action: () => Alert.alert('✅ Logged!', `${pet.name}'s meal has been logged.`) },
-              { icon: '🦮', label: 'Log Walk',   action: () => Alert.alert('✅ Logged!', `${pet.name}'s walk has been logged.`) },
-              { icon: '⚖️', label: 'Log Weight', action: () => Alert.alert('✅ Logged!', `${pet.name}'s weight has been logged.`) },
-              { icon: '🩺', label: 'AI Vet',     action: () => navigation.navigate('AIVet') },
-            ].map(item => (
-              <TouchableOpacity key={item.label} style={s.quickAction} onPress={item.action}>
-                <Text style={s.quickActionIcon}>{item.icon}</Text>
-                <Text style={s.quickActionLabel}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={{ height: 30 }} />
+<View style={{ height: 130 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 // ─────────────────────────────────────────────
-// SCREEN: HEALTH HUB
-// ─────────────────────────────────────────────
 function HealthHubScreen() {
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
 
   const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight'];
-  const tabLabels = { all: '📋 All', vaccines: '💉 Vaccines', meds: '💊 Meds', appointments: '🏥 Visits', weight: '⚖️ Weight' };
+  const tabLabels = {
+    all: '📋 All',
+    vaccines: '💉 Vaccines',
+    meds: '💊 Meds',
+    appointments: '🏥 Visits',
+    weight: '⚖️ Weight',
+  };
 
-  const typeMap = { vaccination: 'vaccines', medication: 'meds', appointment: 'appointments', weight: 'weight' };
+  const typeMap = {
+    vaccination: 'vaccines',
+    medication: 'meds',
+    appointment: 'appointments',
+    weight: 'weight',
+  };
 
-  const records = HEALTH_RECORDS.filter(r =>
-    r.petId === selectedPetId && (activeTab === 'all' || typeMap[r.type] === activeTab)
+  const records = HEALTH_RECORDS.filter(
+    (r) =>
+      r.petId === selectedPetId &&
+      (activeTab === 'all' || typeMap[r.type] === activeTab)
   );
 
-  const pet = PETS.find(p => p.id === selectedPetId);
+  const pet = PETS.find((p) => p.id === selectedPetId);
 
   const statusInfo = {
-    current:   { label: 'CURRENT',  color: C.green  },
-    due_soon:  { label: 'DUE SOON', color: C.yellow },
-    overdue:   { label: 'OVERDUE',  color: C.red    },
-    upcoming:  { label: 'UPCOMING', color: C.blue   },
+    current: { label: 'CURRENT', color: C.green },
+    due_soon: { label: 'DUE SOON', color: C.yellow },
+    overdue: { label: 'OVERDUE', color: C.red },
+    upcoming: { label: 'UPCOMING', color: C.blue },
   };
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <View style={s.pageHeader}>
+      <View style={[s.pageHeader, { paddingTop: 2, marginTop: 0, marginBottom: 0 }]}>
         <Text style={s.pageTitle}>Health Hub</Text>
-        <TouchableOpacity style={s.exportBtn}><Text style={s.exportBtnText}>Export PDF</Text></TouchableOpacity>
+
+        <TouchableOpacity style={s.exportBtn}>
+          <Text style={s.exportBtnText}>Export PDF</Text>
+        </TouchableOpacity>
       </View>
 
-      <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
+      <View style={{ marginTop: -10, marginBottom: -8 }}>
+        <PetAvatarRow
+          pets={PETS}
+          selectedId={selectedPetId}
+          onSelect={setSelectedPetId}
+        />
+      </View>
 
       {/* Summary Card */}
-      <Card style={{ marginHorizontal: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-around' }}>
+      <Card
+        style={{
+          marginHorizontal: 16,
+          marginTop: 20,
+          marginBottom: 6,
+          paddingVertical: 10,
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+        }}
+      >
         {[
-          { num: records.filter(r => r.status === 'current').length,  label: 'Current',  color: C.green  },
-          { num: records.filter(r => r.status === 'due_soon').length, label: 'Due Soon', color: C.yellow },
-          { num: records.filter(r => r.status === 'overdue').length,  label: 'Overdue',  color: C.red    },
-        ].map(item => (
+          {
+            num: records.filter((r) => r.status === 'current').length,
+            label: 'Current',
+            color: C.green,
+          },
+          {
+            num: records.filter((r) => r.status === 'due_soon').length,
+            label: 'Due Soon',
+            color: C.yellow,
+          },
+          {
+            num: records.filter((r) => r.status === 'overdue').length,
+            label: 'Overdue',
+            color: C.red,
+          },
+        ].map((item) => (
           <View key={item.label} style={{ alignItems: 'center' }}>
-            <Text style={{ color: item.color, fontSize: 28, fontWeight: '800' }}>{item.num}</Text>
-            <Text style={{ color: C.muted, fontSize: 12 }}>{item.label}</Text>
+            <Text
+              style={{
+                color: item.color,
+                fontSize: 24,
+                fontWeight: '800',
+              }}
+            >
+              {item.num}
+            </Text>
+
+            <Text
+              style={{
+                color: C.muted,
+                fontSize: 11,
+              }}
+            >
+              {item.label}
+            </Text>
           </View>
         ))}
       </Card>
 
       {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-        {tabs.map(tab => (
-          <TouchableOpacity key={tab} style={[s.tabPill, activeTab === tab && s.tabPillActive]} onPress={() => setActiveTab(tab)}>
-            <Text style={[s.tabPillText, activeTab === tab && s.tabPillTextActive]}>{tabLabels[tab]}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{
+          marginTop: 0,
+          marginBottom: 6,
+          maxHeight: 40,
+        }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          gap: 6,
+          paddingTop: 0,
+          paddingBottom: 0,
+          alignItems: 'center',
+        }}
+      >
+        {tabs.map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[
+              s.tabPill,
+              activeTab === tab && s.tabPillActive,
+              {
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 14,
+                marginRight: 6,
+                alignSelf: 'center',
+              },
+            ]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text
+              style={[
+                s.tabPillText,
+                activeTab === tab && s.tabPillTextActive,
+                {
+                  fontSize: 12,
+                  fontWeight: '600',
+                },
+              ]}
+            >
+              {tabLabels[tab]}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       {/* Records */}
-      <ScrollView style={s.flex} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 4,
+          paddingBottom: 150,
+        }}
+      >
         {records.length === 0 ? (
           <Card style={{ alignItems: 'center', padding: 40 }}>
             <Text style={{ fontSize: 48 }}>📋</Text>
-            <Text style={{ color: C.text, fontWeight: '700', marginTop: 12 }}>No records yet</Text>
-            <Text style={{ color: C.muted, marginTop: 4 }}>Tap + to add {pet.name}'s first record</Text>
+
+            <Text
+              style={{
+                color: C.text,
+                fontWeight: '700',
+                marginTop: 12,
+              }}
+            >
+              No records yet
+            </Text>
+
+            <Text
+              style={{
+                color: C.muted,
+                marginTop: 4,
+              }}
+            >
+              Tap + to add {pet.name}'s first record
+            </Text>
           </Card>
         ) : (
-          records.map(record => (
-            <Card key={record.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          records.map((record) => (
+            <Card
+              key={record.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: 10,
+              }}
+            >
               <View style={s.recordIconWrap}>
                 <Text style={{ fontSize: 22 }}>{record.icon}</Text>
               </View>
+
               <View style={s.flex}>
                 <Text style={s.recordTitle}>{record.title}</Text>
                 <Text style={s.recordDate}>{record.date}</Text>
-                {record.provider && <Text style={s.recordProvider}>{record.provider}</Text>}
-                {record.nextDue && <Text style={s.recordDue}>Next: {record.nextDue}</Text>}
+
+                {record.provider && (
+                  <Text style={s.recordProvider}>{record.provider}</Text>
+                )}
+
+                {record.nextDue && (
+                  <Text style={s.recordDue}>Next: {record.nextDue}</Text>
+                )}
               </View>
+
               {record.status && statusInfo[record.status] && (
-                <Badge label={statusInfo[record.status].label} color={statusInfo[record.status].color} />
+                <Badge
+                  label={statusInfo[record.status].label}
+                  color={statusInfo[record.status].color}
+                />
               )}
             </Card>
           ))
@@ -315,13 +592,21 @@ function HealthHubScreen() {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity style={s.fab} onPress={() => Alert.alert('Add Record', 'Choose record type:\n\n💉 Vaccination\n💊 Medication\n🏥 Appointment\n⚖️ Weight\n🤒 Symptom', [{ text: 'OK' }])}>
+      <TouchableOpacity
+        style={s.fab}
+        onPress={() =>
+          Alert.alert(
+            'Add Record',
+            'Choose record type:\n\n💉 Vaccination\n💊 Medication\n🏥 Appointment\n⚖️ Weight\n🤒 Symptom',
+            [{ text: 'OK' }]
+          )
+        }
+      >
         <Text style={s.fabText}>＋</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
 // ─────────────────────────────────────────────
 // SCREEN: MEMORY VAULT
 // ─────────────────────────────────────────────
@@ -602,29 +887,67 @@ function SettingsScreen({ navigation }) {
 // ─────────────────────────────────────────────
 function AIVetScreen({ navigation }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: "Hi! I'm your AI Vet Assistant 🩺 I have Max's profile loaded — Golden Retriever, 3 years old, 68 lbs. What's going on with him today?" },
+    {
+      role: 'assistant',
+      text: "Hi! I'm your AI Vet Assistant 🩺 I have Max's profile loaded — 3 years old, 68 lbs. What's going on with him today?",
+      time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    },
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
 
-  const AI_RESPONSES = [
-    "Based on what you've described, this is very common in Golden Retrievers. I'd recommend monitoring for 24 hours.\n\n🔍 Most likely causes:\n• Dietary indiscretion\n• Minor infection\n• Environmental allergies\n\n⚡ Triage Level: WATCH AT HOME\n\nIf symptoms persist over 48 hours or worsen, schedule a vet visit.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet for diagnosis.",
-    "Great question! This is something many Golden Retriever owners deal with.\n\n✅ Safe steps:\n1. Check for visible irritation\n2. Keep the area clean and dry\n3. Prevent excessive licking\n\n📅 Triage Level: SCHEDULE A VET\n\nI'd recommend booking an appointment within 2-3 days for a proper examination.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care.",
-    "I understand your concern! Here's what I know about Max's situation:\n\n🌡️ Temperature, appetite, and energy levels are key indicators to watch.\n\n⚡ Triage Level: WATCH AT HOME\n\nGolden Retrievers are resilient — this is likely nothing serious. Keep an eye on him for the next 24 hours.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet.",
+  const EMERGENCY_KEYWORDS = [
+    'glass',
+    'swallowed glass',
+    'ate glass',
+    'choking',
+    'seizure',
+    'poison',
+    'chocolate',
+    'grapes',
+    'xylitol',
+    'antifreeze',
+    'bleeding',
+    'unconscious',
+    "can't breathe",
+    'cant breathe',
+    'collapse',
+    'collapsed',
   ];
+
+  const detectEmergency = (message) => {
+    const lower = message.toLowerCase();
+    return EMERGENCY_KEYWORDS.some(word =>
+      lower.includes(word)
+    );
+  };
+
+  const AI_RESPONSES = [
+    "Based on what you've described, this is something many pet parents run into. I'd recommend monitoring for 24 hours.\n\n🔍 Most likely causes:\n• Dietary indiscretion\n• Minor infection\n• Environmental allergies\n\n⚡ Triage Level: WATCH AT HOME\n\nIf symptoms persist over 48 hours or worsen, schedule a vet visit.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet for diagnosis.",
+    "Great question! This is something many pet parents deal with.\n\n✅ Safe steps:\n1. Check for visible irritation\n2. Keep the area clean and dry\n3. Prevent excessive licking\n\n📅 Triage Level: SCHEDULE A VET\n\nI'd recommend booking an appointment within 2-3 days for a proper examination.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care.",
+    "I understand your concern! Here's what I know about Max's situation:\n\n🌡️ Temperature, appetite, and energy levels are key indicators to watch.\n\n⚡ Triage Level: WATCH AT HOME\n\nThis pet is resilient — this is likely nothing serious. Keep an eye on him for the next 24 hours.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet.",
+  ];
+
+  const EMERGENCY_RESPONSE = "EMERGENCY CARE ADVISED\n\nContact a veterinarian or emergency vet immediately. This should NOT be monitored at home.\n\nDo NOT induce vomiting unless directed by a veterinarian.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care.";
+  const formatTime = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   const send = async (text) => {
     const msg = text || input;
     if (!msg.trim()) return;
-    setMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setMessages(prev => [...prev, { role: 'user', text: msg, time: formatTime() }]);
     setInput('');
+    if (detectEmergency(msg)) {
+      setMessages(prev => [...prev, { role: 'assistant', text: EMERGENCY_RESPONSE, time: formatTime(), emergency: true }]);
+      setIsTyping(false);
+      return;
+    }
     setIsTyping(true);
     setTimeout(() => {
       const reply = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
-      setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: reply, time: formatTime() }]);
       setIsTyping(false);
-    }, 1500);
+    }, 1200);
   };
 
   return (
@@ -643,23 +966,43 @@ function AIVetScreen({ navigation }) {
       </View>
       {/* Pet Context */}
       <View style={s.petContextBar}>
-        <Text style={s.petContextText}>🐕 Max · Golden Retriever · 3 yrs · 68 lbs · Premium Member</Text>
+        <Text style={s.petContextText}>🐕 Max · 3 yrs · 68 lbs · Premium Member</Text>
       </View>
       {/* Messages */}
       <ScrollView ref={scrollRef} style={s.flex} contentContainerStyle={{ padding: 16 }} onContentSizeChange={() => scrollRef.current?.scrollToEnd()}>
         {messages.map((msg, i) => (
-          <View key={i} style={[s.chatBubbleWrap, msg.role === 'user' ? s.chatBubbleUser : s.chatBubbleAI]}>
+          <View
+            key={i}
+            style={[
+              s.chatBubbleWrap,
+              msg.role === 'user'
+                ? { alignSelf: 'flex-end', marginLeft: 36 }
+                : { alignSelf: 'flex-start', marginRight: 36 },
+            ]}
+          >
             {msg.role === 'assistant' && <Text style={{ fontSize: 24, marginBottom: 4 }}>🩺</Text>}
-            <View style={[s.chatBubble, msg.role === 'user' ? s.chatBubbleUserBg : s.chatBubbleAIBg]}>
-              <Text style={[s.chatText, msg.role === 'user' && { color: '#fff' }]}>{msg.text}</Text>
+            <View
+              style={[
+                s.chatBubble,
+                msg.role === 'user'
+                  ? s.chatBubbleUserBg
+                  : msg.emergency
+                    ? { backgroundColor: '#3a1111', borderBottomLeftRadius: 5, borderWidth: 1, borderColor: C.red }
+                    : s.chatBubbleAIBg,
+              ]}
+            >
+              <Text style={[s.chatText, msg.role === 'user' && { color: '#fff' }, msg.emergency && { color: '#ffd7d7', fontWeight: '600' }]}>{msg.text}</Text>
             </View>
+            <Text style={[s.recordDate, { marginTop: 4, textAlign: msg.role === 'user' ? 'right' : 'left' }]}>
+              {msg.time}
+            </Text>
           </View>
         ))}
         {isTyping && (
-          <View style={[s.chatBubbleWrap, s.chatBubbleAI]}>
+          <View style={[s.chatBubbleWrap, { alignSelf: 'flex-start', marginRight: 36 }]}>
             <Text style={{ fontSize: 24 }}>🩺</Text>
             <View style={s.chatBubbleAIBg}>
-              <Text style={s.chatText}>AI Vet is thinking...</Text>
+              <Text style={s.chatText}>Vet Assistant is typing...</Text>
             </View>
           </View>
         )}
@@ -805,21 +1148,115 @@ function TabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: C.card, borderTopColor: C.border, height: 80, paddingBottom: 16, paddingTop: 8 },
-        tabBarActiveTintColor:   C.accent,
+
+        tabBarStyle: {
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: 18,
+
+          height: 82,
+
+          borderRadius: 28,
+          backgroundColor: '#1e1e1e',
+
+          borderTopWidth: 0,
+
+          paddingTop: 6,
+          paddingBottom: 12,
+
+          elevation: 0,
+
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.12,
+          shadowRadius: 20,
+        },
+
+        tabBarActiveTintColor: C.accent,
         tabBarInactiveTintColor: C.muted,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
       }}
     >
-      <Tab.Screen name="Home"      component={DashboardScreen}  options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🏠</Text> }} />
-      <Tab.Screen name="Health"    component={HealthHubScreen}  options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>💊</Text> }} />
-      <Tab.Screen name="Memories"  component={MemoryVaultScreen} options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>📸</Text> }} />
-      <Tab.Screen name="Community" component={CommunityScreen}  options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>👥</Text> }} />
-      <Tab.Screen name="Settings"  component={SettingsScreen}   options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>⚙️</Text> }} />
+      <Tab.Screen
+        name="Home"
+        component={DashboardScreen}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused
+                  ? 'rgba(255,107,53,0.18)'
+                  : 'transparent',
+
+                padding: 5,
+                borderRadius: 16,
+              }}
+            >
+              <MaterialCommunityIcons
+                name="paw"
+                size={22}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Health"
+        component={HealthHubScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              💊
+            </Text>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Memories"
+        component={MemoryVaultScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              📸
+            </Text>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Community"
+        component={CommunityScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              👥
+            </Text>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              ⚙️
+            </Text>
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }
-
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -845,14 +1282,30 @@ const s = StyleSheet.create({
   screen:            { flex: 1, backgroundColor: C.bg },
   flex:              { flex: 1 },
   card:              { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 0, borderWidth: 1, borderColor: C.border },
-  section:           { paddingHorizontal: 16, marginBottom: 20 },
+section: {
+  marginTop: 28,
+  paddingHorizontal: 20,
+},
   sectionHeaderRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionTitle:      { color: C.text, fontSize: 18, fontWeight: '800' },
-
+sectionTitle: {
+  fontSize: 24,
+  fontWeight: '800',
+  marginBottom: 16,
+  color: C.text,
+},
   // Header
   dashHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  greeting:          { color: C.text,  fontSize: 20, fontWeight: '700' },
-  subGreeting:       { color: C.muted, fontSize: 13, marginTop: 2 },
+greeting: {
+  color: C.text,
+  fontSize: 30,
+  fontWeight: '800',
+  letterSpacing: -0.6,
+},
+subGreeting: {
+  color: C.muted,
+  fontSize: 15,
+  marginTop: 4,
+},
 sosButton: {
   backgroundColor: C.red,
   borderRadius: 20,
@@ -893,7 +1346,14 @@ sosButton: {
   fabText:           { color: '#fff', fontSize: 30, fontWeight: '300', lineHeight: 56 },
 
   // Dashboard
-  healthScoreCard:   { marginHorizontal: 16, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 16 },
+healthScoreCard: {
+  marginHorizontal: 16,
+  marginTop: 18,
+  marginBottom: 8,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 16,
+},
   healthScoreLeft:   { width: 92, alignItems: 'center' },
   healthScoreRight:  { flex: 1 },
   scoreCircle:       { width: 84, height: 84, borderRadius: 42, borderWidth: 5, alignItems: 'center', justifyContent: 'center' },
@@ -902,17 +1362,51 @@ sosButton: {
   healthScoreTitle:  { color: C.text, fontSize: 17, fontWeight: '800' },
   healthScoreSub:    { color: C.muted, fontSize: 13, marginTop: 4 },
   healthScoreCheck:  { color: C.muted, fontSize: 12, marginTop: 2 },
-  taskCard:          { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 14, padding: 14, marginBottom: 9, gap: 10, borderWidth: 1, borderColor: C.border },
+taskCard: {
+  flexDirection: 'row',
+  alignItems: 'center',
+
+  backgroundColor: '#1e1e1e',
+
+  padding: 18,
+  borderRadius: 22,
+
+  marginBottom: 14,
+
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.08,
+  shadowRadius: 14,
+
+  elevation: 3,
+},
   taskCardDone:      { opacity: 0.55 },
   taskCheck:         { fontSize: 20 },
   taskInfo:          { flex: 1 },
   taskTitle:         { color: C.text, fontSize: 15, fontWeight: '700' },
   taskTitleDone:     { textDecorationLine: 'line-through', color: C.muted },
   taskTime:          { color: C.muted, fontSize: 12, marginTop: 3 },
-  quickActionsRow:   { flexDirection: 'row', gap: 8, marginTop: 10 },
-  quickAction:       { flex: 1, backgroundColor: C.card, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 8, alignItems: 'center', borderWidth: 1, borderColor: C.border },
-  quickActionIcon:   { fontSize: 26, marginBottom: 6 },
-  quickActionLabel:  { color: C.muted, fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  quickActionsRow:   { flexDirection: 'row', gap: 8, marginTop: 0 },
+quickAction: {
+  flex: 1,
+  backgroundColor: '#1e1e1e',
+
+  borderRadius: 22,
+
+  paddingVertical: 18,
+  alignItems: 'center',
+
+  marginHorizontal: 2,
+
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 10,
+
+  elevation: 2,
+},
+  quickActionIcon:   { fontSize: 36, marginBottom: 6 },
+  quickActionLabel:  { color: C.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   // Health
   recordIconWrap:    { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
