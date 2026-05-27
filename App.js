@@ -320,18 +320,23 @@ function DashboardScreen({ navigation }) {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Recent Activity</Text>
           {recentActivity.length === 0 ? (
-            <Card>
-              <Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>No activity logged yet.</Text>
+            <Card style={s.recentActivityEmptyCard}>
+              <Text style={s.recentActivityEmptyText}>No activity yet for {pet.name}</Text>
             </Card>
           ) : (
             recentActivity.map(log => (
-              <Card key={log.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <View style={{ width: 40, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 30 }}>{log.icon}</Text>
+              <Card key={log.id} style={s.recentActivityCard}>
+                <View style={s.recentActivityIconWrap}>
+                  <Text style={s.recentActivityIcon}>{log.icon}</Text>
                 </View>
-                <View style={s.flex}>
-                  <Text style={s.recordTitle}>{log.title}</Text>
-                  <Text style={s.recordDate}>{log.time}</Text>
+                <View style={s.recentActivityContent}>
+                  <Text style={s.recentActivityTitle}>{log.title}</Text>
+                  <View style={s.recentActivityMetaRow}>
+                    <Text style={s.recentActivityTime}>{log.time}</Text>
+                    <View style={s.recentActivityTypePill}>
+                      <Text style={s.recentActivityTypeText}>{log.type}</Text>
+                    </View>
+                  </View>
                 </View>
               </Card>
             ))
@@ -1362,6 +1367,78 @@ healthScoreCard: {
   healthScoreTitle:  { color: C.text, fontSize: 17, fontWeight: '800' },
   healthScoreSub:    { color: C.muted, fontSize: 13, marginTop: 4 },
   healthScoreCheck:  { color: C.muted, fontSize: 12, marginTop: 2 },
+  recentActivityEmptyCard: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  recentActivityEmptyText: {
+    color: C.muted,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  recentActivityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  recentActivityIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.bg,
+    marginRight: 12,
+  },
+  recentActivityIcon: {
+    fontSize: 22,
+  },
+  recentActivityContent: {
+    flex: 1,
+  },
+  recentActivityTitle: {
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  recentActivityMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  recentActivityTime: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  recentActivityTypePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,107,53,0.12)',
+  },
+  recentActivityTypeText: {
+    color: C.accent,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
 taskCard: {
   flexDirection: 'row',
   alignItems: 'center',
