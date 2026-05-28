@@ -639,7 +639,27 @@ const ACTION_ICONS = [
 function HealthHubScreen() {
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
-const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
+  const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
+  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [pendingRecordType, setPendingRecordType] = useState(null);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [recordForm, setRecordForm] = useState({
+    vaccineName: '',
+    providerClinic: '',
+    nextDueDate: '',
+    medicationName: '',
+    dosage: '',
+    nextDoseDate: '',
+    appointmentReason: '',
+    vetClinic: '',
+    appointmentDate: '',
+    weightValue: '',
+    weightNotes: '',
+    symptomName: '',
+    severity: '',
+    symptomNotes: '',
+  });
+  const [showExportPreview, setShowExportPreview] = useState(false);
   const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight'];
   const tabLabels = {
     all: '📋 All',
@@ -656,7 +676,75 @@ const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
     weight: 'weight',
   };
 
-const records = healthRecords.filter(
+  const createEmptyRecordForm = () => ({
+    vaccineName: '',
+    providerClinic: '',
+    nextDueDate: '',
+    medicationName: '',
+    dosage: '',
+    nextDoseDate: '',
+    appointmentReason: '',
+    vetClinic: '',
+    appointmentDate: '',
+    weightValue: '',
+    weightNotes: '',
+    symptomName: '',
+    severity: '',
+    symptomNotes: '',
+  });
+
+  const recordFieldConfig = {
+    vaccination: [
+      { key: 'vaccineName', label: 'Vaccine name', placeholder: 'Vaccine name', required: true },
+      { key: 'providerClinic', label: 'Provider / clinic', placeholder: 'Provider / clinic' },
+      { key: 'nextDueDate', label: 'Next due date', placeholder: 'Next due date' },
+    ],
+    medication: [
+      { key: 'medicationName', label: 'Medication name', placeholder: 'Medication name', required: true },
+      { key: 'dosage', label: 'Dosage', placeholder: 'Dosage' },
+      { key: 'nextDoseDate', label: 'Next dose / due date', placeholder: 'Next dose / due date' },
+    ],
+    appointment: [
+      { key: 'appointmentReason', label: 'Reason', placeholder: 'Reason', required: true },
+      { key: 'vetClinic', label: 'Vet / clinic', placeholder: 'Vet / clinic' },
+      { key: 'appointmentDate', label: 'Appointment date', placeholder: 'Appointment date' },
+    ],
+    weight: [
+      { key: 'weightValue', label: 'Weight', placeholder: 'Weight', required: true },
+      { key: 'weightNotes', label: 'Notes', placeholder: 'Notes' },
+    ],
+    symptom: [
+      { key: 'symptomName', label: 'Symptom', placeholder: 'Symptom', required: true },
+      { key: 'severity', label: 'Severity', placeholder: 'Severity' },
+      { key: 'symptomNotes', label: 'Notes', placeholder: 'Notes' },
+    ],
+  };
+
+  const recordMainFieldKey = {
+    vaccination: 'vaccineName',
+    medication: 'medicationName',
+    appointment: 'appointmentReason',
+    weight: 'weightValue',
+    symptom: 'symptomName',
+  };
+
+  const recordTypeLabelMap = {
+    vaccination: 'Vaccination',
+    medication: 'Medication',
+    appointment: 'Appointment',
+    weight: 'Weight',
+    symptom: 'Symptom',
+  };
+
+  const getRecordDetailFromTitle = (record) => {
+    const parts = String(record.title || '').split(': ');
+    if (parts.length > 1) {
+      return parts.slice(1).join(': ');
+    }
+    return String(record.title || '').replace(/^(New )?(Vaccination Record|Medication Record|Vet Appointment|Weight Check|Symptom Logged|New Appointment|New Medication Record|New Vaccination Record|Weight Update)\s*:?\s*/i, '').trim() || String(record.title || '');
+  };
+
+  const records = healthRecords.filter(
     (r) =>
       r.petId === selectedPetId &&
       (activeTab === 'all' || typeMap[r.type] === activeTab)
@@ -670,167 +758,492 @@ const records = healthRecords.filter(
     overdue: { label: 'OVERDUE', color: C.red },
     upcoming: { label: 'UPCOMING', color: C.blue },
   };
-const createHealthRecord = (type) => {
-  const iconMap = {
-    vaccination: '💉',
-    medication: '💊',
-    appointment: '🏥',
-    weight: '⚖️',
-    symptom: '🤒',
+  const getRecordFormFromRecord = (record) => {
+    const base = {
+      vaccineName: '',
+      providerClinic: '',
+      nextDueDate: '',
+      medicationName: '',
+      dosage: '',
+      nextDoseDate: '',
+      appointmentReason: '',
+      vetClinic: '',
+      appointmentDate: '',
+      weightValue: '',
+      weightNotes: '',
+      symptomName: '',
+      severity: '',
+      symptomNotes: '',
+    };
+
+    if (record?.details) {
+      return { ...base, ...record.details };
+    }
+
+    const parsedTitle = getRecordDetailFromTitle(record);
+    const mainKey = recordMainFieldKey[record?.type];
+    if (mainKey) return { ...base, [mainKey]: parsedTitle };
+    return base;
   };
 
-  const titleMap = {
-    vaccination: 'New Vaccination Record',
-    medication: 'New Medication Record',
-    appointment: 'New Appointment',
-    weight: 'Weight Update',
-    symptom: 'Symptom Logged',
+  const buildRecordMeta = (type, form) => {
+    const clean = Object.fromEntries(
+      Object.entries(form).map(([key, value]) => [key, String(value || '').trim()])
+    );
+    const mainKey = recordMainFieldKey[type];
+    const mainValue = clean[mainKey] || '';
+
+    const typeConfig = {
+      vaccination: {
+        title: `Vaccination: ${mainValue}`,
+        icon: '💉',
+        status: 'current',
+        detailLines: [
+          clean.providerClinic ? `Provider / clinic: ${clean.providerClinic}` : null,
+          clean.nextDueDate ? `Next due date: ${clean.nextDueDate}` : null,
+        ].filter(Boolean),
+      },
+      medication: {
+        title: `Medication: ${mainValue}`,
+        icon: '💊',
+        status: 'current',
+        detailLines: [
+          clean.dosage ? `Dosage: ${clean.dosage}` : null,
+          clean.nextDoseDate ? `Next dose / due date: ${clean.nextDoseDate}` : null,
+        ].filter(Boolean),
+      },
+      appointment: {
+        title: `Appointment: ${mainValue}`,
+        icon: '🏥',
+        status: 'upcoming',
+        detailLines: [
+          clean.vetClinic ? `Vet / clinic: ${clean.vetClinic}` : null,
+          clean.appointmentDate ? `Appointment date: ${clean.appointmentDate}` : null,
+        ].filter(Boolean),
+      },
+      weight: {
+        title: `Weight: ${mainValue}`,
+        icon: '⚖️',
+        status: 'current',
+        detailLines: [clean.weightNotes ? `Notes: ${clean.weightNotes}` : null].filter(Boolean),
+      },
+      symptom: {
+        title: `Symptom: ${mainValue}`,
+        icon: '🤒',
+        status: 'due_soon',
+        detailLines: [
+          clean.severity ? `Severity: ${clean.severity}` : null,
+          clean.symptomNotes ? `Notes: ${clean.symptomNotes}` : null,
+        ].filter(Boolean),
+      },
+    };
+
+    return { ...typeConfig[type], mainValue, details: clean };
   };
 
-  const newRecord = {
-    id: Date.now().toString(),
-    petId: selectedPetId,
-    type,
-    title: titleMap[type],
-    date: new Date().toLocaleDateString(),
-    provider: null,
-    status: 'current',
-    icon: iconMap[type],
-    nextDue: null,
+  const createHealthRecord = (type, form) => {
+    const meta = buildRecordMeta(type, form);
+    if (!meta || !meta.mainValue) return;
+
+    const newRecord = {
+      id: Date.now().toString(),
+      petId: selectedPetId,
+      type,
+      title: meta.title,
+      date: new Date().toLocaleDateString(),
+      provider: null,
+      status: meta.status,
+      icon: meta.icon,
+      nextDue: null,
+      details: meta.details,
+    };
+
+    setHealthRecords((prev) => [newRecord, ...prev]);
   };
 
-  setHealthRecords((prev) => [newRecord, ...prev]);
-};
+  const openRecordTypePrompt = (type) => {
+    setPendingRecordType(type);
+    setRecordForm(createEmptyRecordForm());
+    setEditingRecord(null);
+    setShowRecordModal(true);
+  };
+
+  const saveRecord = () => {
+    if (!pendingRecordType) {
+      Alert.alert('Enter Details', 'Please choose a record type.');
+      return;
+    }
+
+    const meta = buildRecordMeta(pendingRecordType, recordForm);
+    if (!meta?.mainValue) {
+      Alert.alert('Enter Details', 'Please fill in the main field before saving.');
+      return;
+    }
+
+    if (editingRecord) {
+      setHealthRecords(prev => prev.map(record => (
+        record.id === editingRecord.id
+          ? {
+              ...record,
+              type: pendingRecordType,
+              title: meta.title,
+              details: meta.details,
+            }
+          : record
+      )));
+    } else {
+      createHealthRecord(pendingRecordType, recordForm);
+    }
+
+    setShowRecordModal(false);
+    setPendingRecordType(null);
+    setRecordForm(createEmptyRecordForm());
+    setEditingRecord(null);
+  };
+
+  const closeRecordModal = () => {
+    setShowRecordModal(false);
+    setPendingRecordType(null);
+    setRecordForm(createEmptyRecordForm());
+    setEditingRecord(null);
+  };
+
+  const deleteRecord = (recordId) => {
+    setHealthRecords(prev => prev.filter(record => record.id !== recordId));
+  };
+
+  const handleRecordPress = (record) => {
+    Alert.alert(record.title, 'What would you like to do?', [
+      {
+        text: 'Edit',
+        onPress: () => {
+          setEditingRecord(record);
+          setPendingRecordType(record.type);
+          setRecordForm(getRecordFormFromRecord(record));
+          setShowRecordModal(true);
+        },
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert('Delete Record?', 'This health record will be removed.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => deleteRecord(record.id) },
+          ]);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const getRecordDate = (record) => {
+    const parsed = new Date(record.date);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
+  const getTimelineLabel = (date) => {
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfTarget = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.round((startOfToday - startOfTarget) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'TODAY';
+    if (diffDays === 1) return 'YESTERDAY';
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+  };
+
+  const groupedTimeline = Object.values(
+    records.reduce((acc, record) => {
+      const recordDate = getRecordDate(record);
+      const groupLabel = getTimelineLabel(recordDate);
+      const groupKey = groupLabel;
+
+      if (!acc[groupKey]) {
+        acc[groupKey] = {
+          key: groupKey,
+          date: recordDate,
+          label: groupLabel,
+          records: [],
+        };
+      }
+
+      acc[groupKey].records.push(record);
+      return acc;
+    }, {})
+  )
+    .map(group => ({
+      ...group,
+      records: group.records.sort((a, b) => getRecordDate(b) - getRecordDate(a)),
+    }))
+    .sort((a, b) => b.date - a.date);
+
+  const getRecordDisplayLines = (record) => {
+    const details = record.details || {};
+
+    if (record.type === 'vaccination') {
+      return [
+        details.providerClinic ? `Provider / clinic: ${details.providerClinic}` : null,
+        details.nextDueDate ? `Next due date: ${details.nextDueDate}` : null,
+      ].filter(Boolean);
+    }
+
+    if (record.type === 'medication') {
+      return [
+        details.dosage ? `Dosage: ${details.dosage}` : null,
+        details.nextDoseDate ? `Next dose / due date: ${details.nextDoseDate}` : null,
+      ].filter(Boolean);
+    }
+
+    if (record.type === 'appointment') {
+      return [
+        details.vetClinic ? `Vet / clinic: ${details.vetClinic}` : null,
+        details.appointmentDate ? `Appointment date: ${details.appointmentDate}` : null,
+      ].filter(Boolean);
+    }
+
+    if (record.type === 'weight') {
+      return [details.weightNotes ? `Notes: ${details.weightNotes}` : null].filter(Boolean);
+    }
+
+    if (record.type === 'symptom') {
+      return [
+        details.severity ? `Severity: ${details.severity}` : null,
+        details.symptomNotes ? `Notes: ${details.symptomNotes}` : null,
+      ].filter(Boolean);
+    }
+
+    return [];
+  };
+
+  const currentScore = PETS.find((p) => p.id === selectedPetId)?.score ?? 0;
+  const streakDays = Math.max(1, records.length ? new Set(records.map((record) => record.date)).size : 1);
+  const latestRecords = [...records]
+    .sort((a, b) => getRecordDate(b) - getRecordDate(a))
+    .slice(0, 5);
+
+  const overdueRecords = records.filter((record) => record.status === 'overdue');
+  const medicationRecords = records.filter((record) => record.type === 'medication');
+  const weightRecords = records.filter((record) => record.type === 'weight');
+  const recordCount = records.length;
+  const recentActivityText = recordCount > 0 ? 'Care streak active' : 'No recent health records';
+
+  const insightLines = [];
+
+  if (recordCount >= 5) {
+    insightLines.push(`✨ ${pet.name} has had excellent care this week`);
+  }
+
+  if (overdueRecords.length === 0) {
+    insightLines.push('Wellness records are up to date');
+  } else {
+    insightLines.push('Overdue care detected');
+  }
+
+  if (weightRecords.length > 0) {
+    insightLines.push('Weight tracking active');
+  } else {
+    insightLines.push('No recent weight records');
+  }
+
+  if (medicationRecords.length === 0) {
+    insightLines.push('No medication records logged');
+  } else {
+    insightLines.push('All medications logged');
+  }
+
+  if (recentActivityText) {
+    insightLines.push(recentActivityText);
+  }
+
+  const visibleInsights = insightLines.slice(0, 3);
+
+  const buildHealthSummary = () => {
+    const lines = [
+      `Health Summary for ${pet.name}`,
+      `Species/Breed: ${pet.species || 'Unknown'} · ${pet.breed || 'Unknown'}`,
+      `Current Health Score: ${currentScore}/100`,
+      `Total Health Records: ${records.length}`,
+      `Current Streak: ${streakDays} day${streakDays === 1 ? '' : 's'}`,
+      '',
+      'Latest Records:',
+      ...latestRecords.map((record) => `- ${record.title} (${record.date})`),
+    ];
+
+    return lines.join('\n');
+  };
+
+  const openExportPreview = () => {
+    setShowExportPreview(true);
+  };
+
+  const shareSummary = async () => {
+    const summary = buildHealthSummary();
+    try {
+      await Share.share({ message: summary });
+    } catch (error) {
+      Alert.alert('Share failed', 'Unable to share the summary right now.');
+    }
+  };
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={[s.pageHeader, { paddingTop: 2, marginTop: 0, marginBottom: 0 }]}>
         <Text style={s.pageTitle}>Health Hub</Text>
 
-        <TouchableOpacity style={s.exportBtn}>
+        <TouchableOpacity style={s.exportBtn} onPress={openExportPreview}>
           <Text style={s.exportBtnText}>Export PDF</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={{ marginTop: -10, marginBottom: -8 }}>
-        <PetAvatarRow
-          pets={PETS}
-          selectedId={selectedPetId}
-          onSelect={setSelectedPetId}
-        />
+      <View style={{ marginTop: 0 }}>
+        <View style={{ marginTop: -10, marginBottom: -8 }}>
+          <PetAvatarRow
+            pets={PETS}
+            selectedId={selectedPetId}
+            onSelect={setSelectedPetId}
+          />
+        </View>
+
+        <Card
+          style={{
+            marginHorizontal: 16,
+            marginTop: 10,
+            marginBottom: 12,
+            padding: 16,
+            borderRadius: 24,
+            backgroundColor: '#1a1a1a',
+            borderWidth: 1,
+            borderColor: 'rgba(255, 153, 0, 0.14)',
+            shadowColor: C.accent,
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 3,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.accent, marginRight: 10 }} />
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>Dynamic Health Insights</Text>
+          </View>
+
+          {visibleInsights.map((line, index) => (
+            <View key={`${line}-${index}`} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: index === visibleInsights.length - 1 ? 0 : 8 }}>
+              <Text style={{ color: C.accent, marginRight: 8, fontSize: 14 }}>•</Text>
+              <Text style={{ color: C.text, fontSize: 13, lineHeight: 18, flex: 1 }}>{line}</Text>
+            </View>
+          ))}
+        </Card>
       </View>
 
-      {/* Summary Card */}
-      <Card
-        style={{
-          marginHorizontal: 16,
-          marginTop: 20,
-          marginBottom: 6,
-          paddingVertical: 10,
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-        }}
-      >
-        {[
-          {
-            num: records.filter((r) => r.status === 'current').length,
-            label: 'Current',
-            color: C.green,
-          },
-          {
-            num: records.filter((r) => r.status === 'due_soon').length,
-            label: 'Due Soon',
-            color: C.yellow,
-          },
-          {
-            num: records.filter((r) => r.status === 'overdue').length,
-            label: 'Overdue',
-            color: C.red,
-          },
-        ].map((item) => (
-          <View key={item.label} style={{ alignItems: 'center' }}>
-            <Text
-              style={{
-                color: item.color,
-                fontSize: 24,
-                fontWeight: '800',
-              }}
-            >
-              {item.num}
-            </Text>
-
-            <Text
-              style={{
-                color: C.muted,
-                fontSize: 11,
-              }}
-            >
-              {item.label}
-            </Text>
-          </View>
-        ))}
-      </Card>
-
-      {/* Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{
-          marginTop: 0,
-          marginBottom: 6,
-          maxHeight: 40,
-        }}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          gap: 6,
-          paddingTop: 0,
-          paddingBottom: 0,
-          alignItems: 'center',
-        }}
-      >
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[
-              s.tabPill,
-              activeTab === tab && s.tabPillActive,
-              {
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 14,
-                marginRight: 6,
-                alignSelf: 'center',
-              },
-            ]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text
-              style={[
-                s.tabPillText,
-                activeTab === tab && s.tabPillTextActive,
-                {
-                  fontSize: 12,
-                  fontWeight: '600',
-                },
-              ]}
-            >
-              {tabLabels[tab]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Records */}
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 4,
-          paddingBottom: 150,
+          paddingBottom: 180,
         }}
       >
+        {/* Summary Card */}
+        <Card
+          style={{
+            marginHorizontal: 16,
+            marginTop: 20,
+            marginBottom: 6,
+            paddingVertical: 10,
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+          }}
+        >
+          {[
+            {
+              num: records.filter((r) => r.status === 'current').length,
+              label: 'Current',
+              color: C.green,
+            },
+            {
+              num: records.filter((r) => r.status === 'due_soon').length,
+              label: 'Due Soon',
+              color: C.yellow,
+            },
+            {
+              num: records.filter((r) => r.status === 'overdue').length,
+              label: 'Overdue',
+              color: C.red,
+            },
+          ].map((item) => (
+            <View key={item.label} style={{ alignItems: 'center' }}>
+              <Text
+                style={{
+                  color: item.color,
+                  fontSize: 24,
+                  fontWeight: '800',
+                }}
+              >
+                {item.num}
+              </Text>
+
+              <Text
+                style={{
+                  color: C.muted,
+                  fontSize: 11,
+                }}
+              >
+                {item.label}
+              </Text>
+            </View>
+          ))}
+        </Card>
+
+        {/* Tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{
+            marginTop: 0,
+            marginBottom: 6,
+            maxHeight: 40,
+          }}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            gap: 6,
+            paddingTop: 0,
+            paddingBottom: 0,
+            alignItems: 'center',
+          }}
+        >
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[
+                s.tabPill,
+                activeTab === tab && s.tabPillActive,
+                {
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                  marginRight: 6,
+                  alignSelf: 'center',
+                },
+              ]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text
+                style={[
+                  s.tabPillText,
+                  activeTab === tab && s.tabPillTextActive,
+                  {
+                    fontSize: 12,
+                    fontWeight: '600',
+                  },
+                ]}
+              >
+                {tabLabels[tab]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {records.length === 0 ? (
-          <Card style={{ alignItems: 'center', padding: 40 }}>
+          <Card style={{ alignItems: 'center', padding: 40, marginHorizontal: 16 }}>
             <Text style={{ fontSize: 48 }}>📋</Text>
 
             <Text
@@ -853,39 +1266,61 @@ const createHealthRecord = (type) => {
             </Text>
           </Card>
         ) : (
-          records.map((record) => (
-            <Card
-              key={record.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginBottom: 10,
-              }}
-            >
-              <View style={s.recordIconWrap}>
-                <Text style={{ fontSize: 22 }}>{record.icon}</Text>
+          groupedTimeline.map((group) => (
+            <View key={group.key} style={{ marginBottom: 18, paddingHorizontal: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingHorizontal: 4 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.accent, marginRight: 8 }} />
+                <Text style={{ color: C.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2 }}>
+                  {group.label}
+                </Text>
               </View>
 
-              <View style={s.flex}>
-                <Text style={s.recordTitle}>{record.title}</Text>
-                <Text style={s.recordDate}>{record.date}</Text>
+              {group.records.map((record) => (
+                <View key={record.id} style={s.timelineItem}>
+                  <View style={s.timelineRail}>
+                    <View style={s.timelineLine} />
 
-                {record.provider && (
-                  <Text style={s.recordProvider}>{record.provider}</Text>
-                )}
+                    <View style={s.timelineNode}>
+                      <Text style={s.timelineIcon}>{record.icon}</Text>
+                    </View>
+                  </View>
 
-                {record.nextDue && (
-                  <Text style={s.recordDue}>Next: {record.nextDue}</Text>
-                )}
-              </View>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={s.timelineCard}
+                    onPress={() => handleRecordPress(record)}
+                  >
+                    <View style={s.timelineCardTop}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.timelineTitle}>{record.title}</Text>
+                        <Text style={s.timelineDate}>{record.date}</Text>
 
-              {record.status && statusInfo[record.status] && (
-                <Badge
-                  label={statusInfo[record.status].label}
-                  color={statusInfo[record.status].color}
-                />
-              )}
-            </Card>
+                        {getRecordDisplayLines(record).length > 0 && (
+                          <Text style={{ color: C.muted, fontSize: 11, lineHeight: 16, marginTop: 4 }}>
+                            {getRecordDisplayLines(record).join('\n')}
+                          </Text>
+                        )}
+
+                        {record.provider && (
+                          <Text style={s.timelineProvider}>{record.provider}</Text>
+                        )}
+
+                        {record.nextDue && (
+                          <Text style={s.timelineDue}>Next: {record.nextDue}</Text>
+                        )}
+                      </View>
+
+                      {record.status && statusInfo[record.status] && (
+                        <Badge
+                          label={statusInfo[record.status].label}
+                          color={statusInfo[record.status].color}
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
           ))
         )}
       </ScrollView>
@@ -893,18 +1328,103 @@ const createHealthRecord = (type) => {
       {/* FAB */}
       <TouchableOpacity
         style={s.fab}
-onPress={() =>
-  Alert.alert('Add Record', 'Choose record type', [
-    { text: 'Vaccination 💉', onPress: () => createHealthRecord('vaccination') },
-    { text: 'Medication 💊', onPress: () => createHealthRecord('medication') },
-    { text: 'Appointment 🏥', onPress: () => createHealthRecord('appointment') },
-    { text: 'Weight ⚖️', onPress: () => createHealthRecord('weight') },
-    { text: 'Symptom 🤒', onPress: () => createHealthRecord('symptom') },
-    { text: 'Cancel', style: 'cancel' },
-  ])
-}      >
+        onPress={() =>
+          Alert.alert('Add Record', 'Choose record type', [
+            { text: 'Vaccination', onPress: () => openRecordTypePrompt('vaccination') },
+            { text: 'Medication', onPress: () => openRecordTypePrompt('medication') },
+            { text: 'Appointment', onPress: () => openRecordTypePrompt('appointment') },
+            { text: 'Weight', onPress: () => openRecordTypePrompt('weight') },
+            { text: 'Symptom', onPress: () => openRecordTypePrompt('symptom') },
+            { text: 'Cancel', style: 'cancel' },
+          ])
+        }
+      >
         <Text style={s.fabText}>＋</Text>
       </TouchableOpacity>
+      
+      <Modal visible={showRecordModal} transparent animationType="fade" onRequestClose={closeRecordModal}>
+        <View style={s.modalOverlay}>
+          <View style={s.customActionModal}>
+            <Text style={s.customActionModalTitle}>
+              {pendingRecordType ? `${editingRecord ? 'Edit' : 'Add'} ${recordTypeLabelMap[pendingRecordType] || 'Record'}` : 'Add Record'}
+            </Text>
+
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+              {(pendingRecordType ? recordFieldConfig[pendingRecordType] || [] : []).map((field) => (
+                <View key={field.key} style={{ marginBottom: 10 }}>
+                  <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+                    {field.label}
+                  </Text>
+                  <TextInput
+                    style={[s.customActionInput, { marginBottom: 0 }]}
+                    value={recordForm[field.key]}
+                    onChangeText={(text) => setRecordForm((prev) => ({ ...prev, [field.key]: text }))}
+                    placeholder={field.placeholder}
+                    placeholderTextColor={C.muted}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={s.customActionModalButtons}>
+              <TouchableOpacity style={s.customActionCancelBtn} onPress={closeRecordModal}>
+                <Text style={s.customActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={saveRecord}>
+                <Text style={s.customActionSaveText}>Save Record</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showExportPreview} transparent animationType="fade" onRequestClose={() => setShowExportPreview(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.customActionModal}>
+            <Text style={s.customActionModalTitle}>Export Preview</Text>
+
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              <Text style={{ color: C.text, fontWeight: '800', fontSize: 16, marginBottom: 10 }}>
+                {pet.name}
+              </Text>
+              <Text style={{ color: C.muted, marginBottom: 6 }}>
+                Species/Breed: {pet.species || 'Unknown'} · {pet.breed || 'Unknown'}
+              </Text>
+              <Text style={{ color: C.muted, marginBottom: 6 }}>
+                Current Health Score: {currentScore}/100
+              </Text>
+              <Text style={{ color: C.muted, marginBottom: 6 }}>
+                Total Health Records: {records.length}
+              </Text>
+              <Text style={{ color: C.muted, marginBottom: 12 }}>
+                Current Streak: {streakDays} day{streakDays === 1 ? '' : 's'}
+              </Text>
+
+              <Text style={{ color: C.text, fontWeight: '700', marginBottom: 8 }}>
+                Latest 5 Records
+              </Text>
+              {latestRecords.length === 0 ? (
+                <Text style={{ color: C.muted }}>No records yet.</Text>
+              ) : (
+                latestRecords.map((record) => (
+                  <Text key={record.id} style={{ color: C.muted, marginBottom: 6 }}>
+                    • {record.title}
+                  </Text>
+                ))
+              )}
+            </ScrollView>
+
+            <View style={s.customActionModalButtons}>
+              <TouchableOpacity style={s.customActionCancelBtn} onPress={() => setShowExportPreview(false)}>
+                <Text style={s.customActionCancelText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={shareSummary}>
+                <Text style={s.customActionSaveText}>Share Summary</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1724,6 +2244,79 @@ const s = StyleSheet.create({
 section: {
   marginTop: 28,
   paddingHorizontal: 20,
+},
+timelineItem: {
+  flexDirection: 'row',
+  marginBottom: 16,
+},
+
+timelineRail: {
+  width: 42,
+  alignItems: 'center',
+  position: 'relative',
+},
+
+timelineLine: {
+  position: 'absolute',
+  top: 0,
+  bottom: -18,
+  width: 2,
+  backgroundColor: C.faint,
+},
+
+timelineNode: {
+  width: 34,
+  height: 34,
+  borderRadius: 17,
+  backgroundColor: C.cardHigh,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderWidth: 2,
+  borderColor: C.accent,
+  zIndex: 2,
+},
+
+timelineIcon: {
+  fontSize: 18,
+},
+
+timelineCard: {
+  flex: 1,
+  backgroundColor: C.card,
+  borderRadius: 20,
+  padding: 14,
+  borderWidth: 1,
+  borderColor: C.border,
+},
+
+timelineCardTop: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
+timelineTitle: {
+  color: C.text,
+  fontSize: 16,
+  fontWeight: '800',
+},
+
+timelineDate: {
+  color: C.muted,
+  fontSize: 12,
+  marginTop: 4,
+},
+
+timelineProvider: {
+  color: C.muted,
+  fontSize: 12,
+  marginTop: 2,
+},
+
+timelineDue: {
+  color: C.accent,
+  fontSize: 12,
+  marginTop: 4,
+  fontWeight: '600',
 },
   sectionHeaderRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
 sectionTitle: {
