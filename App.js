@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
-  KeyboardAvoidingView, Platform, StatusBar,
+  KeyboardAvoidingView, Platform, StatusBar, Vibration,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -10,6 +10,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 // ─────────────────────────────────────────────
@@ -37,7 +38,7 @@ const PETS = [
   { id: '1', name: 'Max',   species: 'dog',  breed: 'Golden Retriever', age: '3 yrs', emoji: '🐕', score: 87 },
   { id: '2', name: 'Luna',  species: 'cat',  breed: 'Tabby Cat',        age: '2 yrs', emoji: '🐈', score: 92 },
   { id: '3', name: 'Buddy', species: 'dog',  breed: 'Beagle',           age: '5 yrs', emoji: '🐶', score: 74 },
-  { id: '4', name: 'Bubbles', species: 'fish', breed: 'Betta Fish',      age: '1 yr',  emoji: '',    score: 89 },
+  { id: '4', name: 'Bubbles', species: 'fish', breed: 'Betta Fish',      age: '1 yr',  emoji: '🐟',   score: 89 },
 ];
 
 const TASKS = [
@@ -51,6 +52,14 @@ const TASKS = [
   { id: '8', petId: '3', title: 'Buddy Walk',             time: '8:00 AM',  done: true,  icon: '🦮', type: 'walk'       },
   { id: '9', petId: '3', title: 'Buddy Dinner',           time: '5:30 PM',  done: false, icon: '🍽️', type: 'feeding'    },
 ];
+
+const PET_SOUNDS = {
+  dog: require('./assets/sounds/dog.mp3'),
+  cat: require('./assets/sounds/cat.mp3'),
+  fish: require('./assets/sounds/fish.mp3'),
+  bird: require('./assets/sounds/bird.mp3'),
+  reptile: require('./assets/sounds/reptile.mp3'),
+};
 
 const HEALTH_RECORDS = [
   { id: '1', petId: '1', type: 'vaccination', title: 'Rabies Vaccine',        date: 'Jan 15, 2026', provider: 'Dr. Smith',   status: 'current',   icon: '💉', nextDue: 'Jan 2027' },
@@ -151,7 +160,8 @@ function Badge({ label, color }) {
     </View>
   );
 }
-function PetAvatarRow({ pets, selectedId, onSelect }) {
+function PetAvatarRow({ pets, selectedId, onSelect, bounceValue }) {
+  const selectedScale = bounceValue || 1;
   return (
     <ScrollView
       horizontal
@@ -173,43 +183,81 @@ function PetAvatarRow({ pets, selectedId, onSelect }) {
               marginRight: 16,
             }}
           >
-            <View
-              style={{
-                width: selected ? 82 : 72,
-                height: selected ? 82 : 72,
-
-                borderRadius: 41,
-
-                backgroundColor: selected
-                  ? 'rgba(255,122,26,0.16)'
-                  : '#1e1e1e',
-
-                borderWidth: selected ? 3 : 0,
-
-                borderColor: '#ff7a1a',
-
-                alignItems: 'center',
-                justifyContent: 'center',
-
-                shadowColor: selected ? '#ff7a1a' : '#000',
-
-                shadowOffset: { width: 0, height: 6 },
-
-                shadowOpacity: selected ? 0.28 : 0.08,
-
-                shadowRadius: 14,
-
-                elevation: selected ? 8 : 2,
-              }}
-            >
-              <Text
+            {selected ? (
+              <Animated.View
                 style={{
-                  fontSize: selected ? 38 : 32,
+                  width: 82,
+                  height: 82,
+
+                  borderRadius: 41,
+
+                  backgroundColor: 'rgba(255,122,26,0.16)',
+
+                  borderWidth: 3,
+
+                  borderColor: '#ff7a1a',
+
+                  alignItems: 'center',
+                  justifyContent: 'center',
+
+                  shadowColor: '#ff7a1a',
+
+                  shadowOffset: { width: 0, height: 6 },
+
+                  shadowOpacity: 0.28,
+
+                  shadowRadius: 14,
+
+                  elevation: 8,
+
+                  transform: [{ scale: selectedScale }],
                 }}
               >
-                {pet.emoji}
-              </Text>
-            </View>
+                <Text
+                  style={{
+                    fontSize: 38,
+                  }}
+                >
+                  {pet.emoji}
+                </Text>
+              </Animated.View>
+            ) : (
+              <View
+                style={{
+                  width: 72,
+                  height: 72,
+
+                  borderRadius: 36,
+
+                  backgroundColor: '#1e1e1e',
+
+                  borderWidth: 0,
+
+                  borderColor: '#ff7a1a',
+
+                  alignItems: 'center',
+                  justifyContent: 'center',
+
+                  shadowColor: '#000',
+
+                  shadowOffset: { width: 0, height: 6 },
+
+                  shadowOpacity: 0.08,
+
+                  shadowRadius: 14,
+
+                  elevation: 2,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 32,
+                  }}
+                >
+                  {pet.emoji}
+                </Text>
+              </View>
+            )}
 
             <Text
               style={{
@@ -236,7 +284,14 @@ function PetAvatarRow({ pets, selectedId, onSelect }) {
 function DashboardScreen({ navigation }) {
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [tasks, setTasks] = useState(TASKS);
-  const [calendarFilter, setCalendarFilter] = useState('today');
+  const [careReminders, setCareReminders] = useState([]);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [editingReminder, setEditingReminder] = useState(null);
+  const [reminderTitle, setReminderTitle] = useState('');
+  const [reminderIcon, setReminderIcon] = useState('🍽️');
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderTime, setReminderTime] = useState('');
   const [activityLogs, setActivityLogs] = useState([]);
   const [customActions, setCustomActions] = useState([]);
   const [showAddActionModal, setShowAddActionModal] = useState(false);
@@ -245,15 +300,215 @@ function DashboardScreen({ navigation }) {
   const [petScores, setPetScores] = useState(
     Object.fromEntries(PETS.map(p => [p.id, p.score]))
   );
+  const petBounce = useRef(new Animated.Value(1)).current;
+  const previousPetIdRef = useRef(selectedPetId);
   const pet = PETS.find(p => p.id === selectedPetId);
-  const baseCareTasks = tasks.filter(t => t.petId === selectedPetId && t.source !== 'healthRecord');
-  const healthCareTasks = tasks.filter(t => t.petId === selectedPetId && t.source === 'healthRecord');
-  const calendarTasks = calendarFilter === 'today'
-    ? baseCareTasks
-    : calendarFilter === 'tomorrow'
-      ? []
-      : [...baseCareTasks, ...healthCareTasks];
-  const calendarPending = calendarTasks.filter(t => !t.done).length;
+  const playPetSound = async (species) => {
+    const soundAsset = PET_SOUNDS[species];
+
+    if (!soundAsset) {
+      if (Platform.OS !== 'web') {
+        Vibration.vibrate(12);
+      }
+      return;
+    }
+
+    try {
+      const { sound } = await Audio.Sound.createAsync(soundAsset, {
+        shouldPlay: false,
+        volume: 0.35,
+      });
+
+      await new Promise((resolve, reject) => {
+        let fallbackTimer = setTimeout(async () => {
+          sound.setOnPlaybackStatusUpdate(null);
+          await sound.unloadAsync().catch(() => {});
+          resolve();
+        }, 2500);
+
+        sound.setOnPlaybackStatusUpdate(async (status) => {
+          if (!status.isLoaded) return;
+          if (status.didJustFinish) {
+            clearTimeout(fallbackTimer);
+            sound.setOnPlaybackStatusUpdate(null);
+            await sound.unloadAsync().catch(() => {});
+            resolve();
+          }
+        });
+
+        sound.playAsync().catch(async (error) => {
+          clearTimeout(fallbackTimer);
+          sound.setOnPlaybackStatusUpdate(null);
+          await sound.unloadAsync().catch(() => {});
+          reject(error);
+        });
+      });
+    } catch (error) {
+      if (Platform.OS !== 'web') {
+        Vibration.vibrate(12);
+      }
+    }
+  };
+  const handleSelectPet = (petId) => {
+    if (petId === selectedPetId) return;
+
+    setSelectedPetId(petId);
+
+    Animated.sequence([
+      Animated.timing(petBounce, {
+        toValue: 1.12,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(petBounce, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const selectedPet = PETS.find(p => p.id === petId);
+    if (selectedPet?.species) {
+      void playPetSound(selectedPet.species);
+    }
+  };
+  useEffect(() => {
+    if (previousPetIdRef.current === selectedPetId) return;
+    previousPetIdRef.current = selectedPetId;
+  }, [selectedPetId]);
+  const reminderIconOptions = ['🍽️', '💊', '🦮', '🎾', '🧼', '⚖️', '💧', '🌡️', '🧪', '🧹', '🔥', '💬'];
+  const formatLocalDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const normalizeReminderDateKey = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value.trim();
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return formatLocalDateKey(value);
+    }
+    return '';
+  };
+  const calendarDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+    return date;
+  });
+  const selectedCalendarDateKey = formatLocalDateKey(selectedCalendarDate);
+  const calendarReminders = careReminders.filter(reminder => {
+    return (
+      reminder.petId === selectedPetId
+      && reminder.date === selectedCalendarDateKey
+    );
+  });
+  const formatReminderDate = (value) => {
+    const key = normalizeReminderDateKey(value);
+    if (!key) return typeof value === 'string' && value.trim() ? value.trim() : 'No date set';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return key;
+    const [year, month, day] = key.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  const openReminderModal = () => {
+    setEditingReminder(null);
+    setReminderTitle('');
+    setReminderIcon('🍽️');
+    setReminderDate(selectedCalendarDateKey);
+    setReminderTime('');
+    setShowReminderModal(true);
+  };
+  const saveReminder = () => {
+    const trimmedTitle = reminderTitle.trim();
+    const trimmedDate = reminderDate.trim();
+    if (!trimmedTitle) {
+      Alert.alert('Reminder title required');
+      return;
+    }
+    if (!trimmedDate) {
+      Alert.alert('Reminder date required');
+      return;
+    }
+
+    const nextReminder = {
+      id: editingReminder?.id || Date.now().toString(),
+      petId: selectedPetId,
+      title: trimmedTitle,
+      icon: reminderIcon,
+      date: trimmedDate,
+      time: reminderTime.trim(),
+      completed: editingReminder ? !!editingReminder.completed : false,
+      source: 'manual',
+    };
+
+    setCareReminders(prev => (
+      editingReminder
+        ? prev.map(reminder => (reminder.id === editingReminder.id ? nextReminder : reminder))
+        : [nextReminder, ...prev]
+    ));
+    setShowReminderModal(false);
+    setEditingReminder(null);
+    setReminderTitle('');
+    setReminderIcon('🍽️');
+    setReminderDate(selectedCalendarDateKey);
+    setReminderTime('');
+  };
+  const toggleReminderComplete = (reminderId) => {
+    setCareReminders(prev => prev.map(reminder => (
+      reminder.id === reminderId
+        ? { ...reminder, completed: !reminder.completed }
+        : reminder
+    )));
+  };
+  const openEditReminder = (reminder) => {
+    setEditingReminder(reminder);
+    setReminderTitle(reminder.title || '');
+    setReminderIcon(reminder.icon || '🍽️');
+    setReminderDate(normalizeReminderDateKey(reminder.date) || selectedCalendarDateKey);
+    setReminderTime(reminder.time || '');
+    setShowReminderModal(true);
+  };
+  const confirmDeleteReminder = (reminderId) => {
+    Alert.alert(
+      'Delete Reminder?',
+      'This reminder will be removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setCareReminders(prev => prev.filter(reminder => reminder.id !== reminderId));
+          },
+        },
+      ]
+    );
+  };
+  const handleReminderPress = (reminder) => {
+    const reminderDateLabel = formatReminderDate(reminder.date);
+    const reminderTimeLabel = `\nTime: ${reminder.time || 'Not set'}`;
+    Alert.alert(
+      reminder.title,
+      `Date: ${reminderDateLabel}${reminderTimeLabel}`,
+      [
+        {
+          text: reminder.completed ? 'Mark Incomplete' : 'Complete',
+          onPress: () => toggleReminderComplete(reminder.id),
+        },
+        {
+          text: 'Edit',
+          onPress: () => openEditReminder(reminder),
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => confirmDeleteReminder(reminder.id),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? '☀️ Good morning' : hour < 17 ? '🌤️ Good afternoon' : '🌙 Good evening';
@@ -477,7 +732,12 @@ const ACTION_ICONS = [
     <Text style={s.sosText}>🚨 SOS</Text>
   </TouchableOpacity>
 </View>
-      <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
+      <PetAvatarRow
+        pets={PETS}
+        selectedId={selectedPetId}
+        onSelect={handleSelectPet}
+        bounceValue={petBounce}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Health Score */}
@@ -569,55 +829,87 @@ const ACTION_ICONS = [
         <View style={s.section}>
           <View style={s.sectionHeaderRow}>
             <Text style={s.sectionTitle}>Care Calendar</Text>
-            {calendarPending > 0 && <Badge label={`${calendarPending} pending`} color={C.accent} />}
+            <TouchableOpacity style={s.calendarAddBtn} onPress={openReminderModal}>
+              <Text style={s.calendarAddBtnText}>＋ Add Reminder</Text>
+            </TouchableOpacity>
           </View>
-          <View style={{ flexDirection: 'row', marginBottom: 14 }}>
-            {[
-              { key: 'today', label: 'Today' },
-              { key: 'tomorrow', label: 'Tomorrow' },
-              { key: 'thisWeek', label: 'This Week' },
-            ].map((filter) => (
-              <TouchableOpacity
-                key={filter.key}
-                style={[
-                  s.tabPill,
-                  calendarFilter === filter.key && s.tabPillActive,
-                  {
-                    marginRight: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                  },
-                ]}
-                onPress={() => setCalendarFilter(filter.key)}
-              >
-                <Text
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 4, paddingRight: 8, marginBottom: 14 }}
+          >
+            {calendarDays.map((date) => {
+              const selected = formatLocalDateKey(date) === selectedCalendarDateKey;
+              return (
+                <TouchableOpacity
+                  key={formatLocalDateKey(date)}
                   style={[
-                    s.tabPillText,
-                    calendarFilter === filter.key && s.tabPillTextActive,
+                    s.tabPill,
+                    selected && s.tabPillActive,
                     {
-                      fontSize: 12,
-                      fontWeight: '700',
+                      marginRight: 10,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      minWidth: 56,
+                      alignItems: 'center',
                     },
                   ]}
+                  onPress={() => setSelectedCalendarDate(date)}
                 >
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {calendarFilter === 'tomorrow' ? (
-            <Card><Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>No care scheduled for tomorrow</Text></Card>
-          ) : calendarTasks.length === 0 ? (
-            <Card><Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>🎉 No care scheduled right now!</Text></Card>
+                  <Text
+                    style={[
+                      s.tabPillText,
+                      selected && s.tabPillTextActive,
+                      { fontSize: 11, fontWeight: '700', textAlign: 'center' },
+                    ]}
+                  >
+                    {date.toLocaleDateString([], { weekday: 'short' })}
+                  </Text>
+                  <Text
+                    style={[
+                      s.tabPillText,
+                      selected && s.tabPillTextActive,
+                      { fontSize: 16, fontWeight: '800', marginTop: 2, textAlign: 'center' },
+                    ]}
+                  >
+                    {date.getDate()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {calendarReminders.length === 0 ? (
+            <Card>
+              <Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>
+                No care scheduled for this day
+              </Text>
+            </Card>
           ) : (
-            calendarTasks.map(task => (
-              <TouchableOpacity key={task.id} style={[s.taskCard, task.done && s.taskCardDone]} onPress={() => toggleTask(task.id)}>
-                <Text style={s.taskCheck}>{task.done ? '✅' : '⬜️'}</Text>
-                <View style={s.taskInfo}>
-                  <Text style={[s.taskTitle, task.done && s.taskTitleDone]}>{task.title}</Text>
-                  <Text style={s.taskTime}>{task.time}</Text>
-                </View>
-                <Text style={{ fontSize: 24 }}>{task.icon}</Text>
+            calendarReminders.map(reminder => (
+              <TouchableOpacity
+                key={reminder.id}
+                activeOpacity={0.9}
+                onPress={() => handleReminderPress(reminder)}
+              >
+                <Card style={[s.reminderCard, reminder.completed && s.reminderCardDone]}>
+                  <View style={s.reminderIconWrap}>
+                    <Text style={s.reminderIcon}>{reminder.icon || '🔔'}</Text>
+                  </View>
+                  <View style={s.reminderContent}>
+                    <Text style={[s.reminderTitle, reminder.completed && s.reminderTitleDone]}>
+                      {reminder.title}
+                    </Text>
+                    <Text style={s.reminderDate}>
+                      {formatReminderDate(reminder.date)}
+                      {reminder.time ? ` · ${reminder.time}` : ''}
+                    </Text>
+                  </View>
+                  <View style={[s.reminderStatusPill, reminder.completed && s.reminderStatusPillDone]}>
+                    <Text style={s.reminderStatusText}>
+                      {reminder.completed ? 'Done' : 'Planned'}
+                    </Text>
+                  </View>
+                </Card>
               </TouchableOpacity>
             ))
           )}
@@ -669,6 +961,65 @@ const ACTION_ICONS = [
               </TouchableOpacity>
               <TouchableOpacity style={s.customActionSaveBtn} onPress={saveCustomAction}>
                 <Text style={s.customActionSaveText}>Save Action</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showReminderModal} transparent animationType="fade" onRequestClose={() => setShowReminderModal(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.reminderModal}>
+            <Text style={s.customActionModalTitle}>{editingReminder ? 'Edit Reminder' : 'Create Reminder'}</Text>
+            <TextInput
+              style={s.customActionInput}
+              value={reminderTitle}
+              onChangeText={setReminderTitle}
+              placeholder="Reminder title"
+              placeholderTextColor={C.muted}
+            />
+            <TextInput
+              style={s.customActionInput}
+              value={reminderDate}
+              onChangeText={setReminderDate}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={C.muted}
+            />
+            <TextInput
+              style={s.customActionInput}
+              value={reminderTime}
+              onChangeText={setReminderTime}
+              placeholder="7:00 PM"
+              placeholderTextColor={C.muted}
+            />
+            <Text style={s.reminderModalLabel}>Icon</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.iconPickerRow}>
+              {reminderIconOptions.map((icon, index) => (
+                <TouchableOpacity
+                  key={`${icon}-${index}`}
+                  style={[s.iconPickChip, reminderIcon === icon && s.iconPickChipActive]}
+                  onPress={() => setReminderIcon(icon)}
+                >
+                  <Text style={[s.iconPickChipText, reminderIcon === icon && s.iconPickChipTextActive]}>{icon}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={s.customActionModalButtons}>
+              <TouchableOpacity
+                style={s.customActionCancelBtn}
+                onPress={() => {
+                  setShowReminderModal(false);
+                  setEditingReminder(null);
+                  setReminderTitle('');
+                  setReminderIcon('🍽️');
+                  setReminderDate(selectedCalendarDateKey);
+                  setReminderTime('');
+                }}
+              >
+                <Text style={s.customActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={saveReminder}>
+                <Text style={s.customActionSaveText}>Save Reminder</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2651,7 +3002,73 @@ healthScoreCard: {
     fontWeight: '800',
     textTransform: 'capitalize',
   },
-taskCard: {
+  calendarAddBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,107,53,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,53,0.35)',
+  },
+  calendarAddBtnText: {
+    color: C.accent,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reminderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: '#1e1e1e',
+  },
+  reminderCardDone: {
+    opacity: 0.6,
+  },
+  reminderIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.bg,
+    marginRight: 12,
+  },
+  reminderIcon: {
+    fontSize: 22,
+  },
+  reminderContent: {
+    flex: 1,
+  },
+  reminderTitle: {
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  reminderTitleDone: {
+    textDecorationLine: 'line-through',
+    color: C.muted,
+  },
+  reminderDate: {
+    color: C.muted,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  reminderStatusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,107,53,0.14)',
+    marginLeft: 10,
+  },
+  reminderStatusPillDone: {
+    backgroundColor: 'rgba(74,222,128,0.15)',
+  },
+  reminderStatusText: {
+    color: C.accent,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  taskCard: {
   flexDirection: 'row',
   alignItems: 'center',
 
@@ -2717,6 +3134,11 @@ taskCard: {
   customActionCancelText: { color: C.muted, fontWeight: '700' },
   customActionSaveBtn: { flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center', backgroundColor: C.accent },
   customActionSaveText: { color: '#fff', fontWeight: '800' },
+  reminderModal: { backgroundColor: C.card, borderRadius: 24, padding: 18, borderWidth: 1, borderColor: C.border },
+  reminderModalLabel: { color: C.text, fontSize: 13, fontWeight: '800', marginBottom: 8, marginTop: 6 },
+  reminderDateCard: { backgroundColor: C.bg, borderRadius: 16, borderWidth: 1, borderColor: C.border, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 6 },
+  reminderDateCardText: { color: C.text, fontSize: 14, fontWeight: '700' },
+  reminderDateCardHint: { color: C.muted, fontSize: 12, marginTop: 3 },
 
   // Health
   recordIconWrap:    { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
