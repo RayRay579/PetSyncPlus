@@ -93,6 +93,32 @@ const AI_SUGGESTIONS = [
   'Signs my pet is overweight?',
 ];
 
+const PRESET_ACTIONS = [
+  { label: 'Treat Time', icon: '🍖' },
+  { label: 'Couch Cuddles', icon: '❤️' },
+  { label: 'Bath Time', icon: '🛁' },
+  { label: 'Grooming', icon: '🧼' },
+  { label: 'Nap Time', icon: '😴' },
+  { label: 'Photo Time', icon: '📸' },
+  { label: 'Park Time', icon: '🏞️' },
+  { label: 'Beach Day', icon: '🏖️' },
+  { label: 'Fetch Session', icon: '🎾' },
+  { label: 'Run Together', icon: '🏃' },
+  { label: 'Yarn Play', icon: '🧶' },
+  { label: 'Bird Watching', icon: '👀' },
+  { label: 'Cat Nap', icon: '😺' },
+  { label: 'Bird Bath', icon: '🛁' },
+  { label: 'Singing Time', icon: '🎶' },
+  { label: 'Tank Cleaning', icon: '🧽' },
+  { label: 'Aquarium Time', icon: '✨' },
+  { label: 'Heat Lamp Check', icon: '🔥' },
+  { label: 'Clean Enclosure', icon: '🧹' },
+  { label: 'Bunny Cuddles', icon: '🐰' },
+  { label: 'Snack Time', icon: '🥕' },
+  { label: 'Trail Ride', icon: '🐎' },
+  { label: 'Horse Grooming', icon: '🧴' },
+];
+
 // ─────────────────────────────────────────────
 // REUSABLE COMPONENTS
 // ─────────────────────────────────────────────
@@ -211,6 +237,13 @@ function DashboardScreen({ navigation }) {
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [tasks, setTasks] = useState(TASKS);
   const [activityLogs, setActivityLogs] = useState([]);
+  const [customActions, setCustomActions] = useState([]);
+  const [showAddActionModal, setShowAddActionModal] = useState(false);
+  const [customActionName, setCustomActionName] = useState('');
+  const [customActionIcon, setCustomActionIcon] = useState('⭐');
+  const [petScores, setPetScores] = useState(
+    Object.fromEntries(PETS.map(p => [p.id, p.score]))
+  );
   const pet = PETS.find(p => p.id === selectedPetId);
   const petTasks = tasks.filter(t => t.petId === selectedPetId);
   const pending = petTasks.filter(t => !t.done).length;
@@ -219,25 +252,87 @@ function DashboardScreen({ navigation }) {
   const greeting = hour < 12 ? '☀️ Good morning' : hour < 17 ? '🌤️ Good afternoon' : '🌙 Good evening';
 
   const toggleTask = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: !t.done } : t));
+
+    if (!task.done) {
+      addActivityLog(task.type, task.title, task.icon, { source: 'task', taskId: task.id, petId: task.petId });
+    } else {
+      const matchingTaskLog = activityLogs.find(log => log.source === 'task' && log.taskId === task.id && log.petId === task.petId);
+
+      if (matchingTaskLog) {
+        setActivityLogs(prev => prev.filter(log => !(log.source === 'task' && log.taskId === task.id && log.petId === task.petId)));
+
+        const scoreDelta = getScoreDelta(matchingTaskLog.type);
+        if (scoreDelta > 0) {
+          setPetScores(prev => ({
+            ...prev,
+            [task.petId]: Math.max(0, Math.min(100, (prev[task.petId] ?? PETS.find(p => p.id === task.petId)?.score ?? 0) - scoreDelta)),
+          }));
+        }
+      }
+    }
   };
 
-  const addActivityLog = (type, title, icon) => {
+  const getScoreDelta = (type) => (
+    type === 'meal' || type === 'feeding'
+      ? 1
+      : type === 'walk' || type === 'play' || type === 'social_time'
+        ? 2
+        : type === 'medication'
+          ? 3
+          : type === 'weight' || type === 'tank_temp' || type === 'water_change' || type === 'check_ph' || type === 'filter_cleaned' || type === 'grooming' || type === 'litter_cleaned' || type === 'cage_cleaned' || type === 'heat_check' || type === 'humidity_check' || type === 'habitat_cleaned' || type === 'custom'
+            ? 1
+            : 0
+  );
+
+  const addActivityLog = (type, title, icon, extra = {}) => {
     const now = new Date();
+    const targetPetId = extra.petId ?? pet.id;
     const newLog = {
       id: Date.now().toString(),
-      petId: pet.id,
+      petId: targetPetId,
       type,
       title,
       icon,
       time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       dateKey: now.toDateString(),
+      ...extra,
     };
 
     setActivityLogs(prev => [newLog, ...prev].slice(0, 5));
+
+    const scoreDelta = getScoreDelta(type);
+
+    if (scoreDelta > 0) {
+      setPetScores(prev => ({
+        ...prev,
+        [targetPetId]: Math.max(0, Math.min(100, (prev[targetPetId] ?? PETS.find(p => p.id === targetPetId)?.score ?? 0) + scoreDelta)),
+      }));
+    }
   };
 
-  const scoreColor = pet.score >= 85 ? C.green : pet.score >= 65 ? C.yellow : C.red;
+  const deleteActivityLog = (logId) => {
+    const logToDelete = activityLogs.find(log => log.id === logId);
+
+    setActivityLogs(prev => prev.filter(log => log.id !== logId));
+
+    if (logToDelete) {
+      const scoreDelta = getScoreDelta(logToDelete.type);
+
+      if (scoreDelta > 0) {
+        setPetScores(prev => ({
+          ...prev,
+          [logToDelete.petId]: Math.max(0, Math.min(100, (prev[logToDelete.petId] ?? PETS.find(p => p.id === logToDelete.petId)?.score ?? 0) - scoreDelta)),
+        }));
+      }
+    }
+  };
+
+  const currentScore = petScores[selectedPetId] ?? pet.score;
+  const scoreColor = currentScore >= 85 ? C.green : currentScore >= 65 ? C.yellow : C.red;
   const recentActivity = activityLogs.filter(log => log.petId === pet.id);
   const petActivityDays = [...new Set(recentActivity.map(log => log.dateKey || new Date().toDateString()))].sort((a, b) => new Date(b) - new Date(a));
   let streakDays = 0;
@@ -252,31 +347,109 @@ function DashboardScreen({ navigation }) {
     }
   }
   streakDays = Math.max(1, streakDays);
+  const healthInsights = [];
+
+  if (streakDays >= 3) {
+    healthInsights.push('🟢 Daily care streak active');
+  }
+
+  if (recentActivity.length >= 3) {
+    healthInsights.push('🟢 Active care logging');
+  } else if (recentActivity.length === 0) {
+    healthInsights.push('🟡 No recent pet care logged');
+  }
+
+  if (currentScore >= 90) {
+    healthInsights.push('🟢 Excellent wellness status');
+  } else if (currentScore < 70) {
+    healthInsights.push('🟡 Wellness needs attention');
+  }
+
+  if (healthInsights.length === 0) {
+    healthInsights.push('🟢 Wellness status looks stable');
+  }
+
+  const visibleHealthInsights = healthInsights.slice(0, 3);
   const quickActions = pet.species === 'fish'
     ? [
         { icon: '🍽️', label: 'Feed Fish', action: () => addActivityLog('feeding', 'Fish fed', '🍽️') },
         { icon: '💧', label: 'Water Change', action: () => addActivityLog('water_change', 'Water changed', '💧') },
         { icon: '🌡️', label: 'Tank Temp', action: () => addActivityLog('tank_temp', 'Tank temperature checked', '🌡️') },
+        { icon: '🧪', label: 'Check pH', action: () => addActivityLog('check_ph', 'Water pH checked', '🧪') },
+        { icon: '🧽', label: 'Filter Cleaned', action: () => addActivityLog('filter_cleaned', 'Filter cleaned', '🧽') },
         { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
       ]
-    : pet.species === 'cat'
+    : pet.species === 'bird'
       ? [
-          { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
-          { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+          { icon: '🍽️', label: 'Feed Bird', action: () => addActivityLog('feeding', 'Bird fed', '🍽️') },
+          { icon: '🧼', label: 'Cage Cleaned', action: () => addActivityLog('cage_cleaned', 'Cage cleaned', '🧼') },
+          { icon: '💬', label: 'Social Time', action: () => addActivityLog('social_time', 'Social time logged', '💬') },
           { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
           { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
         ]
-      : [
-          { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
-          { icon: '🦮', label: 'Log Walk', action: () => addActivityLog('walk', 'Walk logged', '🦮') },
-          { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
-          { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
-        ];
+      : pet.species === 'reptile'
+        ? [
+            { icon: '🍽️', label: 'Feed Reptile', action: () => addActivityLog('feeding', 'Reptile fed', '🍽️') },
+            { icon: '🔥', label: 'Heat Check', action: () => addActivityLog('heat_check', 'Heat checked', '🔥') },
+            { icon: '💧', label: 'Humidity Check', action: () => addActivityLog('humidity_check', 'Humidity checked', '💧') },
+            { icon: '🧽', label: 'Habitat Cleaned', action: () => addActivityLog('habitat_cleaned', 'Habitat cleaned', '🧽') },
+            { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+          ]
+        : pet.species === 'cat'
+          ? [
+              { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+              { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+              { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
+              { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+              { icon: '💊', label: 'Medication', action: () => addActivityLog('medication', 'Medication given', '💊') },
+              { icon: '🧹', label: 'Litter Cleaned', action: () => addActivityLog('litter_cleaned', 'Litter cleaned', '🧹') },
+              { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+            ]
+          : [
+              { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+              { icon: '🦮', label: 'Log Walk', action: () => addActivityLog('walk', 'Walk logged', '🦮') },
+              { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+              { icon: '💊', label: 'Medication', action: () => addActivityLog('medication', 'Medication given', '💊') },
+              { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+              { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
+              { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+            ];
+const ACTION_ICONS = [
+
+];  const displayedQuickActions = [
+    ...quickActions,
+    ...customActions,
+    {
+      icon: '➕',
+      label: 'Add Action',
+      action: () => setShowAddActionModal(true),
+      isAddAction: true,
+    },
+  ];
+
+  const saveCustomAction = () => {
+    const trimmedName = customActionName.trim();
+    if (!trimmedName) {
+      Alert.alert('Action name required');
+      return;
+    }
+
+    setCustomActions(prev => [
+      ...prev,
+      {
+        icon: customActionIcon,
+        label: trimmedName,
+        action: () => addActivityLog('custom', trimmedName, customActionIcon),
+      },
+    ]);
+    setCustomActionName('');
+    setCustomActionIcon('⭐');
+    setShowAddActionModal(false);
+  };
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
+      {/* Header */}
 <View style={s.dashHeader}>
   <View style={{ flex: 1, paddingRight: 60 }}>
     <Text
@@ -297,15 +470,15 @@ function DashboardScreen({ navigation }) {
     <Text style={s.sosText}>🚨 SOS</Text>
   </TouchableOpacity>
 </View>
-        {/* Pet Switcher */}
-        <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
+      <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
 
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Health Score */}
         <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Health')}>
           <Card style={s.healthScoreCard}>
             <View style={s.healthScoreLeft}>
               <View style={[s.scoreCircle, { borderColor: scoreColor }]}>
-                <Text style={[s.scoreNumber, { color: scoreColor }]}>{pet.score}</Text>
+                <Text style={[s.scoreNumber, { color: scoreColor }]}>{currentScore}</Text>
                 <Text style={s.scoreLabel}>/100</Text>
               </View>
             </View>
@@ -313,9 +486,9 @@ function DashboardScreen({ navigation }) {
               <Text style={s.healthScoreTitle}>{pet.name}'s Health Score</Text>
               <Text style={s.healthScoreSub}>🐾 {pet.breed} · {pet.age}</Text>
               <View style={{ marginTop: 8 }}>
-                <Text style={s.healthScoreCheck}>🟢 All vaccines up to date</Text>
-                <Text style={s.healthScoreCheck}>🟡 Weight check due in 5 days</Text>
-                <Text style={s.healthScoreCheck}>🟢 Medications on schedule</Text>
+                {visibleHealthInsights.map((insight, index) => (
+                  <Text key={`${insight}-${index}`} style={s.healthScoreCheck}>{insight}</Text>
+                ))}
               </View>
             </View>
           </Card>
@@ -324,14 +497,14 @@ function DashboardScreen({ navigation }) {
         {/* Quick Actions */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Quick Actions</Text>
-          <View style={s.quickActionsRow}>
-            {quickActions.map(item => (
-              <TouchableOpacity key={item.label} style={s.quickAction} onPress={item.action}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
+            {displayedQuickActions.map(item => (
+              <TouchableOpacity key={item.label} style={[s.quickAction, item.isAddAction && s.quickActionAdd]} onPress={item.action}>
                 <Text style={s.quickActionIcon}>{item.icon}</Text>
                 <Text style={s.quickActionLabel}>{item.label}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Streak */}
@@ -358,7 +531,15 @@ function DashboardScreen({ navigation }) {
             </Card>
           ) : (
             recentActivity.map(log => (
-              <Card key={log.id} style={s.recentActivityCard}>
+              <TouchableOpacity
+                key={log.id}
+                activeOpacity={0.9}
+                onLongPress={() => Alert.alert('Delete Activity?', 'Remove this activity log?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: () => deleteActivityLog(log.id) },
+                ])}
+              >
+                <Card style={s.recentActivityCard}>
                 <View style={s.recentActivityIconWrap}>
                   <Text style={s.recentActivityIcon}>{log.icon}</Text>
                 </View>
@@ -371,7 +552,8 @@ function DashboardScreen({ navigation }) {
                     </View>
                   </View>
                 </View>
-              </Card>
+                </Card>
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -398,8 +580,57 @@ function DashboardScreen({ navigation }) {
           )}
         </View>
 
-<View style={{ height: 130 }} />
+        <View style={{ height: 130 }} />
       </ScrollView>
+
+      <Modal visible={showAddActionModal} transparent animationType="fade" onRequestClose={() => setShowAddActionModal(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.customActionModal}>
+            <Text style={s.customActionModalTitle}>Create Action</Text>
+            <TextInput
+              style={s.customActionInput}
+              value={customActionName}
+              onChangeText={setCustomActionName}
+              placeholder="Action name"
+              placeholderTextColor={C.muted}
+            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetActionRow}>
+              {PRESET_ACTIONS.map(preset => (
+                <TouchableOpacity
+                  key={preset.label}
+                  style={s.presetActionCard}
+                  onPress={() => {
+                    setCustomActionName(preset.label);
+                    setCustomActionIcon(preset.icon);
+                  }}
+                >
+                  <Text style={s.presetActionIcon}>{preset.icon}</Text>
+                  <Text style={s.presetActionLabel}>{preset.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.iconPickerRow}>
+              {ACTION_ICONS.map((icon, index) => (
+                <TouchableOpacity
+                  key={`${icon}-${index}`}
+                  style={[s.iconPickChip, customActionIcon === icon && s.iconPickChipActive]}
+                  onPress={() => setCustomActionIcon(icon)}
+                >
+                  <Text style={[s.iconPickChipText, customActionIcon === icon && s.iconPickChipTextActive]}>{icon}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={s.customActionModalButtons}>
+              <TouchableOpacity style={s.customActionCancelBtn} onPress={() => setShowAddActionModal(false)}>
+                <Text style={s.customActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={saveCustomAction}>
+                <Text style={s.customActionSaveText}>Save Action</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -408,7 +639,7 @@ function DashboardScreen({ navigation }) {
 function HealthHubScreen() {
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
-
+const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
   const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight'];
   const tabLabels = {
     all: '📋 All',
@@ -425,7 +656,7 @@ function HealthHubScreen() {
     weight: 'weight',
   };
 
-  const records = HEALTH_RECORDS.filter(
+const records = healthRecords.filter(
     (r) =>
       r.petId === selectedPetId &&
       (activeTab === 'all' || typeMap[r.type] === activeTab)
@@ -439,7 +670,37 @@ function HealthHubScreen() {
     overdue: { label: 'OVERDUE', color: C.red },
     upcoming: { label: 'UPCOMING', color: C.blue },
   };
+const createHealthRecord = (type) => {
+  const iconMap = {
+    vaccination: '💉',
+    medication: '💊',
+    appointment: '🏥',
+    weight: '⚖️',
+    symptom: '🤒',
+  };
 
+  const titleMap = {
+    vaccination: 'New Vaccination Record',
+    medication: 'New Medication Record',
+    appointment: 'New Appointment',
+    weight: 'Weight Update',
+    symptom: 'Symptom Logged',
+  };
+
+  const newRecord = {
+    id: Date.now().toString(),
+    petId: selectedPetId,
+    type,
+    title: titleMap[type],
+    date: new Date().toLocaleDateString(),
+    provider: null,
+    status: 'current',
+    icon: iconMap[type],
+    nextDue: null,
+  };
+
+  setHealthRecords((prev) => [newRecord, ...prev]);
+};
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={[s.pageHeader, { paddingTop: 2, marginTop: 0, marginBottom: 0 }]}>
@@ -632,14 +893,16 @@ function HealthHubScreen() {
       {/* FAB */}
       <TouchableOpacity
         style={s.fab}
-        onPress={() =>
-          Alert.alert(
-            'Add Record',
-            'Choose record type:\n\n💉 Vaccination\n💊 Medication\n🏥 Appointment\n⚖️ Weight\n🤒 Symptom',
-            [{ text: 'OK' }]
-          )
-        }
-      >
+onPress={() =>
+  Alert.alert('Add Record', 'Choose record type', [
+    { text: 'Vaccination 💉', onPress: () => createHealthRecord('vaccination') },
+    { text: 'Medication 💊', onPress: () => createHealthRecord('medication') },
+    { text: 'Appointment 🏥', onPress: () => createHealthRecord('appointment') },
+    { text: 'Weight ⚖️', onPress: () => createHealthRecord('weight') },
+    { text: 'Symptom 🤒', onPress: () => createHealthRecord('symptom') },
+    { text: 'Cancel', style: 'cancel' },
+  ])
+}      >
         <Text style={s.fabText}>＋</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -1031,7 +1294,7 @@ function AIVetScreen({ navigation }) {
             >
               <Text style={[s.chatText, msg.role === 'user' && { color: '#fff' }, msg.emergency && { color: '#ffd7d7', fontWeight: '600' }]}>{msg.text}</Text>
             </View>
-            <Text style={[s.recordDate, { marginTop: 4, textAlign: msg.role === 'user' ? 'right' : 'left' }]}>
+            <Text style={[s.chatTimestamp, { textAlign: msg.role === 'user' ? 'right' : 'left' }]}>
               {msg.time}
             </Text>
           </View>
@@ -1040,7 +1303,7 @@ function AIVetScreen({ navigation }) {
           <View style={[s.chatBubbleWrap, { alignSelf: 'flex-start', marginRight: 36 }]}>
             <Text style={{ fontSize: 24 }}>🩺</Text>
             <View style={s.chatBubbleAIBg}>
-              <Text style={s.chatText}>Vet Assistant is typing...</Text>
+              <Text style={s.typingText}>Vet Assistant is typing...</Text>
             </View>
           </View>
         )}
@@ -1518,8 +1781,8 @@ sosButton: {
   tabPillActive:     { backgroundColor: C.accent, borderColor: C.accent },
   tabPillText:       { color: C.muted, fontSize: 13, fontWeight: '700' },
   tabPillTextActive: { color: '#fff' },
-  fab:               { position: 'absolute', right: 22, bottom: 28, width: 58, height: 58, borderRadius: 29, backgroundColor: C.accent, justifyContent: 'center', alignItems: 'center', shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
-  fabText:           { color: '#fff', fontSize: 30, fontWeight: '300', lineHeight: 56 },
+  fab:               { position: 'absolute', right: 22, bottom: 110, width: 64, height: 64, borderRadius: 32, backgroundColor: C.accent, justifyContent: 'center', alignItems: 'center', shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  fabText:           { color: '#fff', fontSize: 34, fontWeight: '300', lineHeight: 36 },
 
   // Dashboard
 healthScoreCard: {
@@ -1659,17 +1922,19 @@ taskCard: {
   taskTitle:         { color: C.text, fontSize: 15, fontWeight: '700' },
   taskTitleDone:     { textDecorationLine: 'line-through', color: C.muted },
   taskTime:          { color: C.muted, fontSize: 12, marginTop: 3 },
-  quickActionsRow:   { flexDirection: 'row', gap: 8, marginTop: 0 },
-quickAction: {
-  flex: 1,
+  quickAction: {
   backgroundColor: '#1e1e1e',
 
+  width: 82,
+  height: 86,
   borderRadius: 22,
 
-  paddingVertical: 18,
+  paddingVertical: 10,
+  paddingHorizontal: 8,
   alignItems: 'center',
+  justifyContent: 'center',
 
-  marginHorizontal: 2,
+  marginRight: 12,
 
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 4 },
@@ -1678,8 +1943,27 @@ quickAction: {
 
   elevation: 2,
 },
-  quickActionIcon:   { fontSize: 36, marginBottom: 6 },
-  quickActionLabel:  { color: C.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  quickActionIcon:   { fontSize: 30, marginBottom: 4 },
+  quickActionLabel:  { color: C.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', lineHeight: 13 },
+  quickActionAdd:    { borderWidth: 1, borderColor: C.accent },
+  modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.58)', justifyContent: 'center', padding: 20 },
+  customActionModal: { backgroundColor: C.card, borderRadius: 24, padding: 18, borderWidth: 1, borderColor: C.border },
+  customActionModalTitle: { color: C.text, fontSize: 20, fontWeight: '800', marginBottom: 14 },
+  customActionInput: { backgroundColor: C.bg, color: C.text, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: C.border, marginBottom: 14 },
+  iconPickerRow: { paddingVertical: 6, gap: 8 },
+  iconPickChip: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, marginRight: 8, padding: 8 },
+  iconPickChipActive: { borderColor: C.accent, borderWidth: 2, backgroundColor: 'rgba(255,107,53,0.15)' },
+  iconPickChipText: { fontSize: 34, lineHeight: 34 },
+  iconPickChipTextActive: { fontSize: 38, lineHeight: 38 },
+  presetActionRow: { paddingVertical: 8, gap: 10 },
+  presetActionCard: { width: 110, padding: 12, borderRadius: 18, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, marginRight: 10 },
+  presetActionIcon: { fontSize: 22, marginBottom: 8, textAlign: 'center' },
+  presetActionLabel: { color: C.text, fontSize: 12, fontWeight: '700', textAlign: 'center', lineHeight: 15 },
+  customActionModalButtons: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  customActionCancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center', backgroundColor: C.bg, borderWidth: 1, borderColor: C.border },
+  customActionCancelText: { color: C.muted, fontWeight: '700' },
+  customActionSaveBtn: { flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center', backgroundColor: C.accent },
+  customActionSaveText: { color: '#fff', fontWeight: '800' },
 
   // Health
   recordIconWrap:    { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
@@ -1736,17 +2020,19 @@ quickAction: {
   // Modals / AI Vet
   modalHeader:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border },
   modalTitle:        { color: C.text, fontSize: 17, fontWeight: '900' },
-  disclaimer:        { margin: 12, backgroundColor: C.blue + '20', borderLeftWidth: 3, borderLeftColor: C.blue, borderRadius: 10, padding: 10 },
-  disclaimerText:    { color: C.blue, fontSize: 12, lineHeight: 17 },
+  disclaimer:        { marginHorizontal: 12, marginTop: 12, marginBottom: 8, backgroundColor: C.blue + '22', borderLeftWidth: 3, borderLeftColor: C.blue, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 },
+  disclaimerText:    { color: C.blue, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   petContextBar:     { marginHorizontal: 12, marginBottom: 4, backgroundColor: C.card, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.border },
   petContextText:    { color: C.muted, fontSize: 12, textAlign: 'center', fontWeight: '700' },
   chatBubbleWrap:    { marginBottom: 14, maxWidth: '86%' },
   chatBubbleAI:      { alignSelf: 'flex-start' },
   chatBubbleUser:    { alignSelf: 'flex-end' },
-  chatBubble:        { borderRadius: 18, padding: 13 },
-  chatBubbleAIBg:    { backgroundColor: C.card, borderBottomLeftRadius: 5 },
+  chatBubble:        { borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14 },
+  chatBubbleAIBg:    { backgroundColor: C.card, borderBottomLeftRadius: 5, borderWidth: 1, borderColor: C.border },
   chatBubbleUserBg:  { backgroundColor: C.accent, borderBottomRightRadius: 5 },
   chatText:          { color: C.text, fontSize: 14, lineHeight: 20 },
+  chatTimestamp:     { color: C.muted, fontSize: 11, marginTop: 4, fontWeight: '600' },
+  typingText:        { color: C.muted, fontSize: 14, lineHeight: 20, fontStyle: 'italic' },
   suggestion:        { backgroundColor: C.card, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
   suggestionText:    { color: C.muted, fontSize: 12, fontWeight: '700' },
   chatInputRow:      { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: C.border },
