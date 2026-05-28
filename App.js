@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
@@ -236,6 +236,7 @@ function PetAvatarRow({ pets, selectedId, onSelect }) {
 function DashboardScreen({ navigation }) {
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [tasks, setTasks] = useState(TASKS);
+  const [calendarFilter, setCalendarFilter] = useState('today');
   const [activityLogs, setActivityLogs] = useState([]);
   const [customActions, setCustomActions] = useState([]);
   const [showAddActionModal, setShowAddActionModal] = useState(false);
@@ -245,8 +246,14 @@ function DashboardScreen({ navigation }) {
     Object.fromEntries(PETS.map(p => [p.id, p.score]))
   );
   const pet = PETS.find(p => p.id === selectedPetId);
-  const petTasks = tasks.filter(t => t.petId === selectedPetId);
-  const pending = petTasks.filter(t => !t.done).length;
+  const baseCareTasks = tasks.filter(t => t.petId === selectedPetId && t.source !== 'healthRecord');
+  const healthCareTasks = tasks.filter(t => t.petId === selectedPetId && t.source === 'healthRecord');
+  const calendarTasks = calendarFilter === 'today'
+    ? baseCareTasks
+    : calendarFilter === 'tomorrow'
+      ? []
+      : [...baseCareTasks, ...healthCareTasks];
+  const calendarPending = calendarTasks.filter(t => !t.done).length;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? '☀️ Good morning' : hour < 17 ? '🌤️ Good afternoon' : '🌙 Good evening';
@@ -497,7 +504,7 @@ const ACTION_ICONS = [
         {/* Quick Actions */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Quick Actions</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 0, gap: 0 }}>
             {displayedQuickActions.map(item => (
               <TouchableOpacity key={item.label} style={[s.quickAction, item.isAddAction && s.quickActionAdd]} onPress={item.action}>
                 <Text style={s.quickActionIcon}>{item.icon}</Text>
@@ -558,16 +565,52 @@ const ACTION_ICONS = [
           )}
         </View>
 
-        {/* Today's Tasks */}
+        {/* Care Calendar */}
         <View style={s.section}>
           <View style={s.sectionHeaderRow}>
-            <Text style={s.sectionTitle}>Today's Tasks</Text>
-            {pending > 0 && <Badge label={`${pending} pending`} color={C.accent} />}
+            <Text style={s.sectionTitle}>Care Calendar</Text>
+            {calendarPending > 0 && <Badge label={`${calendarPending} pending`} color={C.accent} />}
           </View>
-          {petTasks.length === 0 ? (
-            <Card><Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>🎉 No tasks today!</Text></Card>
+          <View style={{ flexDirection: 'row', marginBottom: 14 }}>
+            {[
+              { key: 'today', label: 'Today' },
+              { key: 'tomorrow', label: 'Tomorrow' },
+              { key: 'thisWeek', label: 'This Week' },
+            ].map((filter) => (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  s.tabPill,
+                  calendarFilter === filter.key && s.tabPillActive,
+                  {
+                    marginRight: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                  },
+                ]}
+                onPress={() => setCalendarFilter(filter.key)}
+              >
+                <Text
+                  style={[
+                    s.tabPillText,
+                    calendarFilter === filter.key && s.tabPillTextActive,
+                    {
+                      fontSize: 12,
+                      fontWeight: '700',
+                    },
+                  ]}
+                >
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {calendarFilter === 'tomorrow' ? (
+            <Card><Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>No care scheduled for tomorrow</Text></Card>
+          ) : calendarTasks.length === 0 ? (
+            <Card><Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>🎉 No care scheduled right now!</Text></Card>
           ) : (
-            petTasks.map(task => (
+            calendarTasks.map(task => (
               <TouchableOpacity key={task.id} style={[s.taskCard, task.done && s.taskCardDone]} onPress={() => toggleTask(task.id)}>
                 <Text style={s.taskCheck}>{task.done ? '✅' : '⬜️'}</Text>
                 <View style={s.taskInfo}>
@@ -1016,6 +1059,86 @@ function HealthHubScreen() {
     return [];
   };
 
+  const getRecordAlertSummary = (record) => {
+    const lines = [record.title];
+
+    if (record.date) lines.push(`Date: ${record.date}`);
+    if (record.provider) lines.push(`Provider: ${record.provider}`);
+    if (record.nextDue) lines.push(`Next due: ${record.nextDue}`);
+
+    const details = getRecordDisplayLines(record);
+    if (details.length > 0) {
+      lines.push('', ...details);
+    }
+
+    return lines.join('\n');
+  };
+
+  const getRecordFullDetails = (record) => {
+    const details = record.details || {};
+    const parts = [record.title, `Date: ${record.date}`];
+
+    if (record.provider) parts.push(`Provider: ${record.provider}`);
+    if (record.nextDue) parts.push(`Next due: ${record.nextDue}`);
+
+    if (record.type === 'vaccination') {
+      if (details.providerClinic) parts.push(`Provider / clinic: ${details.providerClinic}`);
+      if (details.nextDueDate) parts.push(`Next due date: ${details.nextDueDate}`);
+    }
+
+    if (record.type === 'medication') {
+      if (details.dosage) parts.push(`Dosage: ${details.dosage}`);
+      if (details.nextDoseDate) parts.push(`Next dose / due date: ${details.nextDoseDate}`);
+    }
+
+    if (record.type === 'appointment') {
+      if (details.vetClinic) parts.push(`Vet / clinic: ${details.vetClinic}`);
+      if (details.appointmentDate) parts.push(`Appointment date: ${details.appointmentDate}`);
+    }
+
+    if (record.type === 'weight') {
+      if (record.value != null) parts.push(`Value: ${record.value}${record.unit ? ` ${record.unit}` : ''}`);
+      if (details.weightNotes) parts.push(`Notes: ${details.weightNotes}`);
+    }
+
+    if (record.type === 'symptom') {
+      if (details.severity) parts.push(`Severity: ${details.severity}`);
+      if (details.symptomNotes) parts.push(`Notes: ${details.symptomNotes}`);
+    }
+
+    return parts.filter(Boolean).join('\n');
+  };
+
+  const showRecordActions = (record) => {
+    Alert.alert(
+      record.title,
+      getRecordAlertSummary(record),
+      [
+        { text: 'View', onPress: () => Alert.alert(record.title, getRecordFullDetails(record)) },
+        {
+          text: 'Edit',
+          onPress: () => {
+            setEditingRecord(record);
+            setPendingRecordType(record.type);
+            setRecordForm(getRecordFormFromRecord(record));
+            setShowRecordModal(true);
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Delete Record?', 'This health record will be removed.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => deleteRecord(record.id) },
+            ]);
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const currentScore = PETS.find((p) => p.id === selectedPetId)?.score ?? 0;
   const streakDays = Math.max(1, records.length ? new Set(records.map((record) => record.date)).size : 1);
   const latestRecords = [...records]
@@ -1243,14 +1366,15 @@ function HealthHubScreen() {
         </ScrollView>
 
         {records.length === 0 ? (
-          <Card style={{ alignItems: 'center', padding: 40, marginHorizontal: 16 }}>
-            <Text style={{ fontSize: 48 }}>📋</Text>
+          <Card style={{ alignItems: 'center', padding: 32, marginHorizontal: 16, borderRadius: 22, backgroundColor: '#1e1e1e', borderWidth: 1, borderColor: C.border }}>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>📋</Text>
 
             <Text
               style={{
                 color: C.text,
-                fontWeight: '700',
-                marginTop: 12,
+                fontWeight: '800',
+                fontSize: 18,
+                marginTop: 4,
               }}
             >
               No records yet
@@ -1259,10 +1383,23 @@ function HealthHubScreen() {
             <Text
               style={{
                 color: C.muted,
-                marginTop: 4,
+                marginTop: 6,
+                textAlign: 'center',
+                lineHeight: 18,
               }}
             >
-              Tap + to add {pet.name}'s first record
+              Add your first health record for {pet.name}
+            </Text>
+
+            <Text
+              style={{
+                color: C.muted,
+                marginTop: 8,
+                fontSize: 12,
+                fontWeight: '600',
+              }}
+            >
+              Tap + to get started
             </Text>
           </Card>
         ) : (
@@ -1279,7 +1416,6 @@ function HealthHubScreen() {
                 <View key={record.id} style={s.timelineItem}>
                   <View style={s.timelineRail}>
                     <View style={s.timelineLine} />
-
                     <View style={s.timelineNode}>
                       <Text style={s.timelineIcon}>{record.icon}</Text>
                     </View>
@@ -1288,7 +1424,7 @@ function HealthHubScreen() {
                   <TouchableOpacity
                     activeOpacity={0.85}
                     style={s.timelineCard}
-                    onPress={() => handleRecordPress(record)}
+                    onPress={() => showRecordActions(record)}
                   >
                     <View style={s.timelineCardTop}>
                       <View style={{ flex: 1 }}>
@@ -1296,7 +1432,7 @@ function HealthHubScreen() {
                         <Text style={s.timelineDate}>{record.date}</Text>
 
                         {getRecordDisplayLines(record).length > 0 && (
-                          <Text style={{ color: C.muted, fontSize: 11, lineHeight: 16, marginTop: 4 }}>
+                          <Text style={{ color: C.muted, fontSize: 11, lineHeight: 16, marginTop: 6 }}>
                             {getRecordDisplayLines(record).join('\n')}
                           </Text>
                         )}
@@ -1311,10 +1447,11 @@ function HealthHubScreen() {
                       </View>
 
                       {record.status && statusInfo[record.status] && (
-                        <Badge
-                          label={statusInfo[record.status].label}
-                          color={statusInfo[record.status].color}
-                        />
+                        <View style={[s.timelineBadge, { borderColor: statusInfo[record.status].color, backgroundColor: `${statusInfo[record.status].color}15` }]}>
+                          <Text style={[s.timelineBadgeText, { color: statusInfo[record.status].color }]}>
+                            {statusInfo[record.status].label}
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -2242,87 +2379,110 @@ const s = StyleSheet.create({
   flex:              { flex: 1 },
   card:              { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 0, borderWidth: 1, borderColor: C.border },
 section: {
-  marginTop: 28,
+  marginTop: 5,
   paddingHorizontal: 20,
 },
 timelineItem: {
   flexDirection: 'row',
-  marginBottom: 16,
+  marginBottom: 14,
 },
 
 timelineRail: {
-  width: 42,
+  width: 38,
   alignItems: 'center',
   position: 'relative',
 },
 
 timelineLine: {
   position: 'absolute',
-  top: 0,
-  bottom: -18,
+  top: 2,
+  bottom: -14,
   width: 2,
   backgroundColor: C.faint,
 },
 
 timelineNode: {
-  width: 34,
-  height: 34,
-  borderRadius: 17,
-  backgroundColor: C.cardHigh,
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: C.bg,
   alignItems: 'center',
   justifyContent: 'center',
-  borderWidth: 2,
+  borderWidth: 1.5,
   borderColor: C.accent,
   zIndex: 2,
 },
 
 timelineIcon: {
-  fontSize: 18,
+  fontSize: 17,
 },
 
 timelineCard: {
   flex: 1,
-  backgroundColor: C.card,
-  borderRadius: 20,
-  padding: 14,
+  backgroundColor: '#1e1e1e',
+  borderRadius: 18,
+  padding: 13,
   borderWidth: 1,
   borderColor: C.border,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 10,
+  elevation: 2,
 },
 
 timelineCardTop: {
   flexDirection: 'row',
-  alignItems: 'center',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
 },
 
 timelineTitle: {
   color: C.text,
   fontSize: 16,
   fontWeight: '800',
+  lineHeight: 20,
 },
 
 timelineDate: {
   color: C.muted,
-  fontSize: 12,
-  marginTop: 4,
+  fontSize: 11,
+  marginTop: 3,
 },
 
 timelineProvider: {
   color: C.muted,
-  fontSize: 12,
+  fontSize: 11,
   marginTop: 2,
 },
 
 timelineDue: {
   color: C.accent,
-  fontSize: 12,
+  fontSize: 11,
   marginTop: 4,
   fontWeight: '600',
 },
-  sectionHeaderRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+
+timelineBadge: {
+  alignSelf: 'flex-start',
+  borderWidth: 1,
+  borderRadius: 999,
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+  marginLeft: 10,
+  marginTop: 1,
+},
+
+timelineBadgeText: {
+  fontSize: 10,
+  fontWeight: '800',
+  letterSpacing: 0.2,
+},
+  sectionHeaderRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 },
 sectionTitle: {
   fontSize: 24,
   fontWeight: '800',
-  marginBottom: 16,
+  marginBottom: 6,
   color: C.text,
 },
   // Header
@@ -2396,7 +2556,7 @@ healthScoreCard: {
   healthScoreCheck:  { color: C.muted, fontSize: 12, marginTop: 2 },
   streakCard: {
     marginHorizontal: 16,
-    marginTop: 2,
+    marginTop: 15,
     marginBottom: 8,
     padding: 18,
     borderRadius: 22,
