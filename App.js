@@ -1198,6 +1198,7 @@ const playSosSound = async () => {
 // ─────────────────────────────────────────────
 function DashboardScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
+  const { openAddPetModal } = useContext(AddPetContext);
   const { careReminders, setCareReminders } = useContext(CareRemindersContext);
   const { petScores, setPetScores } = useContext(PetScoresContext);
   const { activityLogs, setActivityLogs } = useContext(ActivityLogsContext);
@@ -1233,6 +1234,12 @@ function DashboardScreen({ navigation }) {
     });
   }, [pets]);
   const pet = pets.find(p => p.id === selectedPetId) || pets[0];
+  useEffect(() => {
+    if (pets.length > 0 && !pets.some((item) => item.id === selectedPetId)) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
+
   const playPetSound = async (species) => {
     const soundAsset = getPetSoundAsset(species);
 
@@ -1371,44 +1378,6 @@ function DashboardScreen({ navigation }) {
       }),
     ]).start();
   }, [selectedCalendarDateKey]);
-  useEffect(() => {
-    const nextScore = Math.max(0, Math.min(100, currentScore));
-    const startScore = Math.max(0, Math.min(100, displayedHealthScore));
-
-    if (scoreAnimationRef.current) {
-      clearInterval(scoreAnimationRef.current);
-      scoreAnimationRef.current = null;
-    }
-
-    if (startScore === nextScore) return;
-
-    const steps = 20;
-    const stepMs = 20;
-    const delta = (nextScore - startScore) / steps;
-    let currentStep = 0;
-    let value = startScore;
-
-    scoreAnimationRef.current = setInterval(() => {
-      currentStep += 1;
-      value += delta;
-
-      if (currentStep >= steps) {
-        setDisplayedHealthScore(nextScore);
-        clearInterval(scoreAnimationRef.current);
-        scoreAnimationRef.current = null;
-        return;
-      }
-
-      setDisplayedHealthScore(Math.round(value));
-    }, stepMs);
-
-    return () => {
-      if (scoreAnimationRef.current) {
-        clearInterval(scoreAnimationRef.current);
-        scoreAnimationRef.current = null;
-      }
-    };
-  }, [currentScore, selectedPetId]);
   const reminderIconOptions = ['🍽️', '💊', '🦮', '🎾', '🧼', '⚖️', '💧', '🌡️', '🧪', '🧹', '🔥', '💬'];
   const formatLocalDateKey = (date) => {
     const year = date.getFullYear();
@@ -1569,17 +1538,36 @@ function DashboardScreen({ navigation }) {
     }
   };
 
-  const getScoreDelta = (type) => (
-    type === 'meal' || type === 'feeding'
-      ? 1
-      : type === 'walk' || type === 'play' || type === 'social_time'
-        ? 2
-        : type === 'medication'
-          ? 3
-          : type === 'weight' || type === 'tank_temp' || type === 'water_change' || type === 'check_ph' || type === 'filter_cleaned' || type === 'grooming' || type === 'litter_cleaned' || type === 'cage_cleaned' || type === 'heat_check' || type === 'humidity_check' || type === 'habitat_cleaned' || type === 'custom'
-            ? 1
-            : 0
-  );
+  const getScoreDelta = (type) => {
+    const normalizedType = String(type || '').toLowerCase();
+
+    if (['meal', 'feed', 'feeding'].includes(normalizedType)) return 1;
+    if (['walk', 'play', 'run', 'enrichment', 'social', 'social_time', 'exercise'].includes(normalizedType)) return 2;
+    if (['medication', 'meds', 'medicine'].includes(normalizedType)) return 3;
+    if ([
+      'weight',
+      'tank_temp',
+      'temp',
+      'water_change',
+      'check_ph',
+      'ph',
+      'filter_cleaned',
+      'grooming',
+      'bath',
+      'litter_cleaned',
+      'cage_cleaned',
+      'water',
+      'tank',
+      'filter',
+      'habitat',
+      'heat_check',
+      'humidity_check',
+      'habitat_cleaned',
+      'custom',
+    ].includes(normalizedType)) return 1;
+
+    return 1;
+  };
 
   const addActivityLog = (type, title, icon, extra = {}) => {
     const now = new Date();
@@ -1599,12 +1587,13 @@ function DashboardScreen({ navigation }) {
 
     const scoreDelta = getScoreDelta(type);
 
-    if (scoreDelta > 0) {
-      setPetScores(prev => ({
+    setPetScores(prev => {
+      const current = prev[targetPetId] ?? pets.find(p => p.id === targetPetId)?.score ?? 80;
+      return {
         ...prev,
-        [targetPetId]: Math.max(0, Math.min(100, (prev[targetPetId] ?? pets.find(p => p.id === targetPetId)?.score ?? 0) + scoreDelta)),
-      }));
-    }
+        [targetPetId]: Math.max(0, Math.min(100, current + scoreDelta)),
+      };
+    });
   };
 
   const deleteActivityLog = (logId) => {
@@ -1615,17 +1604,44 @@ function DashboardScreen({ navigation }) {
     if (logToDelete) {
       const scoreDelta = getScoreDelta(logToDelete.type);
 
-      if (scoreDelta > 0) {
-        setPetScores(prev => ({
+      setPetScores(prev => {
+        const current = prev[logToDelete.petId] ?? pets.find(p => p.id === logToDelete.petId)?.score ?? 80;
+        return {
           ...prev,
-          [logToDelete.petId]: Math.max(0, Math.min(100, (prev[logToDelete.petId] ?? pets.find(p => p.id === logToDelete.petId)?.score ?? 0) - scoreDelta)),
-        }));
-      }
+          [logToDelete.petId]: Math.max(0, Math.min(100, current - scoreDelta)),
+        };
+      });
     }
   };
 
   const currentScore = Math.max(0, Math.min(100, petScores[selectedPetId] ?? pet?.score ?? 80));
-  const [displayedHealthScore, setDisplayedHealthScore] = useState(currentScore);
+  if (!pet) {
+    return (
+      <SafeAreaView style={s.screen} edges={['top']}>
+        <View style={s.pageHeader}>
+          <View>
+            <Text style={s.pageTitle}>Home</Text>
+            <Text style={s.pageSub}>No pets yet</Text>
+          </View>
+        </View>
+
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Add your first pet</Text>
+          <Text style={s.petProfileBodyText}>
+            Create a pet to unlock the dashboard, quick actions, reminders, and health tracking.
+          </Text>
+          {typeof openAddPetModal === 'function' && (
+            <TouchableOpacity
+              style={[s.petProfileButton, { marginTop: 16 }]}
+              onPress={() => openAddPetModal()}
+            >
+              <Text style={s.petProfileButtonText}>Add Pet</Text>
+            </TouchableOpacity>
+          )}
+        </Card>
+      </SafeAreaView>
+    );
+  }
   const scoreColor = currentScore >= 85 ? C.green : currentScore >= 65 ? C.yellow : C.red;
   const recentActivity = activityLogs.filter(log => log.petId === pet.id);
   const petActivityDays = [...new Set(recentActivity.map(log => log.dateKey || new Date().toDateString()))].sort((a, b) => new Date(b) - new Date(a));
@@ -1756,7 +1772,7 @@ const ACTION_ICONS = [
           <Card style={s.healthScoreCard}>
             <View style={s.healthScoreLeft}>
               <View style={[s.scoreCircle, { borderColor: scoreColor }]}>
-                <Text style={[s.scoreNumber, { color: scoreColor }]}>{displayedHealthScore}</Text>
+                <Text style={[s.scoreNumber, { color: scoreColor }]}>{currentScore}</Text>
                 <Text style={s.scoreLabel}>/100</Text>
               </View>
             </View>
@@ -2076,15 +2092,48 @@ const ACTION_ICONS = [
 // ─────────────────────────────────────────────
 // SCREEN: PET PROFILE
 // ─────────────────────────────────────────────
-function PetProfileScreen({ navigation, route }) {
+function PetProfileScreen({ navigation, route, onDeletePet }) {
   const { pets } = useContext(PetsContext);
   const { petScores } = useContext(PetScoresContext);
   const { activityLogs } = useContext(ActivityLogsContext);
   const { healthRecords } = useContext(HealthRecordsContext);
   const { careReminders } = useContext(CareRemindersContext);
+  const { openAddPetModal } = useContext(AddPetContext);
 
   const petId = route?.params?.petId;
-  const pet = pets.find((item) => item.id === petId) || pets[0];
+  const pet = pets.find((item) => item.id === petId) || pets[0] || null;
+
+  if (!pet) {
+    return (
+      <SafeAreaView style={s.screen} edges={['top']}>
+        <View style={s.pageHeader}>
+          <View>
+            <Text style={s.pageTitle}>Pet Profile</Text>
+            <Text style={s.pageSub}>No pets available yet</Text>
+          </View>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
+            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Add your first pet</Text>
+          <Text style={s.petProfileBodyText}>
+            Your pet portal is empty right now. Add a pet to start tracking care, reminders, health records, and activity.
+          </Text>
+          {typeof openAddPetModal === 'function' && (
+            <TouchableOpacity
+              style={[s.petProfileButton, { marginTop: 16 }]}
+              onPress={() => openAddPetModal()}
+            >
+              <Text style={s.petProfileButtonText}>Add Pet</Text>
+            </TouchableOpacity>
+          )}
+        </Card>
+      </SafeAreaView>
+    );
+  }
+
   const currentScore = Math.max(0, Math.min(100, petScores[pet.id] ?? pet.score ?? 80));
   const scoreColor = currentScore >= 85 ? C.green : currentScore >= 65 ? C.yellow : C.red;
   const speciesLabel = pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet';
@@ -2107,6 +2156,28 @@ function PetProfileScreen({ navigation, route }) {
     setTimeout(() => {
       navigation.goBack();
     }, 0);
+  };
+  const handleDeletePet = () => {
+    if (typeof onDeletePet !== 'function') {
+      Alert.alert('Delete Pet', 'Delete action is unavailable right now.');
+      return;
+    }
+
+    Alert.alert(
+      `Delete ${pet.name}?`,
+      'This will remove this pet from the app.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            onDeletePet(pet.id);
+            navigation.goBack();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -2214,6 +2285,12 @@ function PetProfileScreen({ navigation, route }) {
           >
             <Text style={[s.petProfileButtonText, s.petProfileButtonTextAccent]}>View Care Calendar</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.petProfileButton, { backgroundColor: 'rgba(231,76,60,0.12)', borderColor: 'rgba(231,76,60,0.5)' }]}
+            onPress={handleDeletePet}
+          >
+            <Text style={[s.petProfileButtonText, { color: C.red }]}>Delete Pet</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -2223,6 +2300,7 @@ function PetProfileScreen({ navigation, route }) {
 // ─────────────────────────────────────────────
 function HealthHubScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
+  const { openAddPetModal } = useContext(AddPetContext);
   const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
@@ -2337,6 +2415,41 @@ function HealthHubScreen({ navigation }) {
   );
 
   const pet = pets.find((p) => p.id === selectedPetId) || pets[0];
+  useEffect(() => {
+    if (pets.length > 0 && !pets.some((item) => item.id === selectedPetId)) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
+
+  if (!pet) {
+    return (
+      <SafeAreaView style={s.screen} edges={['top']}>
+        <View style={s.pageHeader}>
+          <View>
+            <Text style={s.pageTitle}>Health Hub</Text>
+            <Text style={s.pageSub}>No pets available yet</Text>
+          </View>
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
+            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Add your first pet</Text>
+          <Text style={s.petProfileBodyText}>
+            Create a pet to start using health records and reminders.
+          </Text>
+          {typeof openAddPetModal === 'function' && (
+            <TouchableOpacity
+              style={[s.petProfileButton, { marginTop: 16 }]}
+              onPress={() => openAddPetModal()}
+            >
+              <Text style={s.petProfileButtonText}>Add Pet</Text>
+            </TouchableOpacity>
+          )}
+        </Card>
+      </SafeAreaView>
+    );
+  }
 
   const statusInfo = {
     current: { label: 'CURRENT', color: C.green },
@@ -3154,6 +3267,7 @@ function HealthHubScreen({ navigation }) {
 // ─────────────────────────────────────────────
 function MemoryVaultScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
+  const { openAddPetModal } = useContext(AddPetContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
   const { width } = Dimensions.get('window');
@@ -3164,6 +3278,38 @@ function MemoryVaultScreen({ navigation }) {
   );
 
   const pet = pets.find(p => p.id === selectedPetId) || pets[0];
+  useEffect(() => {
+    if (pets.length > 0 && !pets.some((item) => item.id === selectedPetId)) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
+
+  if (!pet) {
+    return (
+      <SafeAreaView style={s.screen} edges={['top']}>
+        <View style={s.pageHeader}>
+          <View>
+            <Text style={s.pageTitle}>Memory Vault</Text>
+            <Text style={s.pageSub}>No pets available yet</Text>
+          </View>
+        </View>
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Add your first pet</Text>
+          <Text style={s.petProfileBodyText}>
+            Create a pet to start collecting memories and milestones.
+          </Text>
+          {typeof openAddPetModal === 'function' && (
+            <TouchableOpacity
+              style={[s.petProfileButton, { marginTop: 16 }]}
+              onPress={() => openAddPetModal()}
+            >
+              <Text style={s.petProfileButtonText}>Add Pet</Text>
+            </TouchableOpacity>
+          )}
+        </Card>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -3585,7 +3731,7 @@ function AIVetScreen({ navigation }) {
 function LostPetScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
   const [step, setStep] = useState(1);
-  const [selectedPet, setSelectedPet] = useState(pets[0] || PETS[0]);
+  const [selectedPet, setSelectedPet] = useState(pets[0] || null);
   const [petPhoto, setPetPhoto] = useState(null);
   const [lastKnownLocation, setLastKnownLocation] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -3599,11 +3745,32 @@ function LostPetScreen({ navigation }) {
   };
 
   useEffect(() => {
-    if (selectedPet && pets.some((pet) => pet.id === selectedPet.id)) return;
-    if (pets[0]) {
-      setSelectedPet(pets[0]);
+    if (pets.length === 0) {
+      setSelectedPet(null);
+      return;
     }
+    if (selectedPet && pets.some((pet) => pet.id === selectedPet.id)) return;
+    setSelectedPet(pets[0]);
   }, [pets, selectedPet]);
+
+  if (!selectedPet) {
+    return (
+      <SafeAreaView style={s.screen} edges={['top']}>
+        <View style={s.pageHeader}>
+          <View>
+            <Text style={s.pageTitle}>Lost Pet</Text>
+            <Text style={s.pageSub}>No pets yet</Text>
+          </View>
+        </View>
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Add your first pet</Text>
+          <Text style={s.petProfileBodyText}>
+            Add a pet first to set up a lost pet alert.
+          </Text>
+        </Card>
+      </SafeAreaView>
+    );
+  }
 
   const pickPetPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -3991,6 +4158,22 @@ export default function App() {
     }
   };
 
+  const handleDeletePet = (petId) => {
+    setPets(prev => prev.filter(p => p.id !== petId));
+    setActivityLogs(prev => prev.filter(log => log.petId !== petId));
+    setCareReminders(prev => prev.filter(reminder => reminder.petId !== petId));
+    setHealthRecords(prev => prev.filter(record => record.petId !== petId));
+    setPetScores(prev => {
+      const next = { ...prev };
+      delete next[petId];
+      return next;
+    });
+  };
+
+  const PetProfileRoute = (props) => (
+    <PetProfileScreen {...props} onDeletePet={handleDeletePet} />
+  );
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -4005,7 +4188,7 @@ export default function App() {
                       <Stack.Navigator screenOptions={{ headerShown: false }}>
                         <Stack.Screen name="Main"    component={TabNavigator}  />
                         <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
-                        <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="PetProfile" component={PetProfileRoute} options={{ presentation: 'modal' }} />
                         <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
                       </Stack.Navigator>
                     </NavigationContainer>
