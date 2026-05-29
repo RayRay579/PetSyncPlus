@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
@@ -61,6 +61,8 @@ const PET_SOUNDS = {
   reptile: require('./assets/sounds/reptile.mp3'),
 };
 
+const SOS_SOUND = require('./assets/sounds/sos.mp3');
+
 const HEALTH_RECORDS = [
   { id: '1', petId: '1', type: 'vaccination', title: 'Rabies Vaccine',        date: 'Jan 15, 2026', provider: 'Dr. Smith',   status: 'current',   icon: '💉', nextDue: 'Jan 2027' },
   { id: '2', petId: '1', type: 'vaccination', title: 'DHPP Booster',          date: 'Jan 15, 2026', provider: 'Dr. Smith',   status: 'current',   icon: '💉', nextDue: 'Mar 2027' },
@@ -74,18 +76,18 @@ const HEALTH_RECORDS = [
 ];
 
 const MEMORIES = [
-  { id: '1',  petId: '1', emoji: '🌊', color: '#1e4976', caption: "Max's beach day!",       milestone: true,  date: 'May 20' },
-  { id: '2',  petId: '1', emoji: '🌿', color: '#1a4a2e', caption: 'Park run',               milestone: false, date: 'May 18' },
-  { id: '3',  petId: '1', emoji: '🎂', color: '#4a1a1a', caption: 'Birthday boy! 🎉',       milestone: true,  date: 'May 10' },
-  { id: '4',  petId: '1', emoji: '🏕️', color: '#2d3a1a', caption: 'Camping trip',           milestone: false, date: 'May 05' },
-  { id: '5',  petId: '1', emoji: '❄️', color: '#1a2a4a', caption: 'First snow!',            milestone: true,  date: 'Jan 15' },
-  { id: '6',  petId: '1', emoji: '🛁', color: '#1a3a3a', caption: 'Bath time',              milestone: false, date: 'Jan 10' },
-  { id: '7',  petId: '2', emoji: '🐱', color: '#3a1a4a', caption: 'Luna nap time',          milestone: false, date: 'May 22' },
-  { id: '8',  petId: '2', emoji: '🌸', color: '#4a1a2d', caption: 'Garden explorer',        milestone: false, date: 'May 15' },
-  { id: '9',  petId: '2', emoji: '🎀', color: '#4a2a1a', caption: 'Dressed up!',            milestone: false, date: 'May 01' },
-  { id: '10', petId: '3', emoji: '🐾', color: '#2a1a4a', caption: 'Buddy loves hiking',     milestone: true,  date: 'Apr 28' },
-  { id: '11', petId: '3', emoji: '🦴', color: '#3a2a1a', caption: 'Treat time',             milestone: false, date: 'Apr 20' },
-  { id: '12', petId: '3', emoji: '💤', color: '#1a2a3a', caption: 'Sleepy Buddy',           milestone: false, date: 'Apr 15' },
+  { id: '1',  petId: '1', emoji: '🌊', color: '#1e4976', caption: "Max's beach day!",       milestone: true,  date: '05/20/2026' },
+  { id: '2',  petId: '1', emoji: '🌿', color: '#1a4a2e', caption: 'Park run',               milestone: false, date: '05/18/2026' },
+  { id: '3',  petId: '1', emoji: '🎂', color: '#4a1a1a', caption: 'Birthday boy! 🎉',       milestone: true,  date: '05/10/2026' },
+  { id: '4',  petId: '1', emoji: '🏕️', color: '#2d3a1a', caption: 'Camping trip',           milestone: false, date: '05/05/2026' },
+  { id: '5',  petId: '1', emoji: '❄️', color: '#1a2a4a', caption: 'First snow!',            milestone: true,  date: '01/15/2026' },
+  { id: '6',  petId: '1', emoji: '🛁', color: '#1a3a3a', caption: 'Bath time',              milestone: false, date: '01/10/2026' },
+  { id: '7',  petId: '2', emoji: '🐱', color: '#3a1a4a', caption: 'Luna nap time',          milestone: false, date: '05/22/2026' },
+  { id: '8',  petId: '2', emoji: '🌸', color: '#4a1a2d', caption: 'Garden explorer',        milestone: false, date: '05/15/2026' },
+  { id: '9',  petId: '2', emoji: '🎀', color: '#4a2a1a', caption: 'Dressed up!',            milestone: false, date: '05/01/2026' },
+  { id: '10', petId: '3', emoji: '🐾', color: '#2a1a4a', caption: 'Buddy loves hiking',     milestone: true,  date: '04/28/2026' },
+  { id: '11', petId: '3', emoji: '🦴', color: '#3a2a1a', caption: 'Treat time',             milestone: false, date: '04/20/2026' },
+  { id: '12', petId: '3', emoji: '💤', color: '#1a2a3a', caption: 'Sleepy Buddy',           milestone: false, date: '04/15/2026' },
 ];
 
 const POSTS = [
@@ -94,6 +96,401 @@ const POSTS = [
   { id: '3', author: 'Johnson Fam', petType: 'Multi-pet household',  time: '1d ago', content: 'Rocky just graduated from puppy training! 8 weeks of hard work and this guy nailed every single command 🎓🐶',    emoji: '🎓', likes: 67, comments: 14, type: 'celebration'  },
   { id: '4', author: 'Vet Dr. Kim', petType: 'Animal Clinic Partner', time: '2d ago', content: 'Summer reminder: sidewalks can reach 150°F on hot days. Test with your hand for 5 seconds — if you can\'t hold it, neither can your pet! 🌡️', emoji: '☀️', likes: 103, comments: 22, type: 'tip' },
 ];
+
+const PET_SPECIES_EMOJIS = {
+  dog: '🐕',
+  cat: '🐈',
+  fish: '🐟',
+  bird: '🐦',
+  reptile: '🦎',
+  rabbit: '🐇',
+  hamster: '🐹',
+  horse: '🐴',
+  other: '🐾',
+};
+
+const PetsContext = createContext({
+  pets: PETS,
+  setPets: () => {},
+});
+
+const HealthRecordsContext = createContext({
+  healthRecords: HEALTH_RECORDS,
+  setHealthRecords: () => {},
+});
+
+const CareRemindersContext = createContext({
+  careReminders: [],
+  setCareReminders: () => {},
+});
+
+const PetScoresContext = createContext({
+  petScores: {},
+  setPetScores: () => {},
+});
+
+const ActivityLogsContext = createContext({
+  activityLogs: [],
+  setActivityLogs: () => {},
+});
+
+const AddPetContext = createContext({
+  openAddPetModal: () => {},
+});
+
+const getDefaultPetEmoji = (species) => PET_SPECIES_EMOJIS[species] || '🐾';
+
+const getStarterPetScore = (species) => {
+  const scoreMap = {
+    dog: 87,
+    cat: 92,
+    fish: 89,
+    bird: 84,
+    reptile: 82,
+    rabbit: 85,
+    hamster: 83,
+    horse: 86,
+    other: 80,
+  };
+
+  return scoreMap[species] ?? 80;
+};
+
+const getPetSoundAsset = (species) => PET_SOUNDS[species] || PET_SOUNDS.dog;
+
+const toLocalDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatDate = (date) => {
+  if (!date) return '';
+
+  let d = typeof date === 'string'
+    ? new Date(date + 'T12:00:00')
+    : date;
+
+  if (Number.isNaN(d.getTime()) && typeof date === 'string') {
+    const loose = new Date(date);
+    if (!Number.isNaN(loose.getTime())) {
+      d = loose;
+    }
+  }
+
+  if (Number.isNaN(d.getTime()) && typeof date === 'string') {
+    const mmddyyyy = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (mmddyyyy) {
+      const month = Number(mmddyyyy[1]);
+      const day = Number(mmddyyyy[2]);
+      const year = Number(mmddyyyy[3]);
+      d = new Date(year, month - 1, day);
+    }
+  }
+
+  if (Number.isNaN(d.getTime())) {
+    return typeof date === 'string' ? date : '';
+  }
+
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const year = d.getFullYear();
+
+  return `${month}/${day}/${year}`;
+};
+
+const addDaysLocal = (date, days) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const formatMonthYear = (date) => date.toLocaleDateString([], { month: 'short', year: 'numeric' });
+
+const getStreakDaysForPet = (activityLogs, petId) => {
+  const petLogs = activityLogs.filter((log) => log.petId === petId);
+  if (petLogs.length === 0) return 1;
+
+  const uniqueDays = [...new Set(petLogs.map((log) => log.dateKey || new Date().toDateString()))]
+    .sort((a, b) => new Date(b) - new Date(a));
+
+  let streakDays = 0;
+  for (let i = 0; i < uniqueDays.length; i += 1) {
+    const expected = new Date();
+    expected.setDate(expected.getDate() - i);
+    const expectedDay = expected.toDateString();
+    if (uniqueDays.includes(expectedDay)) {
+      streakDays += 1;
+    } else {
+      break;
+    }
+  }
+
+  return Math.max(1, streakDays);
+};
+
+const calculateAgeLabelFromBirthday = (birthdayKey) => {
+  if (!birthdayKey || !/^\d{4}-\d{2}-\d{2}$/.test(birthdayKey)) return '';
+
+  const [year, month, day] = birthdayKey.split('-').map(Number);
+  const birthDate = new Date(year, month - 1, day);
+  if (Number.isNaN(birthDate.getTime())) return '';
+
+  const today = new Date();
+  let years = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    years -= 1;
+  }
+
+  if (years >= 1) {
+    return `${years} yr${years === 1 ? '' : 's'}`;
+  }
+
+  const months = Math.max(
+    1,
+    (today.getFullYear() - birthDate.getFullYear()) * 12
+      + (today.getMonth() - birthDate.getMonth())
+      - (today.getDate() < birthDate.getDate() ? 1 : 0)
+  );
+
+  return `${months} mo${months === 1 ? '' : 's'}`;
+};
+
+const buildStarterReminders = (pet) => {
+  const now = new Date();
+  const makeReminder = (title, icon, dayOffset, time) => ({
+    id: `${pet.id}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${dayOffset}`,
+    petId: pet.id,
+    title,
+    icon,
+    date: toLocalDateKey(addDaysLocal(now, dayOffset)),
+    time,
+    completed: false,
+    source: 'starter',
+  });
+
+  const species = pet.species?.toLowerCase();
+
+  switch (species) {
+    case 'dog':
+      return [
+        makeReminder('Morning Feeding', '🍽️', 0, '7:00 AM'),
+        makeReminder('Evening Feeding', '🍽️', 0, '6:00 PM'),
+        makeReminder('Daily Walk', '🦮', 1, '8:00 AM'),
+        makeReminder('Grooming Reminder', '🧼', 2, '4:00 PM'),
+      ];
+    case 'cat':
+      return [
+        makeReminder('Feeding', '🍽️', 0, '8:00 AM'),
+        makeReminder('Litter Cleaning', '🧹', 0, '5:00 PM'),
+        makeReminder('Play Session', '🎾', 1, '6:00 PM'),
+      ];
+    case 'fish':
+      return [
+        makeReminder('Feed Fish', '🍽️', 0, '9:00 AM'),
+        makeReminder('Water Change', '💧', 1, '4:00 PM'),
+        makeReminder('Tank Check', '🌡️', 2, '10:00 AM'),
+      ];
+    case 'bird':
+      return [
+        makeReminder('Feed Bird', '🍽️', 0, '8:00 AM'),
+        makeReminder('Cage Cleaning', '🧼', 1, '5:00 PM'),
+        makeReminder('Enrichment Time', '💬', 2, '3:00 PM'),
+      ];
+    case 'reptile':
+      return [
+        makeReminder('Heat Lamp Check', '🔥', 0, '8:00 AM'),
+        makeReminder('Feeding', '🍽️', 0, '6:00 PM'),
+        makeReminder('Habitat Cleaning', '🧽', 1, '4:00 PM'),
+      ];
+    case 'rabbit':
+      return [
+        makeReminder('Morning Feeding', '🍽️', 0, '8:00 AM'),
+        makeReminder('Hutch Cleaning', '🧹', 1, '5:00 PM'),
+        makeReminder('Play Time', '🎾', 2, '4:00 PM'),
+      ];
+    case 'hamster':
+      return [
+        makeReminder('Feed Hamster', '🍽️', 0, '8:00 AM'),
+        makeReminder('Cage Tidy', '🧼', 1, '5:00 PM'),
+        makeReminder('Wheel Time', '🎾', 2, '4:00 PM'),
+      ];
+    case 'horse':
+      return [
+        makeReminder('Morning Feed', '🍽️', 0, '7:00 AM'),
+        makeReminder('Grooming', '🧼', 1, '4:00 PM'),
+        makeReminder('Trail Ride', '🐎', 2, '3:00 PM'),
+      ];
+    default:
+      return [
+        makeReminder('Daily Care Check', '✨', 0, '9:00 AM'),
+        makeReminder('Feed Time', '🍽️', 1, '9:00 AM'),
+        makeReminder('Habitat Cleaning', '🧹', 2, '4:00 PM'),
+      ];
+  }
+};
+
+const buildStarterHealthRecords = (pet) => {
+  const todayLabel = new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  const nextYearLabel = formatMonthYear(addDaysLocal(new Date(), 365));
+  const parsedWeightMatch = String(pet.weight || '').match(/[\d.]+/);
+  const parsedWeightValue = parsedWeightMatch ? Number(parsedWeightMatch[0]) : null;
+  const species = pet.species?.toLowerCase();
+  const baseRecords = [
+    {
+      id: `${pet.id}-weight-baseline`,
+      petId: pet.id,
+      type: 'weight',
+      title: 'Weight Baseline',
+      date: todayLabel,
+      provider: null,
+      status: 'current',
+      icon: '⚖️',
+      nextDue: null,
+      value: parsedWeightValue,
+      unit: 'lbs',
+      details: {
+        weightValue: pet.weight || '',
+        weightNotes: 'Recorded during onboarding',
+      },
+    },
+  ];
+
+  if (species === 'dog' || species === 'cat') {
+    baseRecords.push({
+      id: `${pet.id}-vaccination-placeholder`,
+      petId: pet.id,
+      type: 'vaccination',
+      title: 'Vaccination Placeholder',
+      date: todayLabel,
+      provider: 'To be scheduled',
+      status: 'upcoming',
+      icon: '💉',
+      nextDue: nextYearLabel,
+      details: {
+        providerClinic: 'To be scheduled',
+      },
+    });
+  } else if (species === 'fish') {
+    baseRecords.push({
+      id: `${pet.id}-tank-setup`,
+      petId: pet.id,
+      type: 'appointment',
+      title: 'Tank Setup Record',
+      date: todayLabel,
+      provider: 'Onboarding',
+      status: 'current',
+      icon: '🌊',
+      nextDue: null,
+      details: {
+        vetClinic: 'Onboarding',
+        appointmentDate: todayLabel,
+      },
+    });
+  } else {
+    baseRecords.push({
+      id: `${pet.id}-wellness-check`,
+      petId: pet.id,
+      type: 'appointment',
+      title: 'Wellness Check',
+      date: todayLabel,
+      provider: 'To be scheduled',
+      status: 'upcoming',
+      icon: '🏥',
+      nextDue: nextYearLabel,
+      details: {
+        vetClinic: 'To be scheduled',
+        appointmentDate: todayLabel,
+      },
+    });
+  }
+
+  return baseRecords;
+};
+
+const buildQuickActionsForSpecies = (pet, addActivityLog, navigation) => {
+  const baseVetAction = { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') };
+  const species = pet.species?.toLowerCase();
+
+  switch (species) {
+    case 'dog':
+      return [
+        { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+        { icon: '🦮', label: 'Log Walk', action: () => addActivityLog('walk', 'Walk logged', '🦮') },
+        { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+        { icon: '💊', label: 'Medication', action: () => addActivityLog('medication', 'Medication given', '💊') },
+        { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+        { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
+        baseVetAction,
+      ];
+    case 'cat':
+      return [
+        { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+        { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+        { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
+        { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+        { icon: '💊', label: 'Medication', action: () => addActivityLog('medication', 'Medication given', '💊') },
+        { icon: '🧹', label: 'Litter Cleaned', action: () => addActivityLog('litter_cleaned', 'Litter cleaned', '🧹') },
+        baseVetAction,
+      ];
+    case 'fish':
+      return [
+        { icon: '🍽️', label: 'Feed Fish', action: () => addActivityLog('feeding', 'Fish fed', '🍽️') },
+        { icon: '💧', label: 'Water Change', action: () => addActivityLog('water_change', 'Water changed', '💧') },
+        { icon: '🌡️', label: 'Tank Temp', action: () => addActivityLog('tank_temp', 'Tank temperature checked', '🌡️') },
+        { icon: '🧪', label: 'Check pH', action: () => addActivityLog('check_ph', 'Water pH checked', '🧪') },
+        { icon: '🧽', label: 'Filter Cleaned', action: () => addActivityLog('filter_cleaned', 'Filter cleaned', '🧽') },
+        baseVetAction,
+      ];
+    case 'bird':
+      return [
+        { icon: '🍽️', label: 'Feed Bird', action: () => addActivityLog('feeding', 'Bird fed', '🍽️') },
+        { icon: '🧼', label: 'Cage Cleaned', action: () => addActivityLog('cage_cleaned', 'Cage cleaned', '🧼') },
+        { icon: '💬', label: 'Social Time', action: () => addActivityLog('social_time', 'Social time logged', '💬') },
+        { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+        baseVetAction,
+      ];
+    case 'reptile':
+      return [
+        { icon: '🍽️', label: 'Feed Reptile', action: () => addActivityLog('feeding', 'Reptile fed', '🍽️') },
+        { icon: '🔥', label: 'Heat Check', action: () => addActivityLog('heat_check', 'Heat checked', '🔥') },
+        { icon: '💧', label: 'Humidity Check', action: () => addActivityLog('humidity_check', 'Humidity checked', '💧') },
+        { icon: '🧽', label: 'Habitat Cleaned', action: () => addActivityLog('habitat_cleaned', 'Habitat cleaned', '🧽') },
+        baseVetAction,
+      ];
+    case 'rabbit':
+      return [
+        { icon: '🍽️', label: 'Feed Rabbit', action: () => addActivityLog('feeding', 'Rabbit fed', '🍽️') },
+        { icon: '🧹', label: 'Hutch Cleaned', action: () => addActivityLog('cage_cleaned', 'Hutch cleaned', '🧹') },
+        { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+      ];
+    case 'hamster':
+      return [
+        { icon: '🍽️', label: 'Feed Hamster', action: () => addActivityLog('feeding', 'Hamster fed', '🍽️') },
+        { icon: '🧼', label: 'Cage Tidy', action: () => addActivityLog('cage_cleaned', 'Cage tidied', '🧼') },
+        { icon: '🎾', label: 'Wheel Time', action: () => addActivityLog('play', 'Wheel time logged', '🎾') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+      ];
+    case 'horse':
+      return [
+        { icon: '🍽️', label: 'Feed Horse', action: () => addActivityLog('feeding', 'Horse fed', '🍽️') },
+        { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
+        { icon: '🐎', label: 'Trail Ride', action: () => addActivityLog('walk', 'Trail ride logged', '🐎') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+      ];
+    default:
+      return [
+        { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+        { icon: '🧹', label: 'Care Check', action: () => addActivityLog('custom', 'Care check logged', '🧹') },
+        { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+        baseVetAction,
+      ];
+  }
+};
 
 const AI_SUGGESTIONS = [
   'My pet is scratching a lot',
@@ -160,8 +557,10 @@ function Badge({ label, color }) {
     </View>
   );
 }
-function PetAvatarRow({ pets, selectedId, onSelect, bounceValue }) {
+function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }) {
   const selectedScale = bounceValue || 1;
+  const { openAddPetModal } = useContext(AddPetContext);
+  const longPressLockRef = useRef(null);
   return (
     <ScrollView
       horizontal
@@ -177,7 +576,20 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue }) {
         return (
           <TouchableOpacity
             key={pet.id}
-            onPress={() => onSelect(pet.id)}
+            delayLongPress={250}
+            onPress={() => {
+              if (longPressLockRef.current === pet.id) return;
+              onSelect(pet.id);
+            }}
+            onLongPress={() => {
+              longPressLockRef.current = pet.id;
+              onOpenProfile?.(pet.id);
+              setTimeout(() => {
+                if (longPressLockRef.current === pet.id) {
+                  longPressLockRef.current = null;
+                }
+              }, 350);
+            }}
             style={{
               alignItems: 'center',
               marginRight: 16,
@@ -213,13 +625,24 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue }) {
                   transform: [{ scale: selectedScale }],
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 38,
-                  }}
-                >
-                  {pet.emoji}
-                </Text>
+                {pet.photoUri ? (
+                  <Image
+                    source={{ uri: pet.photoUri }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 38,
+                    }}
+                  />
+                ) : (
+                  <Text
+                    style={{
+                      fontSize: 38,
+                    }}
+                  >
+                    {pet.emoji || getDefaultPetEmoji(pet.species)}
+                  </Text>
+                )}
               </Animated.View>
             ) : (
               <View
@@ -249,13 +672,24 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue }) {
                   elevation: 2,
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 32,
-                  }}
-                >
-                  {pet.emoji}
-                </Text>
+                {pet.photoUri ? (
+                  <Image
+                    source={{ uri: pet.photoUri }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 36,
+                    }}
+                  />
+                ) : (
+                  <Text
+                    style={{
+                      fontSize: 32,
+                    }}
+                  >
+                    {pet.emoji || getDefaultPetEmoji(pet.species)}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -275,16 +709,500 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue }) {
           </TouchableOpacity>
         );
       })}
+
+      {typeof openAddPetModal === 'function' && (
+        <TouchableOpacity
+          onPress={() => {
+            const selectedPet = pets.find((pet) => pet.id === selectedId);
+            openAddPetModal(onSelect, selectedPet?.species);
+          }}
+          style={{
+            alignItems: 'center',
+            marginRight: 4,
+            marginLeft: 4,
+          }}
+        >
+          <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              borderWidth: 1.5,
+              borderStyle: 'dashed',
+              borderColor: C.accent,
+              backgroundColor: 'rgba(255,122,26,0.10)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: C.accent, fontSize: 30, fontWeight: '700' }}>＋</Text>
+          </View>
+          <Text
+            style={{
+              color: C.accent,
+              fontSize: 13,
+              fontWeight: '700',
+              marginTop: 8,
+            }}
+          >
+            Add Pet
+          </Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
+
+function AnimatedQuickAction({ icon, label, onPress, isAddAction }) {
+  const pressScale = useRef(new Animated.Value(1)).current;
+
+  const animateTo = (toValue, callback) => {
+    Animated.timing(pressScale, {
+      toValue,
+      duration: 90,
+      useNativeDriver: true,
+    }).start(callback);
+  };
+
+  return (
+    <TouchableOpacity
+      activeOpacity={1}
+      onPressIn={() => animateTo(0.96)}
+      onPressOut={() => animateTo(1)}
+      onPress={onPress}
+      style={{ marginRight: 12 }}
+    >
+      <Animated.View
+        style={[
+          s.quickAction,
+          isAddAction && s.quickActionAdd,
+          { transform: [{ scale: pressScale }] },
+        ]}
+      >
+        <Text style={s.quickActionIcon}>{icon}</Text>
+        <Text style={s.quickActionLabel}>{label}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
+  const [step, setStep] = useState(1);
+  const [petPhoto, setPetPhoto] = useState(null);
+  const [petName, setPetName] = useState('');
+  const [petSpecies, setPetSpecies] = useState(initialSpecies || 'dog');
+  const [breedType, setBreedType] = useState('');
+  const [birthMode, setBirthMode] = useState('birthday');
+  const [birthday, setBirthday] = useState('');
+  const [ageText, setAgeText] = useState('');
+  const [weight, setWeight] = useState('');
+  const [gender, setGender] = useState('Unknown');
+  const [careGoals, setCareGoals] = useState('');
+  const modalAnim = useRef(new Animated.Value(0)).current;
+  const cardAnim = useRef(new Animated.Value(0.98)).current;
+  const speciesOptions = [
+    { label: 'Dog', value: 'dog' },
+    { label: 'Cat', value: 'cat' },
+    { label: 'Fish', value: 'fish' },
+    { label: 'Bird', value: 'bird' },
+    { label: 'Reptile', value: 'reptile' },
+    { label: 'Rabbit', value: 'rabbit' },
+    { label: 'Hamster', value: 'hamster' },
+    { label: 'Horse', value: 'horse' },
+    { label: 'Other', value: 'other' },
+  ];
+  const genderOptions = ['Female', 'Male', 'Unknown', 'Other'];
+
+  const resetForm = () => {
+    setStep(1);
+    setPetPhoto(null);
+    setPetName('');
+    setPetSpecies(initialSpecies || 'dog');
+    setBreedType('');
+    setBirthMode('birthday');
+    setBirthday('');
+    setAgeText('');
+    setWeight('');
+    setGender('Unknown');
+    setCareGoals('');
+  };
+
+  useEffect(() => {
+    if (!visible) {
+      resetForm();
+      return;
+    }
+
+    setStep(1);
+    setPetSpecies(initialSpecies || 'dog');
+    modalAnim.setValue(0);
+    cardAnim.setValue(0.98);
+
+    Animated.parallel([
+      Animated.timing(modalAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, initialSpecies, modalAnim, cardAnim]);
+
+  const pickPetPhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Photo permission needed', 'Please allow photo library access to add a pet picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setPetPhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Photo upload failed', 'Please try again.');
+    }
+  };
+
+  const goNext = () => {
+    if (step === 1) {
+      if (!petName.trim()) {
+        Alert.alert('Pet name required', 'Please enter your pet’s name.');
+        return;
+      }
+      setStep(2);
+      return;
+    }
+
+    if (step === 2) {
+      if (birthMode === 'birthday' && !birthday.trim()) {
+        Alert.alert('Birthday required', 'Please enter a birthday in YYYY-MM-DD format or switch to age.');
+        return;
+      }
+      if (birthMode === 'age' && !ageText.trim()) {
+        Alert.alert('Age required', 'Please enter an age.');
+        return;
+      }
+      setStep(3);
+    }
+  };
+
+  const savePet = () => {
+    if (!petName.trim()) {
+      Alert.alert('Pet name required', 'Please enter your pet’s name.');
+      return;
+    }
+
+    if (birthMode === 'birthday' && !birthday.trim()) {
+      Alert.alert('Birthday required', 'Please enter a birthday.');
+      return;
+    }
+
+    if (birthMode === 'age' && !ageText.trim()) {
+      Alert.alert('Age required', 'Please enter an age.');
+      return;
+    }
+
+    const birthdayValue = birthMode === 'birthday' ? birthday.trim() : '';
+    const computedAge = birthMode === 'birthday'
+      ? calculateAgeLabelFromBirthday(birthdayValue)
+      : ageText.trim();
+
+    const newPet = {
+      id: Date.now().toString(),
+      name: petName.trim(),
+      species: petSpecies.toLowerCase(),
+      breed: breedType.trim() || petSpecies.charAt(0).toUpperCase() + petSpecies.slice(1),
+      age: computedAge || 'Unknown',
+      birthday: birthdayValue,
+      ageMode: birthMode,
+      weight: weight.trim(),
+      gender: gender.trim() || 'Unknown',
+      careGoals: careGoals.trim(),
+      emoji: getDefaultPetEmoji(petSpecies),
+      photoUri: petPhoto,
+      score: 80,
+    };
+
+    onSave(newPet);
+    onClose();
+    resetForm();
+  };
+
+  const stepProgress = step / 3;
+  const introCopy = 'Let’s set up your pet portal';
+
+  const selectedSpeciesLabel = speciesOptions.find(item => item.value === petSpecies)?.label || 'Pet';
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={s.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+          <Animated.View
+            style={[
+              s.addPetModal,
+              {
+                opacity: modalAnim,
+                transform: [
+                  {
+                    translateY: modalAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                  { scale: cardAnim },
+                ],
+              },
+            ]}
+          >
+            <View style={s.addPetModalHeader}>
+              <TouchableOpacity onPress={onClose}>
+                <Text style={s.addPetModalClose}>✕</Text>
+              </TouchableOpacity>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={s.addPetModalTitle}>Add Pet</Text>
+                <Text style={s.addPetModalSubtitle}>{introCopy}</Text>
+              </View>
+              <View style={{ width: 22 }} />
+            </View>
+
+            <View style={s.addPetProgressWrap}>
+              <View style={s.addPetProgressTrack}>
+                <View style={[s.addPetProgressFill, { width: `${stepProgress * 100}%` }]} />
+              </View>
+              <Text style={s.addPetProgressText}>Step {step} of 3</Text>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+              {step === 1 && (
+                <Animated.View style={{ opacity: modalAnim }}>
+                  <Text style={s.addPetSectionTitle}>Start with a photo and the basics</Text>
+                  <View style={s.addPetPhotoRow}>
+                    <View style={s.addPetPhotoCircle}>
+                      {petPhoto ? (
+                        <Image source={{ uri: petPhoto }} style={s.addPetPhotoImage} />
+                      ) : (
+                        <Text style={s.addPetPhotoEmoji}>{getDefaultPetEmoji(petSpecies)}</Text>
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <TouchableOpacity style={s.addPetPhotoButton} onPress={pickPetPhoto}>
+                        <Text style={s.addPetPhotoButtonText}>{petPhoto ? 'Change Photo' : 'Add Pet Photo'}</Text>
+                      </TouchableOpacity>
+                      <Text style={s.addPetPhotoHint}>A clear pet photo helps make the app feel more personal.</Text>
+                    </View>
+                  </View>
+
+                  <TextInput
+                    style={s.addPetInput}
+                    value={petName}
+                    onChangeText={setPetName}
+                    placeholder="Pet name"
+                    placeholderTextColor={C.muted}
+                  />
+
+                  <Text style={s.addPetFieldLabel}>Species</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.addPetChipRow}>
+                    {speciesOptions.map(option => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[s.addPetChip, petSpecies === option.value && s.addPetChipActive]}
+                        onPress={() => setPetSpecies(option.value)}
+                      >
+                        <Text style={[s.addPetChipText, petSpecies === option.value && s.addPetChipTextActive]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </Animated.View>
+              )}
+
+              {step === 2 && (
+                <Animated.View style={{ opacity: modalAnim }}>
+                  <Text style={s.addPetSectionTitle}>Tell us a little more</Text>
+                  <TextInput
+                    style={s.addPetInput}
+                    value={breedType}
+                    onChangeText={setBreedType}
+                    placeholder="Breed / type"
+                    placeholderTextColor={C.muted}
+                  />
+
+                  <Text style={s.addPetFieldLabel}>Birthday or age</Text>
+                  <View style={s.addPetModeRow}>
+                    {[
+                      { key: 'birthday', label: 'Birthday' },
+                      { key: 'age', label: 'Age' },
+                    ].map(option => (
+                      <TouchableOpacity
+                        key={option.key}
+                        style={[s.addPetModeChip, birthMode === option.key && s.addPetModeChipActive]}
+                        onPress={() => setBirthMode(option.key)}
+                      >
+                        <Text style={[s.addPetModeChipText, birthMode === option.key && s.addPetModeChipTextActive]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <TextInput
+                    style={s.addPetInput}
+                    value={birthMode === 'birthday' ? birthday : ageText}
+                    onChangeText={birthMode === 'birthday' ? setBirthday : setAgeText}
+                    placeholder={birthMode === 'birthday' ? 'YYYY-MM-DD' : 'Age, e.g. 3 yrs'}
+                    placeholderTextColor={C.muted}
+                    autoCapitalize="none"
+                  />
+
+                  <TextInput
+                    style={s.addPetInput}
+                    value={weight}
+                    onChangeText={setWeight}
+                    placeholder="Weight"
+                    placeholderTextColor={C.muted}
+                  />
+
+                  <Text style={s.addPetFieldLabel}>Gender</Text>
+                  <View style={s.addPetGenderRow}>
+                    {genderOptions.map(option => (
+                      <TouchableOpacity
+                        key={option}
+                        style={[s.addPetModeChip, gender === option && s.addPetModeChipActive]}
+                        onPress={() => setGender(option)}
+                      >
+                        <Text style={[s.addPetModeChipText, gender === option && s.addPetModeChipTextActive]}>
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Animated.View>
+              )}
+
+              {step === 3 && (
+                <Animated.View style={{ opacity: modalAnim }}>
+                  <Text style={s.addPetSectionTitle}>Care goals and review</Text>
+                  <TextInput
+                    style={[s.addPetInput, s.addPetMultiline]}
+                    value={careGoals}
+                    onChangeText={setCareGoals}
+                    placeholder="Care goals / preferences"
+                    placeholderTextColor={C.muted}
+                    multiline
+                  />
+
+                  <View style={s.addPetReviewCard}>
+                    <View style={s.addPetReviewTop}>
+                      <View style={s.addPetReviewAvatar}>
+                        {petPhoto ? (
+                          <Image source={{ uri: petPhoto }} style={s.addPetReviewImage} />
+                        ) : (
+                          <Text style={s.addPetReviewEmoji}>{getDefaultPetEmoji(petSpecies)}</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.addPetReviewName}>{petName.trim() || 'Your pet'}</Text>
+                        <Text style={s.addPetReviewMeta}>
+                          {selectedSpeciesLabel} · {breedType.trim() || 'Breed / type'} · {
+                            birthMode === 'birthday'
+                              ? (birthday.trim() ? `Birthday: ${formatDate(birthday.trim())}` : 'Birthday pending')
+                              : (ageText.trim() || 'Age pending')
+                          }
+                        </Text>
+                        <Text style={s.addPetReviewMeta}>{weight.trim() ? `Weight: ${weight.trim()}` : 'Weight not set'}</Text>
+                        <Text style={s.addPetReviewMeta}>{gender || 'Gender not set'}</Text>
+                      </View>
+                    </View>
+                    <Text style={s.addPetReviewGoalLabel}>Care goals</Text>
+                    <Text style={s.addPetReviewGoalText}>{careGoals.trim() || 'No care goals added yet.'}</Text>
+                  </View>
+                </Animated.View>
+              )}
+            </ScrollView>
+
+            <View style={s.addPetFooter}>
+              <TouchableOpacity
+                style={s.customActionCancelBtn}
+                onPress={onClose}
+              >
+                <Text style={s.customActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              {step > 1 ? (
+                <TouchableOpacity
+                  style={s.customActionCancelBtn}
+                  onPress={() => setStep(prev => Math.max(1, prev - 1))}
+                >
+                  <Text style={s.customActionCancelText}>Back</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {step < 3 ? (
+                <TouchableOpacity style={s.customActionSaveBtn} onPress={goNext}>
+                  <Text style={s.customActionSaveText}>Continue</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={s.customActionSaveBtn} onPress={savePet}>
+                  <Text style={s.customActionSaveText}>Save Pet</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+const playSosSound = async () => {
+  try {
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+    });
+
+    const { sound } = await Audio.Sound.createAsync(
+      require('./assets/sounds/sos.mp3'),
+      {
+        shouldPlay: true,
+        volume: 0.8,
+      }
+    );
+
+    // unload AFTER playback finishes
+    sound.setOnPlaybackStatusUpdate(async (status) => {
+      if (status.didJustFinish) {
+        await sound.unloadAsync();
+      }
+    });
+
+  } catch (error) {
+    console.log('SOS SOUND ERROR:', error);
+    Vibration.vibrate(80);
+  }
+};
 // ─────────────────────────────────────────────
 // SCREEN: DASHBOARD
 // ─────────────────────────────────────────────
 function DashboardScreen({ navigation }) {
+  const { pets } = useContext(PetsContext);
+  const { careReminders, setCareReminders } = useContext(CareRemindersContext);
+  const { petScores, setPetScores } = useContext(PetScoresContext);
+  const { activityLogs, setActivityLogs } = useContext(ActivityLogsContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [tasks, setTasks] = useState(TASKS);
-  const [careReminders, setCareReminders] = useState([]);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
@@ -292,19 +1210,31 @@ function DashboardScreen({ navigation }) {
   const [reminderIcon, setReminderIcon] = useState('🍽️');
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('');
-  const [activityLogs, setActivityLogs] = useState([]);
   const [customActions, setCustomActions] = useState([]);
   const [showAddActionModal, setShowAddActionModal] = useState(false);
   const [customActionName, setCustomActionName] = useState('');
   const [customActionIcon, setCustomActionIcon] = useState('⭐');
-  const [petScores, setPetScores] = useState(
-    Object.fromEntries(PETS.map(p => [p.id, p.score]))
-  );
   const petBounce = useRef(new Animated.Value(1)).current;
+  const calendarChipBounce = useRef(new Animated.Value(1)).current;
+  const sosBounce = useRef(new Animated.Value(1)).current;
+  const sosFlash = useRef(new Animated.Value(0)).current;
+  const [isSosAnimating, setIsSosAnimating] = useState(false);
+  const scoreAnimationRef = useRef(null);
   const previousPetIdRef = useRef(selectedPetId);
-  const pet = PETS.find(p => p.id === selectedPetId);
+  useEffect(() => {
+    setPetScores(prev => {
+      const next = { ...prev };
+      pets.forEach((petItem) => {
+        if (next[petItem.id] == null) {
+          next[petItem.id] = petItem.score ?? getStarterPetScore(petItem.species);
+        }
+      });
+      return next;
+    });
+  }, [pets]);
+  const pet = pets.find(p => p.id === selectedPetId) || pets[0];
   const playPetSound = async (species) => {
-    const soundAsset = PET_SOUNDS[species];
+    const soundAsset = getPetSoundAsset(species);
 
     if (!soundAsset) {
       if (Platform.OS !== 'web') {
@@ -367,15 +1297,118 @@ function DashboardScreen({ navigation }) {
       }),
     ]).start();
 
-    const selectedPet = PETS.find(p => p.id === petId);
+    const selectedPet = pets.find(p => p.id === petId);
     if (selectedPet?.species) {
       void playPetSound(selectedPet.species);
+    }
+  };
+  const handleSosPress = async () => {
+    if (isSosAnimating) return;
+
+    setIsSosAnimating(true);
+
+    try {
+      await playSosSound();
+
+      Animated.sequence([
+        Animated.timing(sosBounce, {
+          toValue: 1.08,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sosBounce, {
+          toValue: 1,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      Animated.sequence([
+        Animated.timing(sosFlash, {
+          toValue: 1,
+          duration: 90,
+          useNativeDriver: false,
+        }),
+        Animated.timing(sosFlash, {
+          toValue: 0,
+          duration: 160,
+          useNativeDriver: false,
+        }),
+      ]).start();
+
+      setTimeout(() => {
+        setIsSosAnimating(false);
+        navigation.navigate('LostPet');
+      }, 500);
+    } catch (error) {
+      if (Platform.OS !== 'web') {
+        Vibration.vibrate(15);
+      }
+      setTimeout(() => {
+        setIsSosAnimating(false);
+        navigation.navigate('LostPet');
+      }, 900);
     }
   };
   useEffect(() => {
     if (previousPetIdRef.current === selectedPetId) return;
     previousPetIdRef.current = selectedPetId;
   }, [selectedPetId]);
+  useEffect(() => {
+    calendarChipBounce.stopAnimation();
+    calendarChipBounce.setValue(1);
+
+    Animated.sequence([
+      Animated.timing(calendarChipBounce, {
+        toValue: 1.08,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(calendarChipBounce, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [selectedCalendarDateKey]);
+  useEffect(() => {
+    const nextScore = Math.max(0, Math.min(100, currentScore));
+    const startScore = Math.max(0, Math.min(100, displayedHealthScore));
+
+    if (scoreAnimationRef.current) {
+      clearInterval(scoreAnimationRef.current);
+      scoreAnimationRef.current = null;
+    }
+
+    if (startScore === nextScore) return;
+
+    const steps = 20;
+    const stepMs = 20;
+    const delta = (nextScore - startScore) / steps;
+    let currentStep = 0;
+    let value = startScore;
+
+    scoreAnimationRef.current = setInterval(() => {
+      currentStep += 1;
+      value += delta;
+
+      if (currentStep >= steps) {
+        setDisplayedHealthScore(nextScore);
+        clearInterval(scoreAnimationRef.current);
+        scoreAnimationRef.current = null;
+        return;
+      }
+
+      setDisplayedHealthScore(Math.round(value));
+    }, stepMs);
+
+    return () => {
+      if (scoreAnimationRef.current) {
+        clearInterval(scoreAnimationRef.current);
+        scoreAnimationRef.current = null;
+      }
+    };
+  }, [currentScore, selectedPetId]);
   const reminderIconOptions = ['🍽️', '💊', '🦮', '🎾', '🧼', '⚖️', '💧', '🌡️', '🧪', '🧹', '🔥', '💬'];
   const formatLocalDateKey = (date) => {
     const year = date.getFullYear();
@@ -407,9 +1440,7 @@ function DashboardScreen({ navigation }) {
     const key = normalizeReminderDateKey(value);
     if (!key) return typeof value === 'string' && value.trim() ? value.trim() : 'No date set';
     if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return key;
-    const [year, month, day] = key.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return formatDate(key);
   };
   const openReminderModal = () => {
     setEditingReminder(null);
@@ -531,7 +1562,7 @@ function DashboardScreen({ navigation }) {
         if (scoreDelta > 0) {
           setPetScores(prev => ({
             ...prev,
-            [task.petId]: Math.max(0, Math.min(100, (prev[task.petId] ?? PETS.find(p => p.id === task.petId)?.score ?? 0) - scoreDelta)),
+            [task.petId]: Math.max(0, Math.min(100, (prev[task.petId] ?? pets.find(p => p.id === task.petId)?.score ?? 0) - scoreDelta)),
           }));
         }
       }
@@ -571,7 +1602,7 @@ function DashboardScreen({ navigation }) {
     if (scoreDelta > 0) {
       setPetScores(prev => ({
         ...prev,
-        [targetPetId]: Math.max(0, Math.min(100, (prev[targetPetId] ?? PETS.find(p => p.id === targetPetId)?.score ?? 0) + scoreDelta)),
+        [targetPetId]: Math.max(0, Math.min(100, (prev[targetPetId] ?? pets.find(p => p.id === targetPetId)?.score ?? 0) + scoreDelta)),
       }));
     }
   };
@@ -587,13 +1618,14 @@ function DashboardScreen({ navigation }) {
       if (scoreDelta > 0) {
         setPetScores(prev => ({
           ...prev,
-          [logToDelete.petId]: Math.max(0, Math.min(100, (prev[logToDelete.petId] ?? PETS.find(p => p.id === logToDelete.petId)?.score ?? 0) - scoreDelta)),
+          [logToDelete.petId]: Math.max(0, Math.min(100, (prev[logToDelete.petId] ?? pets.find(p => p.id === logToDelete.petId)?.score ?? 0) - scoreDelta)),
         }));
       }
     }
   };
 
-  const currentScore = petScores[selectedPetId] ?? pet.score;
+  const currentScore = Math.max(0, Math.min(100, petScores[selectedPetId] ?? pet?.score ?? 80));
+  const [displayedHealthScore, setDisplayedHealthScore] = useState(currentScore);
   const scoreColor = currentScore >= 85 ? C.green : currentScore >= 65 ? C.yellow : C.red;
   const recentActivity = activityLogs.filter(log => log.petId === pet.id);
   const petActivityDays = [...new Set(recentActivity.map(log => log.dateKey || new Date().toDateString()))].sort((a, b) => new Date(b) - new Date(a));
@@ -632,50 +1664,7 @@ function DashboardScreen({ navigation }) {
   }
 
   const visibleHealthInsights = healthInsights.slice(0, 3);
-  const quickActions = pet.species === 'fish'
-    ? [
-        { icon: '🍽️', label: 'Feed Fish', action: () => addActivityLog('feeding', 'Fish fed', '🍽️') },
-        { icon: '💧', label: 'Water Change', action: () => addActivityLog('water_change', 'Water changed', '💧') },
-        { icon: '🌡️', label: 'Tank Temp', action: () => addActivityLog('tank_temp', 'Tank temperature checked', '🌡️') },
-        { icon: '🧪', label: 'Check pH', action: () => addActivityLog('check_ph', 'Water pH checked', '🧪') },
-        { icon: '🧽', label: 'Filter Cleaned', action: () => addActivityLog('filter_cleaned', 'Filter cleaned', '🧽') },
-        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
-      ]
-    : pet.species === 'bird'
-      ? [
-          { icon: '🍽️', label: 'Feed Bird', action: () => addActivityLog('feeding', 'Bird fed', '🍽️') },
-          { icon: '🧼', label: 'Cage Cleaned', action: () => addActivityLog('cage_cleaned', 'Cage cleaned', '🧼') },
-          { icon: '💬', label: 'Social Time', action: () => addActivityLog('social_time', 'Social time logged', '💬') },
-          { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
-          { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
-        ]
-      : pet.species === 'reptile'
-        ? [
-            { icon: '🍽️', label: 'Feed Reptile', action: () => addActivityLog('feeding', 'Reptile fed', '🍽️') },
-            { icon: '🔥', label: 'Heat Check', action: () => addActivityLog('heat_check', 'Heat checked', '🔥') },
-            { icon: '💧', label: 'Humidity Check', action: () => addActivityLog('humidity_check', 'Humidity checked', '💧') },
-            { icon: '🧽', label: 'Habitat Cleaned', action: () => addActivityLog('habitat_cleaned', 'Habitat cleaned', '🧽') },
-            { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
-          ]
-        : pet.species === 'cat'
-          ? [
-              { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
-              { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
-              { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
-              { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
-              { icon: '💊', label: 'Medication', action: () => addActivityLog('medication', 'Medication given', '💊') },
-              { icon: '🧹', label: 'Litter Cleaned', action: () => addActivityLog('litter_cleaned', 'Litter cleaned', '🧹') },
-              { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
-            ]
-          : [
-              { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
-              { icon: '🦮', label: 'Log Walk', action: () => addActivityLog('walk', 'Walk logged', '🦮') },
-              { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
-              { icon: '💊', label: 'Medication', action: () => addActivityLog('medication', 'Medication given', '💊') },
-              { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
-              { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
-              { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
-            ];
+  const quickActions = buildQuickActionsForSpecies(pet, addActivityLog, navigation);
 const ACTION_ICONS = [
 
 ];  const displayedQuickActions = [
@@ -724,19 +1713,41 @@ const ACTION_ICONS = [
     </Text>
 
     <Text style={s.subGreeting} numberOfLines={1}>
-      Monday, May 25 · {PETS.length} pets
+      {formatDate(new Date())} · {pets.length} pets
     </Text>
   </View>
 
-  <TouchableOpacity style={s.sosButton} onPress={() => navigation.navigate('LostPet')}>
-    <Text style={s.sosText}>🚨 SOS</Text>
-  </TouchableOpacity>
+  <Animated.View
+    style={{
+      transform: [{ scale: sosBounce }],
+      shadowColor: C.red,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: sosFlash.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.18, 0.45],
+      }),
+      shadowRadius: sosFlash.interpolate({
+        inputRange: [0, 1],
+        outputRange: [8, 16],
+      }),
+    }}
+  >
+    <TouchableOpacity
+      style={[s.sosButton, { backgroundColor: C.red, opacity: isSosAnimating ? 0.85 : 1 }]}
+      onPress={handleSosPress}
+      activeOpacity={0.95}
+      disabled={isSosAnimating}
+    >
+      <Text style={s.sosText}>🚨 SOS</Text>
+    </TouchableOpacity>
+  </Animated.View>
 </View>
       <PetAvatarRow
-        pets={PETS}
+        pets={pets}
         selectedId={selectedPetId}
         onSelect={handleSelectPet}
         bounceValue={petBounce}
+        onOpenProfile={(petId) => navigation.navigate('PetProfile', { petId })}
       />
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -745,7 +1756,7 @@ const ACTION_ICONS = [
           <Card style={s.healthScoreCard}>
             <View style={s.healthScoreLeft}>
               <View style={[s.scoreCircle, { borderColor: scoreColor }]}>
-                <Text style={[s.scoreNumber, { color: scoreColor }]}>{currentScore}</Text>
+                <Text style={[s.scoreNumber, { color: scoreColor }]}>{displayedHealthScore}</Text>
                 <Text style={s.scoreLabel}>/100</Text>
               </View>
             </View>
@@ -766,10 +1777,13 @@ const ACTION_ICONS = [
           <Text style={s.sectionTitle}>Quick Actions</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 0, gap: 0 }}>
             {displayedQuickActions.map(item => (
-              <TouchableOpacity key={item.label} style={[s.quickAction, item.isAddAction && s.quickActionAdd]} onPress={item.action}>
-                <Text style={s.quickActionIcon}>{item.icon}</Text>
-                <Text style={s.quickActionLabel}>{item.label}</Text>
-              </TouchableOpacity>
+              <AnimatedQuickAction
+                key={item.label}
+                icon={item.icon}
+                label={item.label}
+                onPress={item.action}
+                isAddAction={item.isAddAction}
+              />
             ))}
           </ScrollView>
         </View>
@@ -856,24 +1870,49 @@ const ACTION_ICONS = [
                   ]}
                   onPress={() => setSelectedCalendarDate(date)}
                 >
-                  <Text
-                    style={[
-                      s.tabPillText,
-                      selected && s.tabPillTextActive,
-                      { fontSize: 11, fontWeight: '700', textAlign: 'center' },
-                    ]}
-                  >
-                    {date.toLocaleDateString([], { weekday: 'short' })}
-                  </Text>
-                  <Text
-                    style={[
-                      s.tabPillText,
-                      selected && s.tabPillTextActive,
-                      { fontSize: 16, fontWeight: '800', marginTop: 2, textAlign: 'center' },
-                    ]}
-                  >
-                    {date.getDate()}
-                  </Text>
+                  {selected ? (
+                    <Animated.View style={{ transform: [{ scale: calendarChipBounce }] }}>
+                      <Text
+                        style={[
+                          s.tabPillText,
+                          selected && s.tabPillTextActive,
+                          { fontSize: 11, fontWeight: '700', textAlign: 'center' },
+                        ]}
+                      >
+                        {date.toLocaleDateString([], { weekday: 'short' })}
+                      </Text>
+                      <Text
+                        style={[
+                          s.tabPillText,
+                          selected && s.tabPillTextActive,
+                          { fontSize: 16, fontWeight: '800', marginTop: 2, textAlign: 'center' },
+                        ]}
+                      >
+                        {date.getDate()}
+                      </Text>
+                    </Animated.View>
+                  ) : (
+                    <>
+                      <Text
+                        style={[
+                          s.tabPillText,
+                          selected && s.tabPillTextActive,
+                          { fontSize: 11, fontWeight: '700', textAlign: 'center' },
+                        ]}
+                      >
+                        {date.toLocaleDateString([], { weekday: 'short' })}
+                      </Text>
+                      <Text
+                        style={[
+                          s.tabPillText,
+                          selected && s.tabPillTextActive,
+                          { fontSize: 16, fontWeight: '800', marginTop: 2, textAlign: 'center' },
+                        ]}
+                      >
+                        {date.getDate()}
+                      </Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -985,6 +2024,11 @@ const ACTION_ICONS = [
               placeholder="YYYY-MM-DD"
               placeholderTextColor={C.muted}
             />
+            {reminderDate.trim() ? (
+              <Text style={{ color: C.muted, fontSize: 12, marginTop: -8, marginBottom: 10 }}>
+                Preview: {formatDate(reminderDate.trim())}
+              </Text>
+            ) : null}
             <TextInput
               style={s.customActionInput}
               value={reminderTime}
@@ -1030,10 +2074,158 @@ const ACTION_ICONS = [
 }
 
 // ─────────────────────────────────────────────
-function HealthHubScreen() {
+// SCREEN: PET PROFILE
+// ─────────────────────────────────────────────
+function PetProfileScreen({ navigation, route }) {
+  const { pets } = useContext(PetsContext);
+  const { petScores } = useContext(PetScoresContext);
+  const { activityLogs } = useContext(ActivityLogsContext);
+  const { healthRecords } = useContext(HealthRecordsContext);
+  const { careReminders } = useContext(CareRemindersContext);
+
+  const petId = route?.params?.petId;
+  const pet = pets.find((item) => item.id === petId) || pets[0];
+  const currentScore = Math.max(0, Math.min(100, petScores[pet.id] ?? pet.score ?? 80));
+  const scoreColor = currentScore >= 85 ? C.green : currentScore >= 65 ? C.yellow : C.red;
+  const speciesLabel = pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet';
+  const ageOrBirthday = pet.birthday ? `Birthday: ${formatDate(pet.birthday)}` : `Age: ${pet.age || 'Unknown'}`;
+  const careGoalsText = Array.isArray(pet.careGoals)
+    ? (pet.careGoals.length ? pet.careGoals.join(', ') : 'Not set')
+    : (pet.careGoals || 'Not set');
+  const streakDays = getStreakDaysForPet(activityLogs, pet.id);
+  const todayKey = toLocalDateKey(new Date());
+  const upcomingReminders = careReminders.filter((reminder) => (
+    reminder.petId === pet.id
+    && !reminder.completed
+    && reminder.date
+    && reminder.date >= todayKey
+  ));
+  const petActivity = activityLogs.filter((log) => log.petId === pet.id).slice(0, 3);
+  const petHealthRecordCount = healthRecords.filter((record) => record.petId === pet.id).length;
+  const goToMainTab = (screenName) => {
+    navigation.navigate('Main', { screen: screenName });
+    setTimeout(() => {
+      navigation.goBack();
+    }, 0);
+  };
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.petProfileScroll}>
+        <View style={s.pageHeader}>
+          <View>
+            <Text style={s.pageTitle}>Pet Profile</Text>
+            <Text style={s.pageSub}>A quick view of {pet.name}&apos;s care details</Text>
+          </View>
+
+          <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
+            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Card style={s.petProfileHeroCard}>
+          <View style={s.petProfileAvatarWrap}>
+            <View style={s.petProfileAvatarCircle}>
+              {pet.photoUri ? (
+                <Image source={{ uri: pet.photoUri }} style={s.petProfileAvatarImage} />
+              ) : (
+                <Text style={s.petProfileAvatarEmoji}>{pet.emoji || getDefaultPetEmoji(pet.species)}</Text>
+              )}
+            </View>
+          </View>
+
+          <Text style={s.petProfileName}>{pet.name}</Text>
+          <Text style={s.petProfileSubtitle}>{speciesLabel} · {pet.breed || 'Breed not set'}</Text>
+
+          <View style={s.petProfileChipRow}>
+            <View style={s.petProfileChip}><Text style={s.petProfileChipText}>{ageOrBirthday}</Text></View>
+            <View style={s.petProfileChip}><Text style={s.petProfileChipText}>Weight: {pet.weight || 'Not set'}</Text></View>
+            <View style={s.petProfileChip}><Text style={s.petProfileChipText}>Gender: {pet.gender || 'Not set'}</Text></View>
+          </View>
+        </Card>
+
+        <View style={s.petProfileStatGrid}>
+          <Card style={s.petProfileStatCard}>
+            <Text style={s.petProfileStatLabel}>Health Score</Text>
+            <View style={[s.petProfileScoreCircle, { borderColor: scoreColor, backgroundColor: `${scoreColor}20` }]}>
+              <Text style={[s.petProfileScoreValue, { color: scoreColor }]}>{currentScore}</Text>
+              <Text style={[s.petProfileScoreUnit, { color: scoreColor }]}>/100</Text>
+            </View>
+          </Card>
+
+          <Card style={s.petProfileStatCard}>
+            <Text style={s.petProfileStatLabel}>Care Streak</Text>
+            <Text style={s.petProfileStatBig}>{streakDays} day{streakDays === 1 ? '' : 's'}</Text>
+            <Text style={s.petProfileStatSub}>Keep the streak going</Text>
+          </Card>
+
+          <Card style={s.petProfileStatCard}>
+            <Text style={s.petProfileStatLabel}>Upcoming Reminders</Text>
+            <Text style={s.petProfileStatBig}>{upcomingReminders.length}</Text>
+            <Text style={s.petProfileStatSub}>Scheduled care items</Text>
+          </Card>
+
+          <Card style={s.petProfileStatCard}>
+            <Text style={s.petProfileStatLabel}>Health Records</Text>
+            <Text style={s.petProfileStatBig}>{petHealthRecordCount}</Text>
+            <Text style={s.petProfileStatSub}>Logged records</Text>
+          </Card>
+        </View>
+
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Care Goals</Text>
+          <Text style={s.petProfileBodyText}>{careGoalsText}</Text>
+        </Card>
+
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Recent Activity</Text>
+          {petActivity.length === 0 ? (
+            <Text style={s.petProfileEmptyText}>No recent activity yet.</Text>
+          ) : (
+            petActivity.map((log) => (
+              <View key={log.id} style={s.petProfileActivityRow}>
+                <View style={s.petProfileActivityIcon}>
+                  <Text style={{ fontSize: 18 }}>{log.icon || '✨'}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.petProfileActivityTitle}>{log.title}</Text>
+                  <Text style={s.petProfileActivitySub}>
+                    {log.time}{log.dateKey ? ` · ${formatDate(log.dateKey)}` : ''}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </Card>
+
+        <View style={s.petProfileButtonRow}>
+          <TouchableOpacity style={s.petProfileButton} onPress={() => Alert.alert('Edit Pet coming soon')}>
+            <Text style={s.petProfileButtonText}>Edit Pet</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.petProfileButton}
+            onPress={() => goToMainTab('Health')}
+          >
+            <Text style={s.petProfileButtonText}>View Health Records</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.petProfileButton, s.petProfileButtonAccent]}
+            onPress={() => goToMainTab('Home')}
+          >
+            <Text style={[s.petProfileButtonText, s.petProfileButtonTextAccent]}>View Care Calendar</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ─────────────────────────────────────────────
+function HealthHubScreen({ navigation }) {
+  const { pets } = useContext(PetsContext);
+  const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
-  const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [pendingRecordType, setPendingRecordType] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -1144,7 +2336,7 @@ function HealthHubScreen() {
       (activeTab === 'all' || typeMap[r.type] === activeTab)
   );
 
-  const pet = PETS.find((p) => p.id === selectedPetId);
+  const pet = pets.find((p) => p.id === selectedPetId) || pets[0];
 
   const statusInfo = {
     current: { label: 'CURRENT', color: C.green },
@@ -1170,14 +2362,28 @@ function HealthHubScreen() {
       symptomNotes: '',
     };
 
-    if (record?.details) {
-      return { ...base, ...record.details };
+    const parsedTitle = getRecordDetailFromTitle(record);
+    const merged = { ...base, ...(record?.details || {}) };
+    const mainKey = recordMainFieldKey[record?.type];
+    if (mainKey) {
+      const mainValue =
+        record?.vaccineName ||
+        record?.medicationName ||
+        record?.appointmentReason ||
+        record?.symptomText ||
+        (record?.type === 'weight' && record?.value != null ? `${record.value}${record.unit ? ` ${record.unit}` : ''}` : '') ||
+        parsedTitle;
+
+      merged[mainKey] = mainValue;
     }
 
-    const parsedTitle = getRecordDetailFromTitle(record);
-    const mainKey = recordMainFieldKey[record?.type];
-    if (mainKey) return { ...base, [mainKey]: parsedTitle };
-    return base;
+    if (record?.nextDue) {
+      if (record.type === 'vaccination') merged.nextDueDate = record.nextDue;
+      if (record.type === 'medication') merged.nextDoseDate = record.nextDue;
+      if (record.type === 'appointment') merged.appointmentDate = record.nextDue;
+    }
+
+    return merged;
   };
 
   const buildRecordMeta = (type, form) => {
@@ -1192,39 +2398,64 @@ function HealthHubScreen() {
         title: `Vaccination: ${mainValue}`,
         icon: '💉',
         status: 'current',
+        nextDue: clean.nextDueDate || '',
+        vaccineName: mainValue,
+        details: {
+          providerClinic: clean.providerClinic || '',
+        },
         detailLines: [
           clean.providerClinic ? `Provider / clinic: ${clean.providerClinic}` : null,
-          clean.nextDueDate ? `Next due date: ${clean.nextDueDate}` : null,
         ].filter(Boolean),
       },
       medication: {
         title: `Medication: ${mainValue}`,
         icon: '💊',
         status: 'current',
+        nextDue: clean.nextDoseDate || '',
+        medicationName: mainValue,
+        details: {
+          dosage: clean.dosage || '',
+        },
         detailLines: [
           clean.dosage ? `Dosage: ${clean.dosage}` : null,
-          clean.nextDoseDate ? `Next dose / due date: ${clean.nextDoseDate}` : null,
         ].filter(Boolean),
       },
       appointment: {
         title: `Appointment: ${mainValue}`,
         icon: '🏥',
         status: 'upcoming',
+        nextDue: clean.appointmentDate || '',
+        appointmentReason: mainValue,
+        details: {
+          vetClinic: clean.vetClinic || '',
+        },
         detailLines: [
           clean.vetClinic ? `Vet / clinic: ${clean.vetClinic}` : null,
-          clean.appointmentDate ? `Appointment date: ${clean.appointmentDate}` : null,
         ].filter(Boolean),
       },
       weight: {
         title: `Weight: ${mainValue}`,
         icon: '⚖️',
         status: 'current',
+        value: (() => {
+          const match = String(mainValue).match(/[\d.]+/);
+          return match ? Number(match[0]) : null;
+        })(),
+        unit: 'lbs',
+        details: {
+          weightNotes: clean.weightNotes || '',
+        },
         detailLines: [clean.weightNotes ? `Notes: ${clean.weightNotes}` : null].filter(Boolean),
       },
       symptom: {
         title: `Symptom: ${mainValue}`,
         icon: '🤒',
         status: 'due_soon',
+        symptomText: mainValue,
+        details: {
+          severity: clean.severity || '',
+          symptomNotes: clean.symptomNotes || '',
+        },
         detailLines: [
           clean.severity ? `Severity: ${clean.severity}` : null,
           clean.symptomNotes ? `Notes: ${clean.symptomNotes}` : null,
@@ -1232,23 +2463,21 @@ function HealthHubScreen() {
       },
     };
 
-    return { ...typeConfig[type], mainValue, details: clean };
+    return { ...typeConfig[type], mainValue, details: typeConfig[type].details };
   };
 
   const createHealthRecord = (type, form) => {
     const meta = buildRecordMeta(type, form);
     if (!meta || !meta.mainValue) return;
+    const { detailLines, mainValue, ...recordMeta } = meta;
 
     const newRecord = {
       id: Date.now().toString(),
       petId: selectedPetId,
       type,
-      title: meta.title,
       date: new Date().toLocaleDateString(),
       provider: null,
-      status: meta.status,
-      icon: meta.icon,
-      nextDue: null,
+      ...recordMeta,
       details: meta.details,
     };
 
@@ -1275,12 +2504,13 @@ function HealthHubScreen() {
     }
 
     if (editingRecord) {
+      const { detailLines, mainValue, ...recordMeta } = meta;
       setHealthRecords(prev => prev.map(record => (
         record.id === editingRecord.id
           ? {
               ...record,
               type: pendingRecordType,
-              title: meta.title,
+              ...recordMeta,
               details: meta.details,
             }
           : record
@@ -1344,7 +2574,7 @@ function HealthHubScreen() {
 
     if (diffDays === 0) return 'TODAY';
     if (diffDays === 1) return 'YESTERDAY';
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+    return formatDate(date);
   };
 
   const groupedTimeline = Object.values(
@@ -1378,26 +2608,26 @@ function HealthHubScreen() {
     if (record.type === 'vaccination') {
       return [
         details.providerClinic ? `Provider / clinic: ${details.providerClinic}` : null,
-        details.nextDueDate ? `Next due date: ${details.nextDueDate}` : null,
       ].filter(Boolean);
     }
 
     if (record.type === 'medication') {
       return [
         details.dosage ? `Dosage: ${details.dosage}` : null,
-        details.nextDoseDate ? `Next dose / due date: ${details.nextDoseDate}` : null,
       ].filter(Boolean);
     }
 
     if (record.type === 'appointment') {
       return [
         details.vetClinic ? `Vet / clinic: ${details.vetClinic}` : null,
-        details.appointmentDate ? `Appointment date: ${details.appointmentDate}` : null,
       ].filter(Boolean);
     }
 
     if (record.type === 'weight') {
-      return [details.weightNotes ? `Notes: ${details.weightNotes}` : null].filter(Boolean);
+      return [
+        record.value != null ? `Value: ${record.value}${record.unit ? ` ${record.unit}` : ''}` : null,
+        details.weightNotes ? `Notes: ${details.weightNotes}` : null,
+      ].filter(Boolean);
     }
 
     if (record.type === 'symptom') {
@@ -1413,9 +2643,9 @@ function HealthHubScreen() {
   const getRecordAlertSummary = (record) => {
     const lines = [record.title];
 
-    if (record.date) lines.push(`Date: ${record.date}`);
+    if (record.date) lines.push(`Date: ${formatDate(record.date)}`);
     if (record.provider) lines.push(`Provider: ${record.provider}`);
-    if (record.nextDue) lines.push(`Next due: ${record.nextDue}`);
+    if (record.nextDue) lines.push(`Next due: ${formatDate(record.nextDue)}`);
 
     const details = getRecordDisplayLines(record);
     if (details.length > 0) {
@@ -1427,24 +2657,21 @@ function HealthHubScreen() {
 
   const getRecordFullDetails = (record) => {
     const details = record.details || {};
-    const parts = [record.title, `Date: ${record.date}`];
+    const parts = [record.title, `Date: ${formatDate(record.date)}`];
 
     if (record.provider) parts.push(`Provider: ${record.provider}`);
-    if (record.nextDue) parts.push(`Next due: ${record.nextDue}`);
+    if (record.nextDue) parts.push(`Next due: ${formatDate(record.nextDue)}`);
 
     if (record.type === 'vaccination') {
       if (details.providerClinic) parts.push(`Provider / clinic: ${details.providerClinic}`);
-      if (details.nextDueDate) parts.push(`Next due date: ${details.nextDueDate}`);
     }
 
     if (record.type === 'medication') {
       if (details.dosage) parts.push(`Dosage: ${details.dosage}`);
-      if (details.nextDoseDate) parts.push(`Next dose / due date: ${details.nextDoseDate}`);
     }
 
     if (record.type === 'appointment') {
       if (details.vetClinic) parts.push(`Vet / clinic: ${details.vetClinic}`);
-      if (details.appointmentDate) parts.push(`Appointment date: ${details.appointmentDate}`);
     }
 
     if (record.type === 'weight') {
@@ -1490,7 +2717,7 @@ function HealthHubScreen() {
     );
   };
 
-  const currentScore = PETS.find((p) => p.id === selectedPetId)?.score ?? 0;
+  const currentScore = pets.find((p) => p.id === selectedPetId)?.score ?? 0;
   const streakDays = Math.max(1, records.length ? new Set(records.map((record) => record.date)).size : 1);
   const latestRecords = [...records]
     .sort((a, b) => getRecordDate(b) - getRecordDate(a))
@@ -1541,7 +2768,7 @@ function HealthHubScreen() {
       `Current Streak: ${streakDays} day${streakDays === 1 ? '' : 's'}`,
       '',
       'Latest Records:',
-      ...latestRecords.map((record) => `- ${record.title} (${record.date})`),
+      ...latestRecords.map((record) => `- ${record.title} (${formatDate(record.date)})`),
     ];
 
     return lines.join('\n');
@@ -1572,9 +2799,10 @@ function HealthHubScreen() {
       <View style={{ marginTop: 0 }}>
         <View style={{ marginTop: -10, marginBottom: -8 }}>
           <PetAvatarRow
-            pets={PETS}
+            pets={pets}
             selectedId={selectedPetId}
             onSelect={setSelectedPetId}
+            onOpenProfile={(petId) => navigation.navigate('PetProfile', { petId })}
           />
         </View>
 
@@ -1780,7 +3008,7 @@ function HealthHubScreen() {
                     <View style={s.timelineCardTop}>
                       <View style={{ flex: 1 }}>
                         <Text style={s.timelineTitle}>{record.title}</Text>
-                        <Text style={s.timelineDate}>{record.date}</Text>
+                        <Text style={s.timelineDate}>{formatDate(record.date)}</Text>
 
                         {getRecordDisplayLines(record).length > 0 && (
                           <Text style={{ color: C.muted, fontSize: 11, lineHeight: 16, marginTop: 6 }}>
@@ -1793,7 +3021,7 @@ function HealthHubScreen() {
                         )}
 
                         {record.nextDue && (
-                          <Text style={s.timelineDue}>Next: {record.nextDue}</Text>
+                          <Text style={s.timelineDue}>Next due: {formatDate(record.nextDue)}</Text>
                         )}
                       </View>
 
@@ -1850,6 +3078,11 @@ function HealthHubScreen() {
                     placeholder={field.placeholder}
                     placeholderTextColor={C.muted}
                   />
+                  {field.key.toLowerCase().includes('date') && recordForm[field.key].trim() ? (
+                    <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>
+                      Preview: {formatDate(recordForm[field.key].trim())}
+                    </Text>
+                  ) : null}
                 </View>
               ))}
             </ScrollView>
@@ -1919,7 +3152,8 @@ function HealthHubScreen() {
 // ─────────────────────────────────────────────
 // SCREEN: MEMORY VAULT
 // ─────────────────────────────────────────────
-function MemoryVaultScreen() {
+function MemoryVaultScreen({ navigation }) {
+  const { pets } = useContext(PetsContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
   const { width } = Dimensions.get('window');
@@ -1929,7 +3163,7 @@ function MemoryVaultScreen() {
     m.petId === selectedPetId && (activeTab === 'all' || (activeTab === 'milestones' && m.milestone))
   );
 
-  const pet = PETS.find(p => p.id === selectedPetId);
+  const pet = pets.find(p => p.id === selectedPetId) || pets[0];
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -1943,14 +3177,19 @@ function MemoryVaultScreen() {
         </TouchableOpacity>
       </View>
 
-      <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
+      <PetAvatarRow
+        pets={pets}
+        selectedId={selectedPetId}
+        onSelect={setSelectedPetId}
+        onOpenProfile={(petId) => navigation.navigate('PetProfile', { petId })}
+      />
 
       {/* Memory of the Day */}
       <Card style={s.motdCard}>
         <Text style={s.motdBadge}>✨ Memory of the Day</Text>
         <Text style={{ fontSize: 48, textAlign: 'center', marginVertical: 8 }}>🌊</Text>
         <Text style={s.motdCaption}>{pet.name}'s first beach trip!</Text>
-        <Text style={s.motdDate}>May 2026</Text>
+              <Text style={s.motdDate}>05/20/2026</Text>
       </Card>
 
       {/* Tabs */}
@@ -2106,13 +3345,14 @@ function CommunityScreen() {
 // SCREEN: SETTINGS
 // ─────────────────────────────────────────────
 function SettingsScreen({ navigation }) {
+  const { pets } = useContext(PetsContext);
   const menuSections = [
     {
       title: 'Account',
       items: [
         { icon: '👤', label: 'Profile', sub: 'Raymond · rayray579@gmail.com' },
         { icon: '🏠', label: 'Family Sharing', sub: '2 household members' },
-        { icon: '💳', label: 'Subscription', sub: '⭐ Premium — renews Aug 2026', accent: true },
+        { icon: '💳', label: 'Subscription', sub: '⭐ Premium — renews 08/01/2026', accent: true },
       ],
     },
     {
@@ -2343,8 +3583,9 @@ function AIVetScreen({ navigation }) {
 // MODAL: LOST PET MODE
 // ─────────────────────────────────────────────
 function LostPetScreen({ navigation }) {
+  const { pets } = useContext(PetsContext);
   const [step, setStep] = useState(1);
-  const [selectedPet, setSelectedPet] = useState(PETS[0]);
+  const [selectedPet, setSelectedPet] = useState(pets[0] || PETS[0]);
   const [petPhoto, setPetPhoto] = useState(null);
   const [lastKnownLocation, setLastKnownLocation] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -2356,6 +3597,13 @@ function LostPetScreen({ navigation }) {
     setStep(3);
     setTimeout(() => { setActivated(true); setStep(4); }, 2000);
   };
+
+  useEffect(() => {
+    if (selectedPet && pets.some((pet) => pet.id === selectedPet.id)) return;
+    if (pets[0]) {
+      setSelectedPet(pets[0]);
+    }
+  }, [pets, selectedPet]);
 
   const pickPetPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -2450,7 +3698,7 @@ function LostPetScreen({ navigation }) {
       </View>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={s.stepTitle}>Which pet is missing?</Text>
-        {PETS.map(pet => (
+        {pets.map(pet => (
           <TouchableOpacity key={pet.id} style={[s.petSelectCard, selectedPet.id === pet.id && s.petSelectCardActive]} onPress={() => setSelectedPet(pet)}>
             <Text style={{ fontSize: 40 }}>{pet.emoji}</Text>
             <View style={s.flex}>
@@ -2705,17 +3953,74 @@ function TabNavigator() {
   );
 }
 export default function App() {
+  const [pets, setPets] = useState(PETS);
+  const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
+  const [careReminders, setCareReminders] = useState([]);
+  const [petScores, setPetScores] = useState(Object.fromEntries(PETS.map(p => [p.id, p.score ?? 80])));
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [showAddPetModal, setShowAddPetModal] = useState(false);
+  const [addPetInitialSpecies, setAddPetInitialSpecies] = useState('dog');
+  const addPetSelectCallbackRef = useRef(null);
+
+  const openAddPetModal = (onSelect, speciesHint = 'dog') => {
+    addPetSelectCallbackRef.current = typeof onSelect === 'function' ? onSelect : null;
+    setAddPetInitialSpecies(speciesHint || 'dog');
+    setShowAddPetModal(true);
+  };
+
+  const closeAddPetModal = () => {
+    addPetSelectCallbackRef.current = null;
+    setShowAddPetModal(false);
+  };
+
+  const handleSavePet = (newPet) => {
+    setPets(prev => [newPet, ...prev]);
+    setPetScores(prev => ({
+      ...prev,
+      [newPet.id]: newPet.score ?? 80,
+    }));
+    setCareReminders(prev => [...buildStarterReminders(newPet), ...prev]);
+    setHealthRecords(prev => [...buildStarterHealthRecords(newPet), ...prev]);
+
+    const selectCreatedPet = addPetSelectCallbackRef.current;
+    addPetSelectCallbackRef.current = null;
+    setShowAddPetModal(false);
+
+    if (selectCreatedPet) {
+      selectCreatedPet(newPet.id);
+    }
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor={C.bg} />
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Main"    component={TabNavigator}  />
-            <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
-            <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <AddPetContext.Provider value={{ openAddPetModal }}>
+          <PetsContext.Provider value={{ pets, setPets }}>
+            <PetScoresContext.Provider value={{ petScores, setPetScores }}>
+              <ActivityLogsContext.Provider value={{ activityLogs, setActivityLogs }}>
+                <HealthRecordsContext.Provider value={{ healthRecords, setHealthRecords }}>
+                  <CareRemindersContext.Provider value={{ careReminders, setCareReminders }}>
+                    <NavigationContainer>
+                      <Stack.Navigator screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="Main"    component={TabNavigator}  />
+                        <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
+                      </Stack.Navigator>
+                    </NavigationContainer>
+                    <AddPetModal
+                      visible={showAddPetModal}
+                      initialSpecies={addPetInitialSpecies}
+                      onClose={closeAddPetModal}
+                      onSave={handleSavePet}
+                    />
+                  </CareRemindersContext.Provider>
+                </HealthRecordsContext.Provider>
+              </ActivityLogsContext.Provider>
+            </PetScoresContext.Provider>
+          </PetsContext.Provider>
+        </AddPetContext.Provider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -3134,6 +4439,259 @@ healthScoreCard: {
   customActionCancelText: { color: C.muted, fontWeight: '700' },
   customActionSaveBtn: { flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center', backgroundColor: C.accent },
   customActionSaveText: { color: '#fff', fontWeight: '800' },
+  addPetModal: {
+    backgroundColor: '#1b1b1b',
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+    maxHeight: '90%',
+  },
+  addPetModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  addPetModalClose: {
+    color: C.muted,
+    fontSize: 18,
+    fontWeight: '700',
+    width: 24,
+    textAlign: 'center',
+  },
+  addPetModalTitle: {
+    color: C.text,
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  addPetModalSubtitle: {
+    color: C.muted,
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  addPetProgressWrap: {
+    marginBottom: 14,
+  },
+  addPetProgressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: C.card,
+    overflow: 'hidden',
+  },
+  addPetProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: C.accent,
+  },
+  addPetProgressText: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
+    textAlign: 'right',
+  },
+  addPetSectionTitle: {
+    color: C.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  addPetPhotoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 14,
+  },
+  addPetPhotoCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  addPetPhotoImage: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+  },
+  addPetPhotoEmoji: {
+    fontSize: 38,
+  },
+  addPetPhotoButton: {
+    backgroundColor: 'rgba(255,107,53,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,53,0.25)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  addPetPhotoButtonText: {
+    color: C.accent,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  addPetPhotoHint: {
+    color: C.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  addPetInput: {
+    backgroundColor: C.bg,
+    borderColor: C.border,
+    borderWidth: 1,
+    color: C.text,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+    fontSize: 14,
+  },
+  addPetMultiline: {
+    minHeight: 98,
+    textAlignVertical: 'top',
+  },
+  addPetFieldLabel: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  addPetChipRow: {
+    paddingVertical: 4,
+    paddingRight: 8,
+    gap: 8,
+    marginBottom: 14,
+  },
+  addPetChip: {
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginRight: 8,
+  },
+  addPetChipActive: {
+    backgroundColor: 'rgba(255,107,53,0.16)',
+    borderColor: C.accent,
+  },
+  addPetChipText: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  addPetChipTextActive: {
+    color: C.text,
+  },
+  addPetModeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  addPetModeChip: {
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginRight: 8,
+    marginBottom: 6,
+  },
+  addPetModeChipActive: {
+    backgroundColor: 'rgba(255,107,53,0.16)',
+    borderColor: C.accent,
+  },
+  addPetModeChipText: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  addPetModeChipTextActive: {
+    color: C.text,
+  },
+  addPetGenderRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  addPetReviewCard: {
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 20,
+    padding: 14,
+  },
+  addPetReviewTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  addPetReviewAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: C.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  addPetReviewImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  addPetReviewEmoji: {
+    fontSize: 28,
+  },
+  addPetReviewName: {
+    color: C.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  addPetReviewMeta: {
+    color: C.muted,
+    fontSize: 12,
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  addPetReviewGoalLabel: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  addPetReviewGoalText: {
+    color: C.text,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  addPetFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
   reminderModal: { backgroundColor: C.card, borderRadius: 24, padding: 18, borderWidth: 1, borderColor: C.border },
   reminderModalLabel: { color: C.text, fontSize: 13, fontWeight: '800', marginBottom: 8, marginTop: 6 },
   reminderDateCard: { backgroundColor: C.bg, borderRadius: 16, borderWidth: 1, borderColor: C.border, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 6 },
@@ -3213,6 +4771,40 @@ healthScoreCard: {
   chatInputRow:      { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: C.border },
   chatInput:         { flex: 1, minHeight: 46, maxHeight: 110, backgroundColor: C.card, borderRadius: 18, color: C.text, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15 },
   sendBtn:           { width: 46, height: 46, borderRadius: 23, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+
+  // Pet Profile
+  petProfileScroll:    { paddingBottom: 28 },
+  petProfileHeroCard:   { marginHorizontal: 16, marginTop: 4, padding: 18, borderRadius: 26, alignItems: 'center' },
+  petProfileAvatarWrap: { marginBottom: 12 },
+  petProfileAvatarCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: C.border },
+  petProfileAvatarImage: { width: '100%', height: '100%' },
+  petProfileAvatarEmoji: { fontSize: 54 },
+  petProfileName:       { color: C.text, fontSize: 26, fontWeight: '900', textAlign: 'center' },
+  petProfileSubtitle:   { color: C.muted, fontSize: 13, marginTop: 6, textAlign: 'center', fontWeight: '700' },
+  petProfileChipRow:    { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 14 },
+  petProfileChip:       { backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.border },
+  petProfileChipText:    { color: C.text, fontSize: 12, fontWeight: '700' },
+  petProfileStatGrid:   { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 16, marginTop: 14 },
+  petProfileStatCard:    { width: '48.5%', padding: 14, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  petProfileStatLabel:   { color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 10, textAlign: 'center' },
+  petProfileScoreCircle: { width: 84, height: 84, borderRadius: 42, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  petProfileScoreValue:  { fontSize: 24, fontWeight: '900', lineHeight: 26 },
+  petProfileScoreUnit:    { fontSize: 11, fontWeight: '800', marginTop: -2 },
+  petProfileStatBig:     { color: C.text, fontSize: 22, fontWeight: '900', textAlign: 'center' },
+  petProfileStatSub:     { color: C.muted, fontSize: 11, marginTop: 4, textAlign: 'center' },
+  petProfileInfoCard:    { marginHorizontal: 16, marginTop: 12, padding: 16, borderRadius: 20 },
+  petProfileSectionTitle: { color: C.text, fontSize: 16, fontWeight: '900', marginBottom: 10 },
+  petProfileBodyText:    { color: C.muted, fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  petProfileEmptyText:    { color: C.faint, fontSize: 13, fontStyle: 'italic' },
+  petProfileActivityRow:  { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  petProfileActivityIcon:  { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg, borderWidth: 1, borderColor: C.border },
+  petProfileActivityTitle: { color: C.text, fontSize: 14, fontWeight: '800' },
+  petProfileActivitySub:   { color: C.muted, fontSize: 11, marginTop: 2, fontWeight: '600' },
+  petProfileButtonRow:   { gap: 10, paddingHorizontal: 16, marginTop: 14, marginBottom: 18 },
+  petProfileButton:      { backgroundColor: C.card, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 14, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+  petProfileButtonAccent: { backgroundColor: C.accent, borderColor: C.accent },
+  petProfileButtonText:  { color: C.text, fontSize: 14, fontWeight: '900' },
+  petProfileButtonTextAccent: { color: '#fff' },
 
   // Lost pet flow
   stepTitle:         { color: C.text, fontSize: 24, fontWeight: '900', marginBottom: 16 },
