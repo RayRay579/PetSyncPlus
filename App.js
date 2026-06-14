@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+﻿import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
@@ -10,9 +10,11 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { supabase } from './supabase';
 // ─────────────────────────────────────────────
 // COLORS & THEME
 // ─────────────────────────────────────────────
@@ -95,6 +97,96 @@ const POSTS = [
   { id: '2', author: 'Mike R.',     petType: 'Beagle Dad',           time: '4h ago', content: '🚨 MISSING: Bella (Beagle, 3 yrs) — last seen near Lacey Township. Wearing red collar. PLEASE SHARE! 🚨',        emoji: '🚨', likes: 89, comments: 34, type: 'lost_pet',    lost: true },
   { id: '3', author: 'Johnson Fam', petType: 'Multi-pet household',  time: '1d ago', content: 'Rocky just graduated from puppy training! 8 weeks of hard work and this guy nailed every single command 🎓🐶',    emoji: '🎓', likes: 67, comments: 14, type: 'celebration'  },
   { id: '4', author: 'Vet Dr. Kim', petType: 'Animal Clinic Partner', time: '2d ago', content: 'Summer reminder: sidewalks can reach 150°F on hot days. Test with your hand for 5 seconds — if you can\'t hold it, neither can your pet! 🌡️', emoji: '☀️', likes: 103, comments: 22, type: 'tip' },
+];
+
+const COMMUNITY_TABS = [
+  { key: 'feed', label: 'Feed' },
+  { key: 'recipes', label: 'Recipes' },
+  { key: 'lostPets', label: 'Lost Pets' },
+  { key: 'tips', label: 'Tips' },
+];
+
+const RECIPE_POSTS = [
+  {
+    id: 'recipe-1',
+    author: 'Mia S.',
+    owner: false,
+    petType: 'Dog Parent',
+    title: 'Frozen Peanut Butter Banana Dog Treats',
+    description: 'A cool, high-value treat for hot days with simple ingredients your pup already loves.',
+    ingredients: ['1 banana', '2 tbsp xylitol-free peanut butter', '1/2 cup plain yogurt', 'Ice tray molds'],
+    safeFor: ['dog'],
+    prepTime: '10 min',
+    likes: 58,
+    comments: 12,
+    emoji: '🍌🐶',
+    instructions: [
+      'Mash the banana until smooth.',
+      'Stir in the peanut butter and yogurt.',
+      'Spoon into ice tray molds.',
+      'Freeze until firm, then serve one at a time.',
+    ],
+  },
+  {
+    id: 'recipe-2',
+    author: 'Tina L.',
+    owner: false,
+    petType: 'Cat Parent',
+    title: 'Cat Tuna Bites',
+    description: 'Small savory bites for cats who want a little extra crunch without anything heavy.',
+    ingredients: ['1 can tuna in water', '1 egg', '2 tbsp oat flour', 'Pinch of catnip'],
+    safeFor: ['cat'],
+    prepTime: '20 min',
+    likes: 44,
+    comments: 9,
+    emoji: '🐟🐱',
+    instructions: [
+      'Preheat the oven to 325°F.',
+      'Mix tuna, egg, oat flour, and catnip into a thick dough.',
+      'Shape into tiny bite-size pieces.',
+      'Bake until set and cool completely before serving.',
+    ],
+  },
+  {
+    id: 'recipe-3',
+    author: 'Dr. Lane',
+    owner: false,
+    petType: 'Aquarium Keeper',
+    title: 'Fish Feeding Schedule Mix',
+    description: 'A simple way to prep a varied feeding routine for healthy tanks and happier fish.',
+    ingredients: ['Pellet blend', 'Freeze-dried bloodworms', 'Brine shrimp cubes', 'Vitamin drops'],
+    safeFor: ['fish'],
+    prepTime: '5 min',
+    likes: 31,
+    comments: 6,
+    emoji: '🐟✨',
+    instructions: [
+      'Measure your tank-safe pellet blend.',
+      'Add freeze-dried bloodworms or shrimp in small amounts.',
+      'Store in a sealed container for the week.',
+      'Follow your tank’s feeding schedule and portion carefully.',
+    ],
+  },
+  {
+    id: 'recipe-4',
+    author: 'Nora G.',
+    owner: false,
+    petType: 'Rabbit Parent',
+    title: 'Rabbit Veggie Snack Bowl',
+    description: 'Fresh, crunchy veggies that work as a supervised snack or enrichment bowl.',
+    ingredients: ['Romaine lettuce', 'Parsley', 'Bell pepper', 'Small carrot slices'],
+    safeFor: ['rabbit'],
+    prepTime: '8 min',
+    likes: 36,
+    comments: 11,
+    emoji: '🥬🐇',
+    instructions: [
+      'Wash and dry all produce thoroughly.',
+      'Chop the vegetables into rabbit-safe bite sizes.',
+      'Arrange in a bowl or foraging tray.',
+      'Serve fresh and remove leftovers after the session.',
+    ],
+  },
 ];
 
 const PET_SPECIES_EMOJIS = {
@@ -198,6 +290,163 @@ const formatDate = (date) => {
   const year = d.getFullYear();
 
   return `${month}/${day}/${year}`;
+};
+
+const parseStoredDateKey = (value) => {
+  if (!value) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    const parsed = new Date(`${text}T12:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const savePetToSupabase = async (pet) => {
+  const weightMatch = String(pet.weight || '').match(/[\d.]+/);
+  const parsedWeight = weightMatch ? Number(weightMatch[0]) : null;
+  const normalizedWeight = Number.isFinite(parsedWeight) ? parsedWeight : null;
+
+  const { error } = await supabase.from('pets').insert([
+    {
+      id: pet.id,
+      name: pet.name || '',
+      species: pet.species || '',
+      breed: pet.breed || '',
+      birthday: pet.birthday && String(pet.birthday).trim() ? pet.birthday : null,
+      weight: normalizedWeight,
+      gender: pet.gender || '',
+      photo_url: pet.photoUri || null,
+      care_goals: pet.careGoals || '',
+      health_score: pet.score ?? null,
+    },
+  ]);
+
+  if (error) {
+    console.log('Supabase pet save error:', error);
+    return;
+  }
+
+  console.log('Pet saved to Supabase');
+};
+
+const loadPetsFromSupabase = async () => {
+  const { data, error } = await supabase
+    .from('pets')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.log('Supabase pets load error:', error);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    console.log('No Supabase pets found, using local pets');
+    return [];
+  }
+
+  const mappedPets = data.map((row) => ({
+    id: row.id,
+    name: row.name,
+    species: row.species,
+    breed: row.breed,
+    birthday: row.birthday,
+    age: row.birthday ? calculateAgeLabelFromBirthday(row.birthday) : 'Unknown',
+    weight: row.weight ? `${row.weight} lbs` : '',
+    gender: row.gender,
+    photoUri: row.photo_url,
+    careGoals: row.care_goals,
+    emoji: getDefaultPetEmoji(row.species),
+    score: row.health_score ?? 80,
+  }));
+
+  console.log('Loaded pets from Supabase');
+  return mappedPets;
+};
+
+const DatePickerField = ({ label, value, onChange, placeholder }) => {
+  const [showPicker, setShowPicker] = useState(false);
+  const [tempDate, setTempDate] = useState(() => parseStoredDateKey(value) || new Date());
+
+  useEffect(() => {
+    if (showPicker) {
+      setTempDate(parseStoredDateKey(value) || new Date());
+    }
+  }, [showPicker, value]);
+
+  const openPicker = () => setShowPicker(true);
+  const closePicker = () => setShowPicker(false);
+
+  const confirmDate = (date) => {
+    if (!date) return;
+    onChange(toLocalDateKey(date));
+    setShowPicker(false);
+  };
+
+  return (
+    <>
+      <Text style={s.datePickerLabel}>{label}</Text>
+      <TouchableOpacity style={s.datePickerField} onPress={openPicker} activeOpacity={0.85}>
+        <Text style={[s.datePickerFieldText, !value && s.datePickerPlaceholder]}>
+          {value ? formatDate(value) : placeholder}
+        </Text>
+        <Text style={s.datePickerChevron}>▾</Text>
+      </TouchableOpacity>
+
+      <Modal visible={showPicker} transparent animationType="fade" onRequestClose={closePicker}>
+        <View style={s.datePickerOverlay}>
+          <View style={s.datePickerModal}>
+            <View style={s.datePickerModalHeader}>
+              <Text style={s.datePickerModalTitle}>{label}</Text>
+              <TouchableOpacity onPress={closePicker}>
+                <Text style={s.datePickerModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.datePickerPickerWrap}>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  if (Platform.OS === 'android') {
+                    if (event.type === 'dismissed') {
+                      closePicker();
+                      return;
+                    }
+                    if (selectedDate) {
+                      confirmDate(selectedDate);
+                    }
+                    return;
+                  }
+
+                  if (selectedDate) {
+                    setTempDate(selectedDate);
+                  }
+                }}
+                style={{ width: '100%' }}
+                themeVariant="dark"
+              />
+            </View>
+
+            <View style={s.datePickerButtons}>
+              <TouchableOpacity style={s.customActionCancelBtn} onPress={closePicker}>
+                <Text style={s.customActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={() => confirmDate(tempDate)}>
+                <Text style={s.customActionSaveText}>Select Date</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
 };
 
 const addDaysLocal = (date, days) => {
@@ -1058,14 +1307,23 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
                     ))}
                   </View>
 
-                  <TextInput
-                    style={s.addPetInput}
-                    value={birthMode === 'birthday' ? birthday : ageText}
-                    onChangeText={birthMode === 'birthday' ? setBirthday : setAgeText}
-                    placeholder={birthMode === 'birthday' ? 'YYYY-MM-DD' : 'Age, e.g. 3 yrs'}
-                    placeholderTextColor={C.muted}
-                    autoCapitalize="none"
-                  />
+                  {birthMode === 'birthday' ? (
+                    <DatePickerField
+                      label="Birthday"
+                      value={birthday}
+                      onChange={setBirthday}
+                      placeholder="Select birthday"
+                    />
+                  ) : (
+                    <TextInput
+                      style={s.addPetInput}
+                      value={ageText}
+                      onChangeText={setAgeText}
+                      placeholder="Age, e.g. 3 yrs"
+                      placeholderTextColor={C.muted}
+                      autoCapitalize="none"
+                    />
+                  )}
 
                   <TextInput
                     style={s.addPetInput}
@@ -1165,6 +1423,23 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
       </View>
     </Modal>
   );
+}
+
+function buildPetEditDraft(pet) {
+  const birthMode = pet?.ageMode || (pet?.birthday ? 'birthday' : 'age');
+
+  return {
+    photoUri: pet?.photoUri || null,
+    name: pet?.name || '',
+    species: pet?.species || 'dog',
+    breed: pet?.breed || '',
+    birthMode,
+    birthday: pet?.birthday || '',
+    ageText: birthMode === 'age' ? (pet?.age || '') : '',
+    weight: pet?.weight || '',
+    gender: pet?.gender || 'Unknown',
+    careGoals: Array.isArray(pet?.careGoals) ? pet.careGoals.join(', ') : (pet?.careGoals || ''),
+  };
 }
 
 const playSosSound = async () => {
@@ -2033,18 +2308,12 @@ const ACTION_ICONS = [
               placeholder="Reminder title"
               placeholderTextColor={C.muted}
             />
-            <TextInput
-              style={s.customActionInput}
+            <DatePickerField
+              label="Reminder Date"
               value={reminderDate}
-              onChangeText={setReminderDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={C.muted}
+              onChange={setReminderDate}
+              placeholder="Select reminder date"
             />
-            {reminderDate.trim() ? (
-              <Text style={{ color: C.muted, fontSize: 12, marginTop: -8, marginBottom: 10 }}>
-                Preview: {formatDate(reminderDate.trim())}
-              </Text>
-            ) : null}
             <TextInput
               style={s.customActionInput}
               value={reminderTime}
@@ -2092,16 +2361,134 @@ const ACTION_ICONS = [
 // ─────────────────────────────────────────────
 // SCREEN: PET PROFILE
 // ─────────────────────────────────────────────
-function PetProfileScreen({ navigation, route, onDeletePet }) {
-  const { pets } = useContext(PetsContext);
+function PetProfileScreen({ navigation, route }) {
+  const { pets, setPets } = useContext(PetsContext);
   const { petScores } = useContext(PetScoresContext);
   const { activityLogs } = useContext(ActivityLogsContext);
   const { healthRecords } = useContext(HealthRecordsContext);
   const { careReminders } = useContext(CareRemindersContext);
+  const { setActivityLogs } = useContext(ActivityLogsContext);
+  const { setHealthRecords } = useContext(HealthRecordsContext);
+  const { setCareReminders } = useContext(CareRemindersContext);
+  const { setPetScores } = useContext(PetScoresContext);
   const { openAddPetModal } = useContext(AddPetContext);
+  const [showEditPetModal, setShowEditPetModal] = useState(false);
+  const [editPetDraft, setEditPetDraft] = useState(() => buildPetEditDraft(null));
+  const editModalAnim = useRef(new Animated.Value(0)).current;
+  const editCardAnim = useRef(new Animated.Value(0.98)).current;
 
   const petId = route?.params?.petId;
   const pet = pets.find((item) => item.id === petId) || pets[0] || null;
+  const speciesOptions = [
+    { label: 'Dog', value: 'dog' },
+    { label: 'Cat', value: 'cat' },
+    { label: 'Fish', value: 'fish' },
+    { label: 'Bird', value: 'bird' },
+    { label: 'Reptile', value: 'reptile' },
+    { label: 'Rabbit', value: 'rabbit' },
+    { label: 'Hamster', value: 'hamster' },
+    { label: 'Horse', value: 'horse' },
+    { label: 'Other', value: 'other' },
+  ];
+  const genderOptions = ['Female', 'Male', 'Unknown', 'Other'];
+
+  useEffect(() => {
+    if (!showEditPetModal || !pet) return;
+
+    setEditPetDraft(buildPetEditDraft(pet));
+    editModalAnim.setValue(0);
+    editCardAnim.setValue(0.98);
+
+    Animated.parallel([
+      Animated.timing(editModalAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(editCardAnim, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [showEditPetModal, pet, editModalAnim, editCardAnim]);
+
+  const openEditPetModal = () => {
+    if (!pet) return;
+    setEditPetDraft(buildPetEditDraft(pet));
+    setShowEditPetModal(true);
+  };
+
+  const closeEditPetModal = () => {
+    setShowEditPetModal(false);
+  };
+
+  const pickEditPetPhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Photo permission needed', 'Please allow photo library access to update the pet picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setEditPetDraft((prev) => ({ ...prev, photoUri: result.assets[0].uri }));
+      }
+    } catch (error) {
+      Alert.alert('Photo upload failed', 'Please try again.');
+    }
+  };
+
+  const saveEditedPet = () => {
+    if (!pet) return;
+
+    const name = editPetDraft.name.trim();
+    if (!name) {
+      Alert.alert('Pet name required', "Please enter your pet's name.");
+      return;
+    }
+
+    if (editPetDraft.birthMode === 'birthday' && !editPetDraft.birthday.trim()) {
+      Alert.alert('Birthday required', 'Please enter a birthday.');
+      return;
+    }
+
+    if (editPetDraft.birthMode === 'age' && !editPetDraft.ageText.trim()) {
+      Alert.alert('Age required', 'Please enter an age.');
+      return;
+    }
+
+    const normalizedSpecies = (editPetDraft.species || pet.species || 'other').trim().toLowerCase();
+    const birthdayValue = editPetDraft.birthMode === 'birthday' ? editPetDraft.birthday.trim() : '';
+    const computedAge = editPetDraft.birthMode === 'birthday'
+      ? calculateAgeLabelFromBirthday(birthdayValue)
+      : editPetDraft.ageText.trim();
+
+    const updatedPet = {
+      ...pet,
+      name,
+      species: normalizedSpecies,
+      breed: editPetDraft.breed.trim() || pet.breed || normalizedSpecies.charAt(0).toUpperCase() + normalizedSpecies.slice(1),
+      age: computedAge || pet.age || 'Unknown',
+      birthday: birthdayValue,
+      ageMode: editPetDraft.birthMode,
+      weight: editPetDraft.weight.trim(),
+      gender: editPetDraft.gender.trim() || 'Unknown',
+      careGoals: editPetDraft.careGoals.trim(),
+      photoUri: editPetDraft.photoUri || pet.photoUri || null,
+      emoji: getDefaultPetEmoji(normalizedSpecies),
+    };
+
+    setPets((prev) => prev.map((item) => (item.id === pet.id ? updatedPet : item)));
+    setShowEditPetModal(false);
+  };
 
   if (!pet) {
     return (
@@ -2143,26 +2530,70 @@ function PetProfileScreen({ navigation, route, onDeletePet }) {
     : (pet.careGoals || 'Not set');
   const streakDays = getStreakDaysForPet(activityLogs, pet.id);
   const todayKey = toLocalDateKey(new Date());
+  const parseProfileDate = (value) => {
+    if (!value) return null;
+    const text = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      const parsed = new Date(`${text}T12:00:00`);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const parseReminderTimeToMinutes = (time) => {
+    const text = String(time || '').trim().toUpperCase();
+    if (!text) return 24 * 60;
+    const match = text.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/);
+    if (!match) return 24 * 60;
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const period = match[3];
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return (hours * 60) + minutes;
+  };
   const upcomingReminders = careReminders.filter((reminder) => (
     reminder.petId === pet.id
     && !reminder.completed
     && reminder.date
     && reminder.date >= todayKey
-  ));
-  const petActivity = activityLogs.filter((log) => log.petId === pet.id).slice(0, 3);
+  )).sort((a, b) => {
+    const dateA = String(a.date || '').localeCompare(String(b.date || ''));
+    if (dateA !== 0) return dateA;
+    return parseReminderTimeToMinutes(a.time) - parseReminderTimeToMinutes(b.time);
+  }).slice(0, 3);
+  const petActivity = activityLogs
+    .filter((log) => log.petId === pet.id)
+    .sort((a, b) => {
+      const dateA = parseProfileDate(b.dateKey || b.date)?.getTime() || 0;
+      const dateB = parseProfileDate(a.dateKey || a.date)?.getTime() || 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return (b.id || '').localeCompare(a.id || '');
+    })
+    .slice(0, 3);
   const petHealthRecordCount = healthRecords.filter((record) => record.petId === pet.id).length;
+  const achievementBadges = [
+    activityLogs.some((log) => log.petId === pet.id) && { label: 'First Care Log' },
+    streakDays >= 7 && { label: '7 Day Streak' },
+    currentScore >= 90 && { label: 'Health Champion' },
+    petHealthRecordCount >= 5 && { label: 'Organized Pet Parent' },
+    upcomingReminders.length >= 3 && { label: 'Calendar Planner' },
+  ].filter(Boolean);
   const goToMainTab = (screenName) => {
-    navigation.navigate('Main', { screen: screenName });
-    setTimeout(() => {
-      navigation.goBack();
-    }, 0);
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main',
+          state: {
+            index: 0,
+            routes: [{ name: screenName }],
+          },
+        },
+      ],
+    });
   };
   const handleDeletePet = () => {
-    if (typeof onDeletePet !== 'function') {
-      Alert.alert('Delete Pet', 'Delete action is unavailable right now.');
-      return;
-    }
-
     Alert.alert(
       `Delete ${pet.name}?`,
       'This will remove this pet from the app.',
@@ -2172,7 +2603,15 @@ function PetProfileScreen({ navigation, route, onDeletePet }) {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            onDeletePet(pet.id);
+            setPets((prev) => prev.filter((item) => item.id !== pet.id));
+            setActivityLogs((prev) => prev.filter((log) => log.petId !== pet.id));
+            setCareReminders((prev) => prev.filter((reminder) => reminder.petId !== pet.id));
+            setHealthRecords((prev) => prev.filter((record) => record.petId !== pet.id));
+            setPetScores((prev) => {
+              const next = { ...prev };
+              delete next[pet.id];
+              return next;
+            });
             navigation.goBack();
           },
         },
@@ -2214,6 +2653,11 @@ function PetProfileScreen({ navigation, route, onDeletePet }) {
             <View style={s.petProfileChip}><Text style={s.petProfileChipText}>Gender: {pet.gender || 'Not set'}</Text></View>
           </View>
         </Card>
+
+        <View style={s.petProfileSectionHeaderWrap}>
+          <Text style={s.petProfileSectionHeader}>Health Snapshot</Text>
+          <Text style={s.petProfileSectionSub}>A quick look at {pet.name}&apos;s care status</Text>
+        </View>
 
         <View style={s.petProfileStatGrid}>
           <Card style={s.petProfileStatCard}>
@@ -2269,8 +2713,45 @@ function PetProfileScreen({ navigation, route, onDeletePet }) {
           )}
         </Card>
 
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Upcoming Care</Text>
+          {upcomingReminders.length === 0 ? (
+            <Text style={s.petProfileEmptyText}>No upcoming care scheduled.</Text>
+          ) : (
+            upcomingReminders.map((reminder) => (
+              <View key={reminder.id} style={s.petProfileCareRow}>
+                <View style={s.petProfileCareIcon}>
+                  <Text style={{ fontSize: 18 }}>{reminder.icon || '📌'}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.petProfileActivityTitle}>{reminder.title}</Text>
+                  <Text style={s.petProfileActivitySub}>
+                    {formatDate(reminder.date)}
+                    {reminder.time ? ` · ${reminder.time}` : ''}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </Card>
+
+        <Card style={s.petProfileInfoCard}>
+          <Text style={s.petProfileSectionTitle}>Achievements</Text>
+          {achievementBadges.length === 0 ? (
+            <Text style={s.petProfileEmptyText}>Keep logging care to unlock achievements.</Text>
+          ) : (
+            <View style={s.petProfileAchievementWrap}>
+              {achievementBadges.map((badge) => (
+                <View key={badge.label} style={s.petProfileAchievementBadge}>
+                  <Text style={s.petProfileAchievementBadgeText}>{badge.label}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </Card>
+
         <View style={s.petProfileButtonRow}>
-          <TouchableOpacity style={s.petProfileButton} onPress={() => Alert.alert('Edit Pet coming soon')}>
+          <TouchableOpacity style={s.petProfileButton} onPress={openEditPetModal}>
             <Text style={s.petProfileButtonText}>Edit Pet</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -2293,111 +2774,540 @@ function PetProfileScreen({ navigation, route, onDeletePet }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal visible={showEditPetModal} transparent animationType="fade" onRequestClose={closeEditPetModal}>
+        <View style={s.modalOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+            <Animated.View
+              style={[
+                s.addPetModal,
+                {
+                  opacity: editModalAnim,
+                  transform: [
+                    {
+                      translateY: editModalAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                    { scale: editCardAnim },
+                  ],
+                },
+              ]}
+            >
+              <View style={s.addPetModalHeader}>
+                <TouchableOpacity onPress={closeEditPetModal}>
+                  <Text style={s.addPetModalClose}>X</Text>
+                </TouchableOpacity>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={s.addPetModalTitle}>Edit Pet</Text>
+                  <Text style={s.addPetModalSubtitle}>Update {pet?.name}&apos;s profile</Text>
+                </View>
+                <View style={{ width: 22 }} />
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+                <Text style={s.addPetSectionTitle}>Photo and basics</Text>
+                <View style={s.addPetPhotoRow}>
+                  <View style={s.addPetPhotoCircle}>
+                    {editPetDraft.photoUri ? (
+                      <Image source={{ uri: editPetDraft.photoUri }} style={s.addPetPhotoImage} />
+                    ) : (
+                      <Text style={s.addPetPhotoEmoji}>{getDefaultPetEmoji(editPetDraft.species)}</Text>
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TouchableOpacity style={s.addPetPhotoButton} onPress={pickEditPetPhoto}>
+                      <Text style={s.addPetPhotoButtonText}>
+                        {editPetDraft.photoUri ? 'Change Photo' : 'Add Pet Photo'}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text style={s.addPetPhotoHint}>Use the same picker as adding a pet.</Text>
+                  </View>
+                </View>
+
+                <TextInput
+                  style={s.addPetInput}
+                  value={editPetDraft.name}
+                  onChangeText={(text) => setEditPetDraft((prev) => ({ ...prev, name: text }))}
+                  placeholder="Pet name"
+                  placeholderTextColor={C.muted}
+                />
+
+                <Text style={s.addPetFieldLabel}>Species</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.addPetChipRow}>
+                  {speciesOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[s.addPetChip, editPetDraft.species === option.value && s.addPetChipActive]}
+                      onPress={() => setEditPetDraft((prev) => ({ ...prev, species: option.value }))}
+                    >
+                      <Text style={[s.addPetChipText, editPetDraft.species === option.value && s.addPetChipTextActive]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <TextInput
+                  style={s.addPetInput}
+                  value={editPetDraft.breed}
+                  onChangeText={(text) => setEditPetDraft((prev) => ({ ...prev, breed: text }))}
+                  placeholder="Breed / type"
+                  placeholderTextColor={C.muted}
+                />
+
+                <Text style={s.addPetFieldLabel}>Birthday or age</Text>
+                <View style={s.addPetModeRow}>
+                  {[
+                    { key: 'birthday', label: 'Birthday' },
+                    { key: 'age', label: 'Age' },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.key}
+                      style={[s.addPetModeChip, editPetDraft.birthMode === option.key && s.addPetModeChipActive]}
+                      onPress={() => setEditPetDraft((prev) => ({ ...prev, birthMode: option.key }))}
+                    >
+                      <Text style={[s.addPetModeChipText, editPetDraft.birthMode === option.key && s.addPetModeChipTextActive]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {editPetDraft.birthMode === 'birthday' ? (
+                  <DatePickerField
+                    label="Birthday"
+                    value={editPetDraft.birthday}
+                    onChange={(date) => setEditPetDraft((prev) => ({ ...prev, birthday: date }))}
+                    placeholder="Select birthday"
+                  />
+                ) : (
+                  <TextInput
+                    style={s.addPetInput}
+                    value={editPetDraft.ageText}
+                    onChangeText={(text) => setEditPetDraft((prev) => ({ ...prev, ageText: text }))}
+                    placeholder="Age, e.g. 3 yrs"
+                    placeholderTextColor={C.muted}
+                    autoCapitalize="none"
+                  />
+                )}
+
+                <TextInput
+                  style={s.addPetInput}
+                  value={editPetDraft.weight}
+                  onChangeText={(text) => setEditPetDraft((prev) => ({ ...prev, weight: text }))}
+                  placeholder="Weight"
+                  placeholderTextColor={C.muted}
+                />
+
+                <Text style={s.addPetFieldLabel}>Gender</Text>
+                <View style={s.addPetGenderRow}>
+                  {genderOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[s.addPetModeChip, editPetDraft.gender === option && s.addPetModeChipActive]}
+                      onPress={() => setEditPetDraft((prev) => ({ ...prev, gender: option }))}
+                    >
+                      <Text style={[s.addPetModeChipText, editPetDraft.gender === option && s.addPetModeChipTextActive]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TextInput
+                  style={[s.addPetInput, s.addPetMultiline]}
+                  value={editPetDraft.careGoals}
+                  onChangeText={(text) => setEditPetDraft((prev) => ({ ...prev, careGoals: text }))}
+                  placeholder="Care goals / preferences"
+                  placeholderTextColor={C.muted}
+                  multiline
+                />
+              </ScrollView>
+
+              <View style={s.addPetFooter}>
+                <TouchableOpacity style={s.customActionCancelBtn} onPress={closeEditPetModal}>
+                  <Text style={s.customActionCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.customActionSaveBtn} onPress={saveEditedPet}>
+                  <Text style={s.customActionSaveText}>Save Changes</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 // ─────────────────────────────────────────────
 function HealthHubScreen({ navigation }) {
-  const { pets } = useContext(PetsContext);
-  const { openAddPetModal } = useContext(AddPetContext);
-  const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
+    const { pets } = useContext(PetsContext);
+    const { openAddPetModal } = useContext(AddPetContext);
+    const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
+    const { careReminders, setCareReminders } = useContext(CareRemindersContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [pendingRecordType, setPendingRecordType] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
-  const [recordForm, setRecordForm] = useState({
+  const [showRecordDetailModal, setShowRecordDetailModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+    const [addReminderToCalendar, setAddReminderToCalendar] = useState(false);
+    const [reminderDate, setReminderDate] = useState('');
+    const [reminderTime, setReminderTime] = useState('');
+    const [savedVets, setSavedVets] = useState([]);
+    const [showVetModal, setShowVetModal] = useState(false);
+    const [isVetFinderExpanded, setIsVetFinderExpanded] = useState(false);
+    const [editingVetId, setEditingVetId] = useState(null);
+    const [vetDraft, setVetDraft] = useState({
+      name: '',
+      type: 'Vet Clinic',
+      distance: '',
+      phone: '',
+      address: '',
+      status: 'Open',
+      websiteUrl: '',
+    });
+    const [recordForm, setRecordForm] = useState({
     vaccineName: '',
+    dateGiven: '',
     providerClinic: '',
     nextDueDate: '',
     medicationName: '',
     dosage: '',
+    frequency: '',
+    startDate: '',
+    endDate: '',
+    prescribingVet: '',
+    medicationNotes: '',
     nextDoseDate: '',
-    appointmentReason: '',
+    visitReason: '',
     vetClinic: '',
     appointmentDate: '',
+    diagnosisFindings: '',
+    followUpDate: '',
+    appointmentNotes: '',
     weightValue: '',
+    weightDate: '',
     weightNotes: '',
     symptomName: '',
     severity: '',
+    symptomDate: '',
+    symptomFollowUpDate: '',
     symptomNotes: '',
+    procedureName: '',
+    surgeryDate: '',
+    surgeryFollowUpDate: '',
+    recoveryNotes: '',
+    allergyName: '',
+    reaction: '',
+    allergyNotes: '',
+    diagnosisName: '',
+    diagnosedDate: '',
+    diagnosisVet: '',
+    treatmentPlan: '',
+    diagnosisNotes: '',
+    testName: '',
+    testDate: '',
+    resultSummary: '',
+    labVet: '',
+    labNotes: '',
+    readingType: '',
+    readingValue: '',
+    readingDate: '',
+    readingNotes: '',
   });
-  const [showExportPreview, setShowExportPreview] = useState(false);
-  const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight'];
-  const tabLabels = {
-    all: '📋 All',
-    vaccines: '💉 Vaccines',
-    meds: '💊 Meds',
-    appointments: '🏥 Visits',
-    weight: '⚖️ Weight',
-  };
+    const [showExportPreview, setShowExportPreview] = useState(false);
+    const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight', 'procedures', 'conditions', 'labs', 'aquatic'];
+    const tabLabels = {
+      all: 'All',
+      vaccines: 'Vaccines',
+    meds: 'Meds',
+    appointments: 'Visits',
+    weight: 'Weight',
+    procedures: 'Procedures',
+    conditions: 'Conditions',
+    labs: 'Labs',
+      aquatic: 'Aquatic',
+    };
+    const openMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=vet+near+me');
+    const openEmergencyMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=emergency+vet+near+me');
+    const openVetCall = (phone) => Linking.openURL(`tel:${phone}`);
+    const openVetMaps = (clinic) => {
+      const query = encodeURIComponent(`${clinic.name} ${clinic.address}`);
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
+    };
+    const openVetWebsite = (websiteUrl) => {
+      const normalized = String(websiteUrl || '').trim();
+      if (!normalized) return;
+
+      const url = /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
+      Linking.openURL(url);
+    };
+    const openVetAddModal = (defaults = {}) => {
+      setEditingVetId(defaults.id || null);
+      setVetDraft({
+        name: defaults.name || '',
+        type: defaults.type || 'Vet Clinic',
+        distance: defaults.distance || '',
+        phone: defaults.phone || '',
+        address: defaults.address || '',
+        status: defaults.status || 'Open',
+        websiteUrl: defaults.websiteUrl || '',
+      });
+      setShowVetModal(true);
+    };
+    const closeVetModal = () => {
+      setShowVetModal(false);
+      setEditingVetId(null);
+      setVetDraft({
+        name: '',
+        type: 'Vet Clinic',
+        distance: '',
+        phone: '',
+        address: '',
+        status: 'Open',
+        websiteUrl: '',
+      });
+    };
+    const toggleVetFinder = () => {
+      setIsVetFinderExpanded((prev) => !prev);
+    };
+    const saveVetCard = () => {
+      const name = vetDraft.name.trim();
+      const type = vetDraft.type.trim();
+      const distance = vetDraft.distance.trim();
+      const phone = vetDraft.phone.trim();
+      const address = vetDraft.address.trim();
+      const status = vetDraft.status.trim();
+      const websiteUrl = vetDraft.websiteUrl.trim();
+
+      if (!name || !type || !distance || !phone || !address || !status) {
+        Alert.alert('Missing details', 'Please complete all vet fields before saving.');
+        return;
+      }
+
+      const payload = {
+        id: editingVetId || `saved-vet-${Date.now()}`,
+        name,
+        type,
+        distance,
+        phone,
+        address,
+        status,
+        websiteUrl,
+      };
+
+      setSavedVets((prev) => {
+        if (editingVetId) {
+          return prev.map((vet) => (vet.id === editingVetId ? payload : vet));
+        }
+
+        return [payload, ...prev];
+      });
+      closeVetModal();
+    };
+    const editVetCard = (clinic) => openVetAddModal(clinic);
+    const deleteVetCard = (vetId) => {
+      Alert.alert('Delete Vet?', 'This saved vet card will be removed.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => setSavedVets((prev) => prev.filter((vet) => vet.id !== vetId)),
+        },
+      ]);
+    };
 
   const typeMap = {
     vaccination: 'vaccines',
     medication: 'meds',
     appointment: 'appointments',
     weight: 'weight',
+    symptom: 'conditions',
+    surgery: 'procedures',
+    allergy: 'conditions',
+    diagnosis: 'conditions',
+    lab: 'labs',
+    fish: 'aquatic',
   };
 
   const createEmptyRecordForm = () => ({
     vaccineName: '',
+    dateGiven: '',
     providerClinic: '',
     nextDueDate: '',
     medicationName: '',
     dosage: '',
+    frequency: '',
+    startDate: '',
+    endDate: '',
+    prescribingVet: '',
+    medicationNotes: '',
     nextDoseDate: '',
-    appointmentReason: '',
+    visitReason: '',
     vetClinic: '',
     appointmentDate: '',
+    diagnosisFindings: '',
+    followUpDate: '',
+    appointmentNotes: '',
     weightValue: '',
+    weightDate: '',
     weightNotes: '',
     symptomName: '',
     severity: '',
+    symptomDate: '',
+    symptomFollowUpDate: '',
     symptomNotes: '',
+    procedureName: '',
+    surgeryDate: '',
+    surgeryFollowUpDate: '',
+    recoveryNotes: '',
+    allergyName: '',
+    reaction: '',
+    allergyNotes: '',
+    diagnosisName: '',
+    diagnosedDate: '',
+    diagnosisVet: '',
+    treatmentPlan: '',
+    diagnosisNotes: '',
+    testName: '',
+    testDate: '',
+    resultSummary: '',
+    labVet: '',
+    labNotes: '',
+    readingType: '',
+    readingValue: '',
+    readingDate: '',
+    readingNotes: '',
   });
 
   const recordFieldConfig = {
     vaccination: [
       { key: 'vaccineName', label: 'Vaccine name', placeholder: 'Vaccine name', required: true },
+      { key: 'dateGiven', label: 'Date given', placeholder: 'Date given' },
       { key: 'providerClinic', label: 'Provider / clinic', placeholder: 'Provider / clinic' },
       { key: 'nextDueDate', label: 'Next due date', placeholder: 'Next due date' },
+      { key: 'vaccineNotes', label: 'Notes', placeholder: 'Notes' },
     ],
     medication: [
       { key: 'medicationName', label: 'Medication name', placeholder: 'Medication name', required: true },
       { key: 'dosage', label: 'Dosage', placeholder: 'Dosage' },
-      { key: 'nextDoseDate', label: 'Next dose / due date', placeholder: 'Next dose / due date' },
+      { key: 'frequency', label: 'Frequency', placeholder: 'Frequency' },
+      { key: 'startDate', label: 'Start date', placeholder: 'Start date' },
+      { key: 'endDate', label: 'End date', placeholder: 'End date' },
+      { key: 'prescribingVet', label: 'Prescribing vet', placeholder: 'Prescribing vet' },
+      { key: 'medicationNotes', label: 'Notes', placeholder: 'Notes' },
     ],
     appointment: [
-      { key: 'appointmentReason', label: 'Reason', placeholder: 'Reason', required: true },
+      { key: 'visitReason', label: 'Visit reason', placeholder: 'Visit reason', required: true },
       { key: 'vetClinic', label: 'Vet / clinic', placeholder: 'Vet / clinic' },
       { key: 'appointmentDate', label: 'Appointment date', placeholder: 'Appointment date' },
+      { key: 'diagnosisFindings', label: 'Diagnosis / findings', placeholder: 'Diagnosis / findings' },
+      { key: 'followUpDate', label: 'Follow-up date', placeholder: 'Follow-up date' },
+      { key: 'appointmentNotes', label: 'Notes', placeholder: 'Notes' },
     ],
     weight: [
       { key: 'weightValue', label: 'Weight', placeholder: 'Weight', required: true },
+      { key: 'weightDate', label: 'Date recorded', placeholder: 'Date recorded' },
       { key: 'weightNotes', label: 'Notes', placeholder: 'Notes' },
     ],
     symptom: [
       { key: 'symptomName', label: 'Symptom', placeholder: 'Symptom', required: true },
       { key: 'severity', label: 'Severity', placeholder: 'Severity' },
+      { key: 'symptomDate', label: 'Date noticed', placeholder: 'Date noticed' },
+      { key: 'symptomFollowUpDate', label: 'Follow-up date', placeholder: 'Follow-up date' },
       { key: 'symptomNotes', label: 'Notes', placeholder: 'Notes' },
+    ],
+    surgery: [
+      { key: 'procedureName', label: 'Procedure name', placeholder: 'Procedure name', required: true },
+      { key: 'surgeryDate', label: 'Date', placeholder: 'Date' },
+      { key: 'vetClinic', label: 'Clinic / vet', placeholder: 'Clinic / vet' },
+      { key: 'recoveryNotes', label: 'Recovery notes', placeholder: 'Recovery notes' },
+      { key: 'surgeryFollowUpDate', label: 'Follow-up date', placeholder: 'Follow-up date' },
+    ],
+    allergy: [
+      { key: 'allergyName', label: 'Allergy name', placeholder: 'Allergy name', required: true },
+      { key: 'reaction', label: 'Reaction', placeholder: 'Reaction' },
+      { key: 'severity', label: 'Severity', placeholder: 'Severity' },
+      { key: 'allergyNotes', label: 'Notes', placeholder: 'Notes' },
+    ],
+    diagnosis: [
+      { key: 'diagnosisName', label: 'Diagnosis name', placeholder: 'Diagnosis name', required: true },
+      { key: 'diagnosedDate', label: 'Diagnosed date', placeholder: 'Diagnosed date' },
+      { key: 'diagnosisVet', label: 'Vet / clinic', placeholder: 'Vet / clinic' },
+      { key: 'treatmentPlan', label: 'Treatment plan', placeholder: 'Treatment plan' },
+      { key: 'diagnosisNotes', label: 'Notes', placeholder: 'Notes' },
+    ],
+    lab: [
+      { key: 'testName', label: 'Test name', placeholder: 'Test name', required: true },
+      { key: 'testDate', label: 'Test date', placeholder: 'Test date' },
+      { key: 'resultSummary', label: 'Result summary', placeholder: 'Result summary' },
+      { key: 'labVet', label: 'Vet / clinic', placeholder: 'Vet / clinic' },
+      { key: 'labNotes', label: 'Notes', placeholder: 'Notes' },
+    ],
+    fish: [
+      { key: 'readingType', label: 'Reading type', placeholder: 'Reading type', required: true },
+      { key: 'readingValue', label: 'Value', placeholder: 'Value', required: true },
+      { key: 'readingDate', label: 'Date', placeholder: 'Date' },
+      { key: 'readingNotes', label: 'Notes', placeholder: 'Notes' },
     ],
   };
 
   const recordMainFieldKey = {
     vaccination: 'vaccineName',
     medication: 'medicationName',
-    appointment: 'appointmentReason',
+    appointment: 'visitReason',
     weight: 'weightValue',
     symptom: 'symptomName',
+    surgery: 'procedureName',
+    allergy: 'allergyName',
+    diagnosis: 'diagnosisName',
+    lab: 'testName',
+    fish: 'readingType',
   };
 
   const recordTypeLabelMap = {
     vaccination: 'Vaccination',
     medication: 'Medication',
-    appointment: 'Appointment',
+    appointment: 'Appointment / Vet Visit',
     weight: 'Weight',
     symptom: 'Symptom',
+    surgery: 'Surgery / Procedure',
+    allergy: 'Allergy',
+    diagnosis: 'Diagnosis',
+    lab: 'Lab Result',
+    fish: 'Fish / Tank Reading',
+  };
+
+  const reminderEligibleTypes = new Set(['vaccination', 'medication', 'appointment', 'weight', 'symptom']);
+
+  const getReminderDefaultDate = (type, form) => {
+    if (type === 'vaccination') return String(form?.nextDueDate || '').trim();
+    if (type === 'medication') return String(form?.endDate || form?.nextDoseDate || '').trim();
+    if (type === 'appointment') return String(form?.appointmentDate || '').trim();
+    if (type === 'weight') return '';
+    if (type === 'symptom') return '';
+    return '';
+  };
+
+  const firstText = (...values) => values.map((value) => String(value || '').trim()).find(Boolean) || '';
+
+  const getLinkedReminderForRecord = (recordId) => (
+    careReminders.find((reminder) => reminder.source === 'healthRecord' && reminder.sourceRecordId === recordId) || null
+  );
+
+  const openRecordDetail = (record) => {
+    setSelectedRecord(record);
+    setShowRecordDetailModal(true);
+  };
+
+  const closeRecordDetail = () => {
+    setShowRecordDetailModal(false);
+    setSelectedRecord(null);
   };
 
   const getRecordDetailFromTitle = (record) => {
@@ -2460,19 +3370,52 @@ function HealthHubScreen({ navigation }) {
   const getRecordFormFromRecord = (record) => {
     const base = {
       vaccineName: '',
+      dateGiven: '',
       providerClinic: '',
       nextDueDate: '',
       medicationName: '',
       dosage: '',
+      frequency: '',
+      startDate: '',
+      endDate: '',
+      prescribingVet: '',
+      medicationNotes: '',
       nextDoseDate: '',
-      appointmentReason: '',
+      visitReason: '',
       vetClinic: '',
       appointmentDate: '',
+      diagnosisFindings: '',
+      followUpDate: '',
+      appointmentNotes: '',
       weightValue: '',
+      weightDate: '',
       weightNotes: '',
       symptomName: '',
       severity: '',
+      symptomDate: '',
+      symptomFollowUpDate: '',
       symptomNotes: '',
+      procedureName: '',
+      surgeryDate: '',
+      surgeryFollowUpDate: '',
+      recoveryNotes: '',
+      allergyName: '',
+      reaction: '',
+      allergyNotes: '',
+      diagnosisName: '',
+      diagnosedDate: '',
+      diagnosisVet: '',
+      treatmentPlan: '',
+      diagnosisNotes: '',
+      testName: '',
+      testDate: '',
+      resultSummary: '',
+      labVet: '',
+      labNotes: '',
+      readingType: '',
+      readingValue: '',
+      readingDate: '',
+      readingNotes: '',
     };
 
     const parsedTitle = getRecordDetailFromTitle(record);
@@ -2483,20 +3426,99 @@ function HealthHubScreen({ navigation }) {
         record?.vaccineName ||
         record?.medicationName ||
         record?.appointmentReason ||
+        record?.visitReason ||
         record?.symptomText ||
+        record?.procedureName ||
+        record?.allergyName ||
+        record?.diagnosisName ||
+        record?.testName ||
+        record?.readingType ||
         (record?.type === 'weight' && record?.value != null ? `${record.value}${record.unit ? ` ${record.unit}` : ''}` : '') ||
         parsedTitle;
 
       merged[mainKey] = mainValue;
     }
 
-    if (record?.nextDue) {
-      if (record.type === 'vaccination') merged.nextDueDate = record.nextDue;
-      if (record.type === 'medication') merged.nextDoseDate = record.nextDue;
-      if (record.type === 'appointment') merged.appointmentDate = record.nextDue;
+    if (record?.type === 'vaccination') {
+      merged.vaccineName = firstText(record?.vaccineName, merged.vaccineName, parsedTitle);
+      merged.dateGiven = firstText(record?.dateGiven, record?.date, merged.dateGiven);
+      merged.providerClinic = firstText(record?.provider, merged.providerClinic);
+      merged.nextDueDate = firstText(record?.nextDue, merged.nextDueDate, record?.nextDueDate);
+      merged.vaccineNotes = firstText(record?.notes, merged.vaccineNotes, record?.details?.vaccineNotes);
+    } else if (record?.type === 'medication') {
+      merged.medicationName = firstText(record?.medicationName, merged.medicationName, parsedTitle);
+      merged.dosage = firstText(record?.dosage, merged.dosage);
+      merged.frequency = firstText(record?.frequency, merged.frequency);
+      merged.startDate = firstText(record?.startDate, record?.date, merged.startDate);
+      merged.endDate = firstText(record?.endDate, record?.nextDue, record?.details?.nextDoseDate, merged.endDate);
+      merged.nextDoseDate = merged.endDate;
+      merged.prescribingVet = firstText(record?.provider, merged.prescribingVet);
+      merged.medicationNotes = firstText(record?.notes, merged.medicationNotes, record?.details?.medicationNotes);
+    } else if (record?.type === 'appointment') {
+      merged.visitReason = firstText(record?.appointmentReason, record?.visitReason, merged.visitReason, parsedTitle);
+      merged.appointmentDate = firstText(record?.appointmentDate, record?.date, merged.appointmentDate);
+      merged.vetClinic = firstText(record?.provider, merged.vetClinic, record?.details?.clinicVet);
+      merged.diagnosisFindings = firstText(record?.diagnosisFindings, merged.diagnosisFindings);
+      merged.followUpDate = firstText(record?.nextDue, merged.followUpDate);
+      merged.appointmentNotes = firstText(record?.notes, merged.appointmentNotes, record?.details?.appointmentNotes);
+    } else if (record?.type === 'weight') {
+      merged.weightValue = firstText(
+        record?.weightValue,
+        record?.value != null ? `${record.value}${record.unit ? ` ${record.unit}` : ''}` : '',
+        merged.weightValue,
+        parsedTitle
+      );
+      merged.weightDate = firstText(record?.weightDate, record?.date, merged.weightDate);
+      merged.weightNotes = firstText(record?.notes, merged.weightNotes, record?.details?.weightNotes);
+    } else if (record?.type === 'symptom') {
+      merged.symptomName = firstText(record?.symptomText, record?.symptomName, merged.symptomName, parsedTitle);
+      merged.severity = firstText(record?.severity, merged.severity);
+      merged.symptomDate = firstText(record?.symptomDate, record?.date, merged.symptomDate);
+      merged.symptomFollowUpDate = firstText(record?.nextDue, merged.symptomFollowUpDate);
+      merged.symptomNotes = firstText(record?.notes, merged.symptomNotes, record?.details?.symptomNotes);
+    } else if (record?.type === 'surgery') {
+      merged.procedureName = firstText(record?.procedureName, merged.procedureName, parsedTitle);
+      merged.surgeryDate = firstText(record?.surgeryDate, record?.date, merged.surgeryDate);
+      merged.vetClinic = firstText(record?.provider, merged.vetClinic);
+      merged.surgeryFollowUpDate = firstText(record?.nextDue, merged.surgeryFollowUpDate);
+      merged.recoveryNotes = firstText(record?.notes, merged.recoveryNotes, record?.details?.recoveryNotes);
+    } else if (record?.type === 'allergy') {
+      merged.allergyName = firstText(record?.allergyName, merged.allergyName, parsedTitle);
+      merged.reaction = firstText(record?.reaction, merged.reaction);
+      merged.severity = firstText(record?.severity, merged.severity);
+      merged.allergyNotes = firstText(record?.notes, merged.allergyNotes, record?.details?.allergyNotes);
+    } else if (record?.type === 'diagnosis') {
+      merged.diagnosisName = firstText(record?.diagnosisName, merged.diagnosisName, parsedTitle);
+      merged.diagnosedDate = firstText(record?.diagnosedDate, record?.date, merged.diagnosedDate);
+      merged.diagnosisVet = firstText(record?.provider, merged.diagnosisVet);
+      merged.treatmentPlan = firstText(record?.treatmentPlan, merged.treatmentPlan);
+      merged.diagnosisNotes = firstText(record?.notes, merged.diagnosisNotes, record?.details?.diagnosisNotes);
+    } else if (record?.type === 'lab') {
+      merged.testName = firstText(record?.testName, merged.testName, parsedTitle);
+      merged.testDate = firstText(record?.testDate, record?.date, merged.testDate);
+      merged.resultSummary = firstText(record?.resultSummary, merged.resultSummary);
+      merged.labVet = firstText(record?.provider, merged.labVet);
+      merged.labNotes = firstText(record?.notes, merged.labNotes, record?.details?.labNotes);
+    } else if (record?.type === 'fish') {
+      merged.readingType = firstText(record?.readingType, merged.readingType, parsedTitle);
+      merged.readingValue = firstText(record?.readingValue, merged.readingValue);
+      merged.readingDate = firstText(record?.readingDate, record?.date, merged.readingDate);
+      merged.readingNotes = firstText(record?.notes, merged.readingNotes, record?.details?.readingNotes);
     }
 
     return merged;
+  };
+
+  const openRecordEditor = (record) => {
+    const linkedReminder = getLinkedReminderForRecord(record.id);
+    const form = getRecordFormFromRecord(record);
+    setEditingRecord(record);
+    setPendingRecordType(record.type);
+    setRecordForm(form);
+    setAddReminderToCalendar(Boolean(linkedReminder));
+    setReminderDate(linkedReminder?.date || getReminderDefaultDate(record.type, form));
+    setReminderTime(linkedReminder?.time || '');
+    setShowRecordModal(true);
   };
 
   const buildRecordMeta = (type, form) => {
@@ -2505,78 +3527,158 @@ function HealthHubScreen({ navigation }) {
     );
     const mainKey = recordMainFieldKey[type];
     const mainValue = clean[mainKey] || '';
+    const todayKey = toLocalDateKey(new Date());
 
     const typeConfig = {
       vaccination: {
         title: `Vaccination: ${mainValue}`,
         icon: '💉',
         status: 'current',
+        date: clean.dateGiven || todayKey,
         nextDue: clean.nextDueDate || '',
-        vaccineName: mainValue,
+        provider: clean.providerClinic || '',
         details: {
+          vaccineName: mainValue,
+          dateGiven: clean.dateGiven || todayKey,
           providerClinic: clean.providerClinic || '',
+          nextDueDate: clean.nextDueDate || '',
+          vaccineNotes: clean.vaccineNotes || '',
         },
-        detailLines: [
-          clean.providerClinic ? `Provider / clinic: ${clean.providerClinic}` : null,
-        ].filter(Boolean),
       },
       medication: {
         title: `Medication: ${mainValue}`,
         icon: '💊',
         status: 'current',
-        nextDue: clean.nextDoseDate || '',
-        medicationName: mainValue,
+        date: clean.startDate || todayKey,
+        nextDue: clean.endDate || clean.nextDoseDate || '',
+        provider: clean.prescribingVet || '',
         details: {
+          medicationName: mainValue,
           dosage: clean.dosage || '',
+          frequency: clean.frequency || '',
+          startDate: clean.startDate || todayKey,
+          endDate: clean.endDate || clean.nextDoseDate || '',
+          nextDoseDate: clean.endDate || clean.nextDoseDate || '',
+          prescribingVet: clean.prescribingVet || '',
+          medicationNotes: clean.medicationNotes || '',
         },
-        detailLines: [
-          clean.dosage ? `Dosage: ${clean.dosage}` : null,
-        ].filter(Boolean),
       },
       appointment: {
         title: `Appointment: ${mainValue}`,
         icon: '🏥',
         status: 'upcoming',
-        nextDue: clean.appointmentDate || '',
-        appointmentReason: mainValue,
+        date: clean.appointmentDate || todayKey,
+        nextDue: clean.followUpDate || '',
+        provider: clean.vetClinic || '',
         details: {
-          vetClinic: clean.vetClinic || '',
+          visitReason: mainValue,
+          appointmentDate: clean.appointmentDate || todayKey,
+          clinicVet: clean.vetClinic || '',
+          diagnosisFindings: clean.diagnosisFindings || '',
+          followUpDate: clean.followUpDate || '',
+          appointmentNotes: clean.appointmentNotes || '',
         },
-        detailLines: [
-          clean.vetClinic ? `Vet / clinic: ${clean.vetClinic}` : null,
-        ].filter(Boolean),
       },
       weight: {
         title: `Weight: ${mainValue}`,
         icon: '⚖️',
         status: 'current',
-        value: (() => {
-          const match = String(mainValue).match(/[\d.]+/);
-          return match ? Number(match[0]) : null;
-        })(),
-        unit: 'lbs',
+        date: clean.weightDate || todayKey,
         details: {
+          weightValue: mainValue,
+          weightDate: clean.weightDate || todayKey,
           weightNotes: clean.weightNotes || '',
         },
-        detailLines: [clean.weightNotes ? `Notes: ${clean.weightNotes}` : null].filter(Boolean),
       },
       symptom: {
         title: `Symptom: ${mainValue}`,
         icon: '🤒',
         status: 'due_soon',
-        symptomText: mainValue,
+        date: clean.symptomDate || todayKey,
+        nextDue: clean.symptomFollowUpDate || '',
         details: {
+          symptomName: mainValue,
           severity: clean.severity || '',
+          symptomDate: clean.symptomDate || todayKey,
+          symptomFollowUpDate: clean.symptomFollowUpDate || '',
           symptomNotes: clean.symptomNotes || '',
         },
-        detailLines: [
-          clean.severity ? `Severity: ${clean.severity}` : null,
-          clean.symptomNotes ? `Notes: ${clean.symptomNotes}` : null,
-        ].filter(Boolean),
+      },
+      surgery: {
+        title: `Surgery: ${mainValue}`,
+        icon: '🩺',
+        status: 'current',
+        date: clean.surgeryDate || todayKey,
+        nextDue: clean.surgeryFollowUpDate || '',
+        provider: clean.vetClinic || '',
+        details: {
+          procedureName: mainValue,
+          surgeryDate: clean.surgeryDate || todayKey,
+          clinicVet: clean.vetClinic || '',
+          recoveryNotes: clean.recoveryNotes || '',
+          surgeryFollowUpDate: clean.surgeryFollowUpDate || '',
+        },
+      },
+      allergy: {
+        title: `Allergy: ${mainValue}`,
+        icon: '⚠️',
+        status: 'current',
+        date: todayKey,
+        details: {
+          allergyName: mainValue,
+          reaction: clean.reaction || '',
+          severity: clean.severity || '',
+          allergyNotes: clean.allergyNotes || '',
+        },
+      },
+      diagnosis: {
+        title: `Diagnosis: ${mainValue}`,
+        icon: '📋',
+        status: 'current',
+        date: clean.diagnosedDate || todayKey,
+        provider: clean.diagnosisVet || '',
+        details: {
+          diagnosisName: mainValue,
+          diagnosedDate: clean.diagnosedDate || todayKey,
+          diagnosisVet: clean.diagnosisVet || '',
+          treatmentPlan: clean.treatmentPlan || '',
+          diagnosisNotes: clean.diagnosisNotes || '',
+        },
+      },
+      lab: {
+        title: `Lab Result: ${mainValue}`,
+        icon: '🧪',
+        status: 'current',
+        date: clean.testDate || todayKey,
+        provider: clean.labVet || '',
+        details: {
+          testName: mainValue,
+          testDate: clean.testDate || todayKey,
+          resultSummary: clean.resultSummary || '',
+          labVet: clean.labVet || '',
+          labNotes: clean.labNotes || '',
+        },
+      },
+      fish: {
+        title: `Tank Reading: ${mainValue}`,
+        icon: '🐟',
+        status: 'current',
+        date: clean.readingDate || todayKey,
+        details: {
+          readingType: mainValue,
+          readingValue: clean.readingValue || '',
+          readingDate: clean.readingDate || todayKey,
+          readingNotes: clean.readingNotes || '',
+        },
       },
     };
 
-    return { ...typeConfig[type], mainValue, details: typeConfig[type].details };
+    const selected = typeConfig[type];
+    return {
+      ...selected,
+      mainValue,
+      details: selected?.details || {},
+    };
   };
 
   const createHealthRecord = (type, form) => {
@@ -2588,19 +3690,55 @@ function HealthHubScreen({ navigation }) {
       id: Date.now().toString(),
       petId: selectedPetId,
       type,
-      date: new Date().toLocaleDateString(),
-      provider: null,
+      date: recordMeta.date || toLocalDateKey(new Date()),
       ...recordMeta,
       details: meta.details,
     };
 
     setHealthRecords((prev) => [newRecord, ...prev]);
+    return newRecord;
+  };
+
+  const upsertHealthRecordReminder = (record, reminderEnabled, reminderDateValue, reminderTimeValue, existingReminder = null) => {
+    const linkedReminder = existingReminder || getLinkedReminderForRecord(record.id);
+
+    if (!reminderEnabled) {
+      if (linkedReminder) {
+        setCareReminders((prev) => prev.filter((reminder) => reminder.id !== linkedReminder.id));
+      }
+      return;
+    }
+
+    const cleanedDate = String(reminderDateValue || '').trim();
+    const cleanedTime = String(reminderTimeValue || '').trim();
+    if (!cleanedDate) return;
+
+    const reminderPayload = {
+      id: linkedReminder?.id || Date.now().toString(),
+      petId: selectedPetId,
+      title: `${record.title} due`,
+      icon: record.icon,
+      date: cleanedDate,
+      time: cleanedTime,
+      completed: false,
+      source: 'healthRecord',
+      sourceRecordId: record.id,
+    };
+
+    setCareReminders((prev) => (
+      linkedReminder
+        ? prev.map((reminder) => (reminder.id === linkedReminder.id ? reminderPayload : reminder))
+        : [reminderPayload, ...prev]
+    ));
   };
 
   const openRecordTypePrompt = (type) => {
     setPendingRecordType(type);
     setRecordForm(createEmptyRecordForm());
     setEditingRecord(null);
+    setAddReminderToCalendar(false);
+    setReminderDate('');
+    setReminderTime('');
     setShowRecordModal(true);
   };
 
@@ -2616,6 +3754,14 @@ function HealthHubScreen({ navigation }) {
       return;
     }
 
+    const reminderEnabled = reminderEligibleTypes.has(pendingRecordType) && addReminderToCalendar;
+    const effectiveReminderDate = String(reminderDate || '').trim() || getReminderDefaultDate(pendingRecordType, recordForm);
+
+    if (reminderEnabled && !effectiveReminderDate) {
+      Alert.alert('Reminder date required', 'Please enter a reminder date before saving.');
+      return;
+    }
+
     if (editingRecord) {
       const { detailLines, mainValue, ...recordMeta } = meta;
       setHealthRecords(prev => prev.map(record => (
@@ -2628,14 +3774,36 @@ function HealthHubScreen({ navigation }) {
             }
           : record
       )));
+      upsertHealthRecordReminder(
+        {
+          ...editingRecord,
+          type: pendingRecordType,
+          ...recordMeta,
+          details: meta.details,
+        },
+        reminderEnabled,
+        effectiveReminderDate,
+        reminderTime
+      );
     } else {
-      createHealthRecord(pendingRecordType, recordForm);
+      const newRecord = createHealthRecord(pendingRecordType, recordForm);
+      if (newRecord) {
+        upsertHealthRecordReminder(
+          newRecord,
+          reminderEnabled,
+          effectiveReminderDate,
+          reminderTime
+        );
+      }
     }
 
     setShowRecordModal(false);
     setPendingRecordType(null);
     setRecordForm(createEmptyRecordForm());
     setEditingRecord(null);
+    setAddReminderToCalendar(false);
+    setReminderDate('');
+    setReminderTime('');
   };
 
   const closeRecordModal = () => {
@@ -2643,10 +3811,14 @@ function HealthHubScreen({ navigation }) {
     setPendingRecordType(null);
     setRecordForm(createEmptyRecordForm());
     setEditingRecord(null);
+    setAddReminderToCalendar(false);
+    setReminderDate('');
+    setReminderTime('');
   };
 
   const deleteRecord = (recordId) => {
     setHealthRecords(prev => prev.filter(record => record.id !== recordId));
+    setCareReminders(prev => prev.filter((reminder) => reminder.sourceRecordId !== recordId));
   };
 
   const handleRecordPress = (record) => {
@@ -2715,119 +3887,171 @@ function HealthHubScreen({ navigation }) {
     }))
     .sort((a, b) => b.date - a.date);
 
-  const getRecordDisplayLines = (record) => {
+  const buildRecordDetailLines = (record, compact = false) => {
     const details = record.details || {};
+    const lines = [];
+    const add = (label, value) => {
+      const text = String(value || '').trim();
+      if (text) lines.push(`${label}: ${text}`);
+    };
 
-    if (record.type === 'vaccination') {
-      return [
-        details.providerClinic ? `Provider / clinic: ${details.providerClinic}` : null,
-      ].filter(Boolean);
+    switch (record.type) {
+      case 'vaccination':
+        add('Vaccine name', details.vaccineName || record.vaccineName);
+        add('Date given', details.dateGiven || record.date);
+        add('Provider / clinic', details.providerClinic || record.provider);
+        add('Next due date', details.nextDueDate || record.nextDue);
+        add('Notes', details.vaccineNotes);
+        break;
+      case 'medication':
+        add('Medication name', details.medicationName || record.medicationName);
+        add('Dosage', details.dosage);
+        add('Frequency', details.frequency);
+        add('Start date', details.startDate || record.date);
+        add('End date', details.endDate || record.nextDue);
+        add('Prescribing vet', details.prescribingVet || record.provider);
+        add('Notes', details.medicationNotes);
+        break;
+      case 'appointment':
+        add('Visit reason', details.visitReason || record.visitReason || record.appointmentReason);
+        add('Appointment date', details.appointmentDate || record.date);
+        add('Clinic / vet', details.clinicVet || record.provider);
+        add('Diagnosis / findings', details.diagnosisFindings);
+        add('Follow-up date', details.followUpDate || record.nextDue);
+        add('Notes', details.appointmentNotes);
+        break;
+      case 'weight':
+        add('Weight', details.weightValue || (record.value != null ? `${record.value}${record.unit ? ` ${record.unit}` : ''}` : record.weightValue));
+        add('Date recorded', details.weightDate || record.date);
+        add('Notes', details.weightNotes);
+        break;
+      case 'symptom':
+        add('Symptom', details.symptomName || record.symptomText);
+        add('Severity', details.severity);
+        add('Date noticed', details.symptomDate || record.date);
+        add('Follow-up date', details.symptomFollowUpDate || record.nextDue);
+        add('Notes', details.symptomNotes);
+        break;
+      case 'surgery':
+        add('Procedure name', details.procedureName || record.procedureName);
+        add('Date', details.surgeryDate || record.date);
+        add('Clinic / vet', details.clinicVet || record.provider);
+        add('Recovery notes', details.recoveryNotes);
+        add('Follow-up date', details.surgeryFollowUpDate || record.nextDue);
+        break;
+      case 'allergy':
+        add('Allergy name', details.allergyName || record.allergyName);
+        add('Reaction', details.reaction);
+        add('Severity', details.severity);
+        add('Notes', details.allergyNotes);
+        break;
+      case 'diagnosis':
+        add('Diagnosis name', details.diagnosisName || record.diagnosisName);
+        add('Diagnosed date', details.diagnosedDate || record.date);
+        add('Vet / clinic', details.diagnosisVet || record.provider);
+        add('Treatment plan', details.treatmentPlan);
+        add('Notes', details.diagnosisNotes);
+        break;
+      case 'lab':
+        add('Test name', details.testName || record.testName);
+        add('Test date', details.testDate || record.date);
+        add('Result summary', details.resultSummary);
+        add('Vet / clinic', details.labVet || record.provider);
+        add('Notes', details.labNotes);
+        break;
+      case 'fish':
+        add('Reading type', details.readingType || record.readingType);
+        add('Value', details.readingValue || record.readingValue);
+        add('Date', details.readingDate || record.date);
+        add('Notes', details.readingNotes);
+        break;
+      default:
+        break;
     }
 
-    if (record.type === 'medication') {
-      return [
-        details.dosage ? `Dosage: ${details.dosage}` : null,
-      ].filter(Boolean);
-    }
-
-    if (record.type === 'appointment') {
-      return [
-        details.vetClinic ? `Vet / clinic: ${details.vetClinic}` : null,
-      ].filter(Boolean);
-    }
-
-    if (record.type === 'weight') {
-      return [
-        record.value != null ? `Value: ${record.value}${record.unit ? ` ${record.unit}` : ''}` : null,
-        details.weightNotes ? `Notes: ${details.weightNotes}` : null,
-      ].filter(Boolean);
-    }
-
-    if (record.type === 'symptom') {
-      return [
-        details.severity ? `Severity: ${details.severity}` : null,
-        details.symptomNotes ? `Notes: ${details.symptomNotes}` : null,
-      ].filter(Boolean);
-    }
-
-    return [];
+    return compact ? lines.slice(0, 3) : lines;
   };
 
-  const getRecordAlertSummary = (record) => {
-    const lines = [record.title];
+  const getRecordDisplayLines = (record) => buildRecordDetailLines(record, true);
 
-    if (record.date) lines.push(`Date: ${formatDate(record.date)}`);
-    if (record.provider) lines.push(`Provider: ${record.provider}`);
-    if (record.nextDue) lines.push(`Next due: ${formatDate(record.nextDue)}`);
+  const getRecordStatusBadge = (record) => {
+    const today = new Date();
+    const recordDate = parseStoredDateKey(record.date) || today;
+    const linkedReminder = getLinkedReminderForRecord(record.id);
+    const reminderDateValue = parseStoredDateKey(linkedReminder?.date);
+    const nextDueDateValue = parseStoredDateKey(
+      record.nextDue ||
+      record.details?.nextDueDate ||
+      record.details?.followUpDate ||
+      record.details?.symptomFollowUpDate ||
+      record.details?.surgeryFollowUpDate
+    );
+    const ageDays = Math.max(0, Math.floor((today - recordDate) / (1000 * 60 * 60 * 24)));
+    const reminderDays = reminderDateValue ? Math.floor((reminderDateValue - today) / (1000 * 60 * 60 * 24)) : null;
+    const nextDueDays = nextDueDateValue ? Math.floor((nextDueDateValue - today) / (1000 * 60 * 60 * 24)) : null;
 
-    const details = getRecordDisplayLines(record);
-    if (details.length > 0) {
-      lines.push('', ...details);
+    if ((reminderDays != null && reminderDays > 0) || (nextDueDays != null && nextDueDays > 0)) {
+      return { label: 'Upcoming', color: C.blue };
     }
+    if (ageDays > 365) {
+      return { label: 'Archived', color: C.faint };
+    }
+    if (ageDays > 30) {
+      return { label: 'Completed', color: C.green };
+    }
+    return { label: 'Active', color: C.accent };
+  };
 
-    return lines.join('\n');
+  const getRecordHeaderLines = (record) => {
+    const details = record.details || {};
+    const dateLabel = formatDate(record.date);
+
+    if (record.type === 'vaccination') {
+      return ['Vaccination', details.vaccineName || record.title, `Given ${formatDate(details.dateGiven || record.date)}`, details.nextDueDate ? `Next Due ${formatDate(details.nextDueDate)}` : null].filter(Boolean);
+    }
+    if (record.type === 'medication') {
+      return ['Medication', details.medicationName || record.title, `Started ${formatDate(details.startDate || record.date)}`, details.endDate ? `Ends ${formatDate(details.endDate)}` : null].filter(Boolean);
+    }
+    if (record.type === 'appointment') {
+      return ['Appointment', details.visitReason || record.title, dateLabel, details.followUpDate ? `Follow-up ${formatDate(details.followUpDate)}` : null].filter(Boolean);
+    }
+    if (record.type === 'weight') {
+      return ['Weight', details.weightValue || record.title, `Recorded ${formatDate(details.weightDate || record.date)}`].filter(Boolean);
+    }
+    if (record.type === 'symptom') {
+      return ['Symptom', details.symptomName || record.title, `Noted ${formatDate(details.symptomDate || record.date)}`, details.symptomFollowUpDate ? `Follow-up ${formatDate(details.symptomFollowUpDate)}` : null].filter(Boolean);
+    }
+    if (record.type === 'surgery') {
+      return ['Surgery / Procedure', details.procedureName || record.title, dateLabel, details.surgeryFollowUpDate ? `Follow-up ${formatDate(details.surgeryFollowUpDate)}` : null].filter(Boolean);
+    }
+    if (record.type === 'allergy') {
+      return ['Allergy', details.allergyName || record.title, details.severity ? `Severity ${details.severity}` : null].filter(Boolean);
+    }
+    if (record.type === 'diagnosis') {
+      return ['Diagnosis', details.diagnosisName || record.title, `Diagnosed ${formatDate(details.diagnosedDate || record.date)}`].filter(Boolean);
+    }
+    if (record.type === 'lab') {
+      return ['Lab Result', details.testName || record.title, `Tested ${formatDate(details.testDate || record.date)}`].filter(Boolean);
+    }
+    if (record.type === 'fish') {
+      return ['Fish / Tank Reading', details.readingType || record.title, `Recorded ${formatDate(details.readingDate || record.date)}`].filter(Boolean);
+    }
+    return [record.title, dateLabel].filter(Boolean);
   };
 
   const getRecordFullDetails = (record) => {
-    const details = record.details || {};
-    const parts = [record.title, `Date: ${formatDate(record.date)}`];
-
-    if (record.provider) parts.push(`Provider: ${record.provider}`);
-    if (record.nextDue) parts.push(`Next due: ${formatDate(record.nextDue)}`);
-
-    if (record.type === 'vaccination') {
-      if (details.providerClinic) parts.push(`Provider / clinic: ${details.providerClinic}`);
-    }
-
-    if (record.type === 'medication') {
-      if (details.dosage) parts.push(`Dosage: ${details.dosage}`);
-    }
-
-    if (record.type === 'appointment') {
-      if (details.vetClinic) parts.push(`Vet / clinic: ${details.vetClinic}`);
-    }
-
-    if (record.type === 'weight') {
-      if (record.value != null) parts.push(`Value: ${record.value}${record.unit ? ` ${record.unit}` : ''}`);
-      if (details.weightNotes) parts.push(`Notes: ${details.weightNotes}`);
-    }
-
-    if (record.type === 'symptom') {
-      if (details.severity) parts.push(`Severity: ${details.severity}`);
-      if (details.symptomNotes) parts.push(`Notes: ${details.symptomNotes}`);
-    }
-
-    return parts.filter(Boolean).join('\n');
+    const lines = [record.title, `Date: ${formatDate(record.date)}`];
+    const linkedReminder = getLinkedReminderForRecord(record.id);
+    if (record.provider) lines.push(`Provider: ${record.provider}`);
+    if (record.nextDue) lines.push(`Next due: ${formatDate(record.nextDue)}`);
+    if (linkedReminder?.date) lines.push(`Reminder scheduled for ${formatDate(linkedReminder.date)}${linkedReminder.time ? ` at ${linkedReminder.time}` : ''}`);
+    const details = buildRecordDetailLines(record, false);
+    if (details.length > 0) lines.push('', ...details);
+    return lines.join('\n');
   };
 
   const showRecordActions = (record) => {
-    Alert.alert(
-      record.title,
-      getRecordAlertSummary(record),
-      [
-        { text: 'View', onPress: () => Alert.alert(record.title, getRecordFullDetails(record)) },
-        {
-          text: 'Edit',
-          onPress: () => {
-            setEditingRecord(record);
-            setPendingRecordType(record.type);
-            setRecordForm(getRecordFormFromRecord(record));
-            setShowRecordModal(true);
-          },
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Delete Record?', 'This health record will be removed.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: () => deleteRecord(record.id) },
-            ]);
-          },
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    openRecordDetail(record);
   };
 
   const currentScore = pets.find((p) => p.id === selectedPetId)?.score ?? 0;
@@ -2871,6 +4095,10 @@ function HealthHubScreen({ navigation }) {
   }
 
   const visibleInsights = insightLines.slice(0, 3);
+  const selectedRecordReminder = selectedRecord ? getLinkedReminderForRecord(selectedRecord.id) : null;
+  const selectedRecordStatus = selectedRecord ? getRecordStatusBadge(selectedRecord) : null;
+  const selectedRecordHeaderLines = selectedRecord ? getRecordHeaderLines(selectedRecord) : [];
+  const selectedRecordDetailLines = selectedRecord ? buildRecordDetailLines(selectedRecord, false) : [];
 
   const buildHealthSummary = () => {
     const lines = [
@@ -2909,11 +4137,11 @@ function HealthHubScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <View style={{ marginTop: 0 }}>
-        <View style={{ marginTop: -10, marginBottom: -8 }}>
-          <PetAvatarRow
-            pets={pets}
-            selectedId={selectedPetId}
+        <View style={{ marginTop: 0 }}>
+          <View style={{ marginTop: -10, marginBottom: -8 }}>
+            <PetAvatarRow
+              pets={pets}
+              selectedId={selectedPetId}
             onSelect={setSelectedPetId}
             onOpenProfile={(petId) => navigation.navigate('PetProfile', { petId })}
           />
@@ -2946,15 +4174,25 @@ function HealthHubScreen({ navigation }) {
               <Text style={{ color: C.accent, marginRight: 8, fontSize: 14 }}>•</Text>
               <Text style={{ color: C.text, fontSize: 13, lineHeight: 18, flex: 1 }}>{line}</Text>
             </View>
-          ))}
-        </Card>
-      </View>
+            ))}
 
-      <ScrollView
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: 180,
+          <TouchableOpacity style={s.localVetFinderToggle} onPress={toggleVetFinder} activeOpacity={0.9}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.localVetFinderToggleTitle}>Local Vets & Emergency Care</Text>
+              <Text style={s.localVetFinderToggleSub}>
+                {isVetFinderExpanded ? 'Tap to close the vet finder sheet' : 'Tap to open nearby vet tools and saved clinics'}
+              </Text>
+            </View>
+            <Text style={s.localVetFinderChevron}>{isVetFinderExpanded ? '▴' : '▾'}</Text>
+          </TouchableOpacity>
+          </Card>
+        </View>
+
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: 180,
         }}
       >
         {/* Summary Card */}
@@ -3094,11 +4332,11 @@ function HealthHubScreen({ navigation }) {
               Tap + to get started
             </Text>
           </Card>
-        ) : (
-          groupedTimeline.map((group) => (
-            <View key={group.key} style={{ marginBottom: 18, paddingHorizontal: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingHorizontal: 4 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.accent, marginRight: 8 }} />
+          ) : (
+            groupedTimeline.map((group) => (
+              <View key={group.key} style={{ marginBottom: 18, paddingHorizontal: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingHorizontal: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.accent, marginRight: 8 }} />
                 <Text style={{ color: C.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2 }}>
                   {group.label}
                 </Text>
@@ -3149,10 +4387,11 @@ function HealthHubScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
               ))}
-            </View>
-          ))
-        )}
-      </ScrollView>
+              </View>
+            ))
+          )}
+
+        </ScrollView>
 
       {/* FAB */}
       <TouchableOpacity
@@ -3181,23 +4420,90 @@ function HealthHubScreen({ navigation }) {
             <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
               {(pendingRecordType ? recordFieldConfig[pendingRecordType] || [] : []).map((field) => (
                 <View key={field.key} style={{ marginBottom: 10 }}>
-                  <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
-                    {field.label}
-                  </Text>
-                  <TextInput
-                    style={[s.customActionInput, { marginBottom: 0 }]}
-                    value={recordForm[field.key]}
-                    onChangeText={(text) => setRecordForm((prev) => ({ ...prev, [field.key]: text }))}
-                    placeholder={field.placeholder}
-                    placeholderTextColor={C.muted}
-                  />
-                  {field.key.toLowerCase().includes('date') && recordForm[field.key].trim() ? (
-                    <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>
-                      Preview: {formatDate(recordForm[field.key].trim())}
-                    </Text>
-                  ) : null}
+                  {field.key.toLowerCase().includes('date') ? (
+                    <DatePickerField
+                      label={field.label}
+                      value={recordForm[field.key]}
+                      onChange={(date) => setRecordForm((prev) => ({ ...prev, [field.key]: date }))}
+                      placeholder={field.placeholder}
+                    />
+                  ) : (
+                    <>
+                      <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+                        {field.label}
+                      </Text>
+                      <TextInput
+                        style={[s.customActionInput, { marginBottom: 0 }]}
+                        value={recordForm[field.key]}
+                        onChangeText={(text) => setRecordForm((prev) => ({ ...prev, [field.key]: text }))}
+                        placeholder={field.placeholder}
+                        placeholderTextColor={C.muted}
+                      />
+                    </>
+                  )}
                 </View>
               ))}
+
+              {reminderEligibleTypes.has(pendingRecordType) ? (
+                <View style={{ marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border }}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setAddReminderToCalendar((prev) => {
+                        const next = !prev;
+                        if (next && !String(reminderDate || '').trim()) {
+                          setReminderDate(getReminderDefaultDate(pendingRecordType, recordForm));
+                        }
+                        return next;
+                      });
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}
+                  >
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: addReminderToCalendar ? C.accent : C.border,
+                        backgroundColor: addReminderToCalendar ? C.accent : 'transparent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {addReminderToCalendar ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>✓</Text> : null}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>Add reminder to Care Calendar</Text>
+                      <Text style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>
+                        Create a follow-up reminder for this health record.
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {addReminderToCalendar ? (
+                    <>
+                      <DatePickerField
+                        label="Reminder Date"
+                        value={reminderDate}
+                        onChange={setReminderDate}
+                        placeholder={getReminderDefaultDate(pendingRecordType, recordForm) || 'Select reminder date'}
+                      />
+
+                      <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+                        Reminder Time
+                      </Text>
+                      <TextInput
+                        style={[s.customActionInput, { marginBottom: 0 }]}
+                        value={reminderTime}
+                        onChangeText={setReminderTime}
+                        placeholder="Reminder time"
+                        placeholderTextColor={C.muted}
+                      />
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
             </ScrollView>
 
             <View style={s.customActionModalButtons}>
@@ -3206,6 +4512,147 @@ function HealthHubScreen({ navigation }) {
               </TouchableOpacity>
               <TouchableOpacity style={s.customActionSaveBtn} onPress={saveRecord}>
                 <Text style={s.customActionSaveText}>Save Record</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showRecordDetailModal} transparent animationType="fade" onRequestClose={closeRecordDetail}>
+        <View style={s.modalOverlay}>
+          <View style={[s.customActionModal, { padding: 0, overflow: 'hidden', maxHeight: '88%' }]}>
+            <View style={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+                <View style={{
+                  width: 58,
+                  height: 58,
+                  borderRadius: 18,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(255,107,53,0.14)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,107,53,0.22)',
+                  marginRight: 12,
+                }}>
+                  <Text style={{ fontSize: 28 }}>{selectedRecord?.icon || '📄'}</Text>
+                </View>
+
+                <View style={{ flex: 1, paddingTop: 2 }}>
+                  <Text style={{ color: C.text, fontSize: 20, fontWeight: '900', lineHeight: 24 }}>
+                    {selectedRecord?.title || 'Record details'}
+                  </Text>
+                  <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 4 }}>
+                    {pet.name}
+                  </Text>
+                  <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 2 }}>
+                    {selectedRecord ? formatDate(selectedRecord.date) : ''}
+                  </Text>
+                </View>
+
+                {selectedRecordStatus ? (
+                  <View style={[
+                    s.recordDetailBadge,
+                    { borderColor: selectedRecordStatus.color, backgroundColor: `${selectedRecordStatus.color}15` }
+                  ]}>
+                    <Text style={[s.recordDetailBadgeText, { color: selectedRecordStatus.color }]}>
+                      {selectedRecordStatus.label}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {selectedRecord ? (
+                <View style={s.recordDetailHeaderBlock}>
+                  {selectedRecordHeaderLines.map((line, index) => (
+                    <Text
+                      key={`${line}-${index}`}
+                      style={[
+                        index === 0 ? s.recordDetailTypeLabel : index === 1 ? s.recordDetailMainTitle : s.recordDetailHeaderLine,
+                        index > 1 && { marginTop: 2 },
+                      ]}
+                    >
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {selectedRecordReminder ? (
+                <View style={s.recordDetailReminderCard}>
+                  <Text style={s.recordDetailReminderLabel}>
+                    Reminder scheduled for {formatDate(selectedRecordReminder.date)}
+                    {selectedRecordReminder.time ? ` at ${selectedRecordReminder.time}` : ''}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 18, paddingVertical: 16 }}>
+              {selectedRecord ? (
+                <>
+                  <Text style={s.recordDetailSectionTitle}>Chart Details</Text>
+                  <View style={s.recordDetailSection}>
+                    {selectedRecordDetailLines.length > 0 ? (
+                      selectedRecordDetailLines.map((line) => {
+                        const splitIndex = line.indexOf(': ');
+                        const label = splitIndex >= 0 ? line.slice(0, splitIndex) : line;
+                        const value = splitIndex >= 0 ? line.slice(splitIndex + 2) : '';
+                        const isNotes = /notes/i.test(label);
+
+                        return (
+                          <View
+                            key={`${label}-${value}`}
+                            style={[s.recordDetailRow, isNotes && s.recordDetailNotesRow]}
+                          >
+                            <Text style={s.recordDetailFieldLabel}>{label}</Text>
+                            <Text style={[s.recordDetailFieldValue, isNotes && s.recordDetailNotesValue]}>
+                              {value || '—'}
+                            </Text>
+                          </View>
+                        );
+                      })
+                    ) : (
+                      <Text style={s.recordDetailEmptyText}>No structured details available.</Text>
+                    )}
+                  </View>
+                </>
+              ) : null}
+            </ScrollView>
+
+            <View style={[s.customActionModalButtons, { paddingHorizontal: 18, paddingBottom: 18, marginTop: 0 }]}>
+              <TouchableOpacity
+                style={s.customActionCancelBtn}
+                onPress={() => {
+                  if (!selectedRecord) return;
+                  closeRecordDetail();
+                  openRecordEditor(selectedRecord);
+                }}
+              >
+                <Text style={s.customActionCancelText}>Edit</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.customActionCancelBtn, { borderColor: 'rgba(255, 92, 92, 0.25)', backgroundColor: 'rgba(255, 92, 92, 0.10)' }]}
+                onPress={() => {
+                  if (!selectedRecord) return;
+                  Alert.alert('Delete Record?', 'This health record will be removed.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: () => {
+                        deleteRecord(selectedRecord.id);
+                        closeRecordDetail();
+                      },
+                    },
+                  ]);
+                }}
+              >
+                <Text style={{ color: '#ff8080', fontWeight: '800' }}>Delete</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={closeRecordDetail}>
+                <Text style={s.customActionSaveText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3258,6 +4705,213 @@ function HealthHubScreen({ navigation }) {
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal visible={showVetModal} transparent animationType="fade" onRequestClose={closeVetModal}>
+        <KeyboardAvoidingView
+          style={s.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 28 : 0}
+        >
+          <View style={s.customActionModal}>
+            <Text style={s.customActionModalTitle}>{editingVetId ? 'Edit Vet Card' : 'Save Vet Card'}</Text>
+
+            <ScrollView
+              style={{ maxHeight: 360 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
+              <Text style={s.vetModalLabel}>Clinic name</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.name}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, name: text }))}
+                placeholder="Clinic name"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Type</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.type}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, type: text }))}
+                placeholder="Vet Clinic / Emergency Vet / Mobile Vet"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Distance</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.distance}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, distance: text }))}
+                placeholder="2.4 mi"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Phone</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.phone}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, phone: text }))}
+                placeholder="732-555-0142"
+                placeholderTextColor={C.muted}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={s.vetModalLabel}>Address</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.address}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, address: text }))}
+                placeholder="Ocean County, NJ"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Status</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.status}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, status: text }))}
+                placeholder="Open / 24/7 Emergency / By appointment"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Website link</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.websiteUrl}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, websiteUrl: text }))}
+                placeholder="https://clinicwebsite.com"
+                placeholderTextColor={C.muted}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </ScrollView>
+
+            <View style={s.customActionModalButtons}>
+              <TouchableOpacity style={s.customActionCancelBtn} onPress={closeVetModal}>
+                <Text style={s.customActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={saveVetCard}>
+                <Text style={s.customActionSaveText}>{editingVetId ? 'Update Vet' : 'Save Vet'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={isVetFinderExpanded} animationType="slide" onRequestClose={toggleVetFinder}>
+        <SafeAreaView style={s.localVetFinderModalScreen} edges={['top', 'bottom']}>
+          <View style={s.localVetFinderModalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.localVetFinderModalTitle}>Local Vets & Emergency Care</Text>
+              <Text style={s.localVetFinderModalSubtitle}>
+                Search nearby clinics, then save the ones you want to keep on hand.
+              </Text>
+            </View>
+            <TouchableOpacity style={s.localVetFinderCloseBtn} onPress={toggleVetFinder} activeOpacity={0.85}>
+              <Text style={s.localVetFinderCloseBtnText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={s.localVetFinderModalScroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={s.localVetFinderModalScrollContent}
+          >
+            <View style={s.localVetWarning}>
+              <Text style={s.localVetWarningText}>
+                If your pet is having trouble breathing, bleeding heavily, collapsed, had a seizure, ate something toxic, or may have swallowed glass/sharp objects, contact an emergency vet immediately.
+              </Text>
+            </View>
+
+            <View style={s.localVetFinderButtonRow}>
+              <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1 }]} onPress={openMapsSearch} activeOpacity={0.9}>
+                <Text style={s.localVetFinderMainBtnText}>Find Vets Near Me</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1, backgroundColor: C.red, borderColor: C.red }]} onPress={openEmergencyMapsSearch} activeOpacity={0.9}>
+                <Text style={s.localVetFinderMainBtnText}>Find Emergency Vet Near Me</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={s.localVetFinderSaveBtn} onPress={() => openVetAddModal()} activeOpacity={0.9}>
+              <Text style={s.localVetFinderSaveBtnText}>＋ Add Vet Card</Text>
+            </TouchableOpacity>
+
+            <View style={s.localVetSavedSection}>
+              <Text style={s.localVetSavedSectionTitle}>Saved Vet Cards</Text>
+
+              {savedVets.length === 0 ? (
+                <View style={s.localVetEmptyState}>
+                  <Text style={s.localVetEmptyStateText}>
+                    Search for a clinic, open the website or map, then save the vet here so you can return to it later.
+                  </Text>
+                </View>
+              ) : (
+                savedVets.map((clinic) => (
+                  <View key={clinic.id} style={s.localVetCard}>
+                    <View style={s.localVetCardTopRow}>
+                      <View style={s.localVetAvatar}>
+                        <Text style={s.localVetAvatarText}>🏥</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.localVetName}>{clinic.name}</Text>
+                        <Text style={s.localVetType}>{clinic.type}</Text>
+                      </View>
+                      <View style={s.localVetStatusPill}>
+                        <Text style={s.localVetStatusText}>{clinic.status}</Text>
+                      </View>
+                    </View>
+
+                    <View style={s.localVetMetaGrid}>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Distance</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.distance}</Text>
+                      </View>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Phone</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.phone}</Text>
+                      </View>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Address</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.address}</Text>
+                      </View>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Website</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.websiteUrl ? 'Saved' : 'Not added'}</Text>
+                      </View>
+                    </View>
+
+                    <View style={s.localVetActionRow}>
+                      <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetCall(clinic.phone)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnText}>Call</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetMaps(clinic)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnText}>Open Maps</Text>
+                      </TouchableOpacity>
+                      {clinic.websiteUrl ? (
+                        <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetWebsite(clinic.websiteUrl)} activeOpacity={0.85}>
+                          <Text style={s.localVetActionBtnText}>Website</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+
+                    <View style={s.localVetEditDeleteRow}>
+                      <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnAccentSoft]} onPress={() => editVetCard(clinic)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnTextAccentSoft}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnDanger]} onPress={() => deleteVetCard(clinic.id)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnTextDanger}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -3377,11 +5031,31 @@ function MemoryVaultScreen({ navigation }) {
 // ─────────────────────────────────────────────
 function CommunityScreen() {
   const [posts, setPosts] = useState(POSTS);
+  const [recipes, setRecipes] = useState(RECIPE_POSTS);
+  const [activeCommunityTab, setActiveCommunityTab] = useState('feed');
+  const [expandedRecipeId, setExpandedRecipeId] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
   const [postText, setPostText] = useState('');
+  const [showRecipeModal, setShowRecipeModal] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState(null);
+  const [recipeDraft, setRecipeDraft] = useState({
+    title: '',
+    description: '',
+    ingredients: '',
+    safeFor: '',
+    prepTime: '',
+  });
 
   const toggleLike = (postId) => {
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: p.likes + (p.liked ? -1 : 1), liked: !p.liked } : p));
+  };
+
+  const toggleRecipeLike = (recipeId) => {
+    setRecipes((prev) => prev.map((recipe) => (
+      recipe.id === recipeId
+        ? { ...recipe, likes: recipe.likes + (recipe.liked ? -1 : 1), liked: !recipe.liked }
+        : recipe
+    )));
   };
 
   const submitPost = () => {
@@ -3392,6 +5066,256 @@ function CommunityScreen() {
     setShowCompose(false);
   };
 
+  const buildRecipeDraft = (recipe) => ({
+    title: recipe?.title || '',
+    description: recipe?.description || '',
+    ingredients: recipe?.ingredients?.join('\n') || '',
+    safeFor: recipe?.safeFor?.join(', ') || '',
+    prepTime: recipe?.prepTime || '',
+  });
+
+  const openRecipeModal = (recipe = null) => {
+    setEditingRecipeId(recipe?.id || null);
+    setRecipeDraft(buildRecipeDraft(recipe));
+    setShowRecipeModal(true);
+  };
+
+  const closeRecipeModal = () => {
+    setShowRecipeModal(false);
+    setEditingRecipeId(null);
+    setRecipeDraft({
+      title: '',
+      description: '',
+      ingredients: '',
+      safeFor: '',
+      prepTime: '',
+    });
+  };
+
+  const submitRecipe = () => {
+    const title = recipeDraft.title.trim();
+    const description = recipeDraft.description.trim();
+    const ingredients = recipeDraft.ingredients
+      .split(/\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const safeFor = recipeDraft.safeFor
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+    const prepTime = recipeDraft.prepTime.trim();
+
+    if (!title || !description || !ingredients.length || !safeFor.length || !prepTime) {
+      Alert.alert('Missing details', 'Please fill out every recipe field before posting.');
+      return;
+    }
+
+    const ownerLabel = `${safeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(' / ')} Parent`;
+    const generatedInstructions = [
+      'Gather the ingredients listed in this recipe.',
+      `Prepare and combine them according to the recipe for ${title}.`,
+      'Serve only in appropriate portions and monitor your pet the first time.',
+    ];
+    const recipePayload = {
+      id: editingRecipeId || `recipe-${Date.now()}`,
+      author: 'Raymond',
+      owner: true,
+      petType: ownerLabel,
+      title,
+      description,
+      ingredients,
+      safeFor,
+      prepTime,
+      likes: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.likes ?? 0 : 0,
+      comments: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.comments ?? 0 : 0,
+      emoji: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.emoji ?? '🥣' : '🥣',
+      instructions: editingRecipeId
+        ? recipes.find((recipe) => recipe.id === editingRecipeId)?.instructions ?? generatedInstructions
+        : generatedInstructions,
+    };
+
+    setRecipes((prev) => {
+      if (editingRecipeId) {
+        return prev.map((recipe) => (recipe.id === editingRecipeId ? { ...recipe, ...recipePayload } : recipe));
+      }
+
+      return [recipePayload, ...prev];
+    });
+
+    closeRecipeModal();
+    setActiveCommunityTab('recipes');
+  };
+
+  const deleteRecipe = (recipeId) => {
+    Alert.alert('Delete Recipe?', 'This recipe post will be removed.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => setRecipes((prev) => prev.filter((recipe) => recipe.id !== recipeId)),
+      },
+    ]);
+  };
+
+  const shareRecipe = async (recipe) => {
+    Alert.alert('Share recipe coming soon');
+  };
+
+  const toggleRecipeExpanded = (recipeId) => {
+    setExpandedRecipeId((current) => (current === recipeId ? null : recipeId));
+  };
+
+  const visiblePosts = posts.filter((post) => {
+    if (activeCommunityTab === 'feed') {
+      return post.type !== 'lost_pet' && post.type !== 'tip';
+    }
+
+    if (activeCommunityTab === 'lostPets') {
+      return post.type === 'lost_pet';
+    }
+
+    if (activeCommunityTab === 'tips') {
+      return post.type === 'tip';
+    }
+
+    return false;
+  });
+
+  const renderPostCard = (post) => (
+    <Card key={post.id} style={{ marginBottom: 14 }}>
+      {post.lost && (
+        <View style={s.lostBanner}>
+          <Text style={s.lostBannerText}>🚨 LOST PET ALERT</Text>
+        </View>
+      )}
+      <View style={s.postAuthorRow}>
+        <View style={s.postAvatar}>
+          <Text style={{ fontSize: 18 }}>{post.emoji}</Text>
+        </View>
+        <View style={s.flex}>
+          <Text style={s.postAuthor}>{post.author}</Text>
+          <Text style={s.postPetType}>{post.petType} · {post.time}</Text>
+        </View>
+      </View>
+      <Text style={s.postContent}>{post.content}</Text>
+      <View style={[s.postMediaPlaceholder, { backgroundColor: post.lost ? '#3a0a0a' : C.cardHigh }]}>
+        <Text style={{ fontSize: 40 }}>{post.emoji}</Text>
+      </View>
+      <View style={s.postActions}>
+        <TouchableOpacity style={s.postAction} onPress={() => toggleLike(post.id)}>
+          <Text style={{ fontSize: 18 }}>{post.liked ? '❤️' : '🤍'}</Text>
+          <Text style={[s.postActionText, post.liked && { color: '#e74c3c' }]}>{post.likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Comments', `${post.comments} people commented on this post.`)}>
+          <Text style={{ fontSize: 18 }}>💬</Text>
+          <Text style={s.postActionText}>{post.comments}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Share', 'Share this post to Facebook, Nextdoor, or Twitter')}>
+          <Text style={{ fontSize: 18 }}>↗️</Text>
+          <Text style={s.postActionText}>Share</Text>
+        </TouchableOpacity>
+      </View>
+      {post.lost && (
+        <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('🚨 Alert Sent!', '156 pet owners in your area have been notified.')}>
+          <Text style={s.alertNeighborsBtnText}>🚨 Alert My Neighborhood</Text>
+        </TouchableOpacity>
+      )}
+    </Card>
+  );
+
+  const renderRecipeCard = (recipe) => (
+    <Card key={recipe.id} style={{ marginBottom: 14, paddingTop: 14 }}>
+      <View style={s.recipeHeroRow}>
+        <View style={s.recipeEmojiWrap}>
+          <Text style={s.recipeEmoji}>{recipe.emoji}</Text>
+        </View>
+        <View style={s.flex}>
+          <Text style={s.recipeTitle}>{recipe.title}</Text>
+          <Text style={s.recipeMeta}>
+            {recipe.author} · {recipe.petType} / {recipe.safeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={s.recipeDescription}>{recipe.description}</Text>
+
+      <View style={s.recipeMetaRow}>
+        <View style={s.recipePill}>
+          <Text style={s.recipePillLabel}>Safe for</Text>
+          <Text style={s.recipePillValue}>{recipe.safeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}</Text>
+        </View>
+        <View style={s.recipePill}>
+          <Text style={s.recipePillLabel}>Prep time</Text>
+          <Text style={s.recipePillValue}>{recipe.prepTime}</Text>
+        </View>
+      </View>
+
+        <View style={s.recipeIngredientsBlock}>
+          <Text style={s.recipeIngredientsLabel}>Ingredients preview</Text>
+          <Text style={s.recipeIngredientsText}>
+            {recipe.ingredients.slice(0, 3).join(' • ')}
+            {recipe.ingredients.length > 3 ? ' • …' : ''}
+          </Text>
+        </View>
+
+        <TouchableOpacity style={s.recipeExpandToggle} onPress={() => toggleRecipeExpanded(recipe.id)}>
+          <Text style={s.recipeExpandToggleText}>
+            {expandedRecipeId === recipe.id ? 'Hide full instructions' : 'Show full instructions'}
+          </Text>
+          <Text style={s.recipeExpandChevron}>{expandedRecipeId === recipe.id ? '▴' : '▾'}</Text>
+        </TouchableOpacity>
+
+        {expandedRecipeId === recipe.id && (
+          <View style={s.recipeInstructionsBlock}>
+            <Text style={s.recipeInstructionsLabel}>Full instructions</Text>
+            {(recipe.instructions || []).map((step, index) => (
+              <View key={`${recipe.id}-step-${index}`} style={s.recipeInstructionRow}>
+                <View style={s.recipeInstructionNumber}>
+                  <Text style={s.recipeInstructionNumberText}>{index + 1}</Text>
+                </View>
+                <Text style={s.recipeInstructionText}>{step}</Text>
+              </View>
+            ))}
+
+            <View style={s.recipeIngredientsFullBlock}>
+              <Text style={s.recipeInstructionsLabel}>Full ingredients</Text>
+              {recipe.ingredients.map((ingredient, index) => (
+                <Text key={`${recipe.id}-ingredient-${index}`} style={s.recipeIngredientFullText}>
+                  • {ingredient}
+                </Text>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <View style={s.recipeActions}>
+        <TouchableOpacity style={s.postAction} onPress={() => toggleRecipeLike(recipe.id)}>
+          <Text style={{ fontSize: 18 }}>{recipe.liked ? '❤️' : '🤍'}</Text>
+          <Text style={[s.postActionText, recipe.liked && { color: '#e74c3c' }]}>{recipe.likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Comments', `${recipe.comments} people commented on this recipe.`)}>
+          <Text style={{ fontSize: 18 }}>💬</Text>
+          <Text style={s.postActionText}>{recipe.comments}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.postAction} onPress={() => shareRecipe(recipe)}>
+          <Text style={{ fontSize: 18 }}>↗️</Text>
+          <Text style={s.postActionText}>Share</Text>
+        </TouchableOpacity>
+      </View>
+
+      {recipe.owner && (
+        <View style={s.recipeOwnerActions}>
+          <TouchableOpacity style={s.recipeOwnerBtn} onPress={() => openRecipeModal(recipe)}>
+            <Text style={s.recipeOwnerBtnText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.recipeOwnerBtn, s.recipeOwnerBtnDanger]} onPress={() => deleteRecipe(recipe.id)}>
+            <Text style={[s.recipeOwnerBtnText, s.recipeOwnerBtnTextDanger]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </Card>
+  );
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.pageHeader}>
@@ -3399,58 +5323,40 @@ function CommunityScreen() {
           <Text style={s.pageTitle}>Community</Text>
           <Text style={s.pageSub}>📍 Bayville, NJ</Text>
         </View>
-        <TouchableOpacity style={s.accentBtn} onPress={() => setShowCompose(true)}>
-          <Text style={s.accentBtnText}>＋ Post</Text>
+        <TouchableOpacity
+          style={s.accentBtn}
+          onPress={activeCommunityTab === 'recipes' ? openRecipeModal : () => setShowCompose(true)}
+        >
+          <Text style={s.accentBtnText}>{activeCommunityTab === 'recipes' ? '＋ Recipe' : '＋ Post'}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        {posts.map(post => (
-          <Card key={post.id} style={{ marginBottom: 14 }}>
-            {/* Lost pet special header */}
-            {post.lost && (
-              <View style={s.lostBanner}>
-                <Text style={s.lostBannerText}>🚨 LOST PET ALERT</Text>
-              </View>
-            )}
-            {/* Author */}
-            <View style={s.postAuthorRow}>
-              <View style={s.postAvatar}>
-                <Text style={{ fontSize: 18 }}>{post.emoji}</Text>
-              </View>
-              <View style={s.flex}>
-                <Text style={s.postAuthor}>{post.author}</Text>
-                <Text style={s.postPetType}>{post.petType} · {post.time}</Text>
-              </View>
-            </View>
-            {/* Content */}
-            <Text style={s.postContent}>{post.content}</Text>
-            {/* Media placeholder */}
-            <View style={[s.postMediaPlaceholder, { backgroundColor: post.lost ? '#3a0a0a' : C.cardHigh }]}>
-              <Text style={{ fontSize: 40 }}>{post.emoji}</Text>
-            </View>
-            {/* Actions */}
-            <View style={s.postActions}>
-              <TouchableOpacity style={s.postAction} onPress={() => toggleLike(post.id)}>
-                <Text style={{ fontSize: 18 }}>{post.liked ? '❤️' : '🤍'}</Text>
-                <Text style={[s.postActionText, post.liked && { color: '#e74c3c' }]}>{post.likes}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Comments', `${post.comments} people commented on this post.`)}>
-                <Text style={{ fontSize: 18 }}>💬</Text>
-                <Text style={s.postActionText}>{post.comments}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Share', 'Share this post to Facebook, Nextdoor, or Twitter')}>
-                <Text style={{ fontSize: 18 }}>↗️</Text>
-                <Text style={s.postActionText}>Share</Text>
-              </TouchableOpacity>
-            </View>
-            {post.lost && (
-              <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('🚨 Alert Sent!', '156 pet owners in your area have been notified.')}>
-                <Text style={s.alertNeighborsBtnText}>🚨 Alert My Neighborhood</Text>
-              </TouchableOpacity>
-            )}
-          </Card>
-        ))}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.communityTabRow}>
+          {COMMUNITY_TABS.map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[s.communityTabPill, activeCommunityTab === tab.key && s.communityTabPillActive]}
+                onPress={() => setActiveCommunityTab(tab.key)}
+              >
+              <Text style={[s.communityTabText, activeCommunityTab === tab.key && s.communityTabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {activeCommunityTab === 'recipes' && (
+          <View style={s.recipeSafetyNote}>
+            <Text style={s.recipeSafetyNoteText}>Always check with your vet before introducing new foods.</Text>
+          </View>
+        )}
+
+        {activeCommunityTab === 'recipes' ? (
+          recipes.map(renderRecipeCard)
+        ) : (
+          visiblePosts.map(renderPostCard)
+        )}
       </ScrollView>
 
       {/* Compose Modal */}
@@ -3480,7 +5386,76 @@ function CommunityScreen() {
                 <Text style={{ color: C.accent, fontSize: 13 }}>{tip}</Text>
               </TouchableOpacity>
             ))}
+            </View>
+          </SafeAreaView>
+        </Modal>
+
+        <Modal visible={showRecipeModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeRecipeModal}>
+        <SafeAreaView style={[s.screen, { backgroundColor: C.bg }]}>
+          <View style={s.modalHeader}>
+            <TouchableOpacity onPress={closeRecipeModal}>
+              <Text style={{ color: C.muted, fontSize: 16 }}>Cancel</Text>
+            </TouchableOpacity>
+              <Text style={s.modalTitle}>{editingRecipeId ? 'Edit Recipe' : 'New Recipe'}</Text>
+            <TouchableOpacity onPress={submitRecipe}>
+                <Text style={{ color: C.accent, fontSize: 16, fontWeight: '700' }}>
+                  {editingRecipeId ? 'Save' : 'Post'}
+                </Text>
+            </TouchableOpacity>
           </View>
+
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+            <Text style={s.recipeFieldLabel}>Recipe title</Text>
+            <TextInput
+              style={s.recipeInput}
+              placeholder="Frozen Peanut Butter Banana Dog Treats"
+              placeholderTextColor={C.muted}
+              value={recipeDraft.title}
+              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, title: text }))}
+            />
+
+            <Text style={s.recipeFieldLabel}>Description</Text>
+            <TextInput
+              style={[s.recipeInput, s.recipeTextArea]}
+              placeholder="What makes this recipe special?"
+              placeholderTextColor={C.muted}
+              value={recipeDraft.description}
+              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, description: text }))}
+              multiline
+            />
+
+            <Text style={s.recipeFieldLabel}>Ingredients</Text>
+            <TextInput
+              style={[s.recipeInput, s.recipeTextArea]}
+              placeholder="One ingredient per line"
+              placeholderTextColor={C.muted}
+              value={recipeDraft.ingredients}
+              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, ingredients: text }))}
+              multiline
+            />
+
+            <Text style={s.recipeFieldLabel}>Safe for pet type</Text>
+            <TextInput
+              style={s.recipeInput}
+              placeholder="dog, cat, rabbit"
+              placeholderTextColor={C.muted}
+              value={recipeDraft.safeFor}
+              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, safeFor: text }))}
+            />
+
+            <Text style={s.recipeFieldLabel}>Prep time</Text>
+            <TextInput
+              style={s.recipeInput}
+              placeholder="10 min"
+              placeholderTextColor={C.muted}
+              value={recipeDraft.prepTime}
+              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, prepTime: text }))}
+            />
+
+            <View style={s.recipeModalTip}>
+              <Text style={s.recipeModalTipText}>Use simple, pet-safe ingredients and avoid anything your vet has flagged as unsafe.</Text>
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -4120,10 +6095,10 @@ function TabNavigator() {
   );
 }
 export default function App() {
-  const [pets, setPets] = useState(PETS);
+  const [pets, setPets] = useState([]);
   const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
   const [careReminders, setCareReminders] = useState([]);
-  const [petScores, setPetScores] = useState(Object.fromEntries(PETS.map(p => [p.id, p.score ?? 80])));
+  const [petScores, setPetScores] = useState({});
   const [activityLogs, setActivityLogs] = useState([]);
   const [showAddPetModal, setShowAddPetModal] = useState(false);
   const [addPetInitialSpecies, setAddPetInitialSpecies] = useState('dog');
@@ -4149,6 +6124,8 @@ export default function App() {
     setCareReminders(prev => [...buildStarterReminders(newPet), ...prev]);
     setHealthRecords(prev => [...buildStarterHealthRecords(newPet), ...prev]);
 
+    savePetToSupabase(newPet);
+
     const selectCreatedPet = addPetSelectCallbackRef.current;
     addPetSelectCallbackRef.current = null;
     setShowAddPetModal(false);
@@ -4158,21 +6135,32 @@ export default function App() {
     }
   };
 
-  const handleDeletePet = (petId) => {
-    setPets(prev => prev.filter(p => p.id !== petId));
-    setActivityLogs(prev => prev.filter(log => log.petId !== petId));
-    setCareReminders(prev => prev.filter(reminder => reminder.petId !== petId));
-    setHealthRecords(prev => prev.filter(record => record.petId !== petId));
-    setPetScores(prev => {
-      const next = { ...prev };
-      delete next[petId];
-      return next;
-    });
-  };
+  useEffect(() => {
+    let isActive = true;
 
-  const PetProfileRoute = (props) => (
-    <PetProfileScreen {...props} onDeletePet={handleDeletePet} />
-  );
+    const run = async () => {
+      const mappedPets = await loadPetsFromSupabase();
+
+      if (!isActive) {
+        return;
+      }
+
+      if (mappedPets.length > 0) {
+        setPets(mappedPets);
+        setPetScores(Object.fromEntries(mappedPets.map((pet) => [pet.id, pet.score ?? 80])));
+        return;
+      }
+
+      setPets([]);
+      setPetScores({});
+    };
+
+    run();
+
+    return () => {
+      isActive = false;
+    };
+  }, [setPets, setPetScores]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -4188,7 +6176,7 @@ export default function App() {
                       <Stack.Navigator screenOptions={{ headerShown: false }}>
                         <Stack.Screen name="Main"    component={TabNavigator}  />
                         <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
-                        <Stack.Screen name="PetProfile" component={PetProfileRoute} options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
                         <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
                       </Stack.Navigator>
                     </NavigationContainer>
@@ -4622,6 +6610,103 @@ healthScoreCard: {
   customActionCancelText: { color: C.muted, fontWeight: '700' },
   customActionSaveBtn: { flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center', backgroundColor: C.accent },
   customActionSaveText: { color: '#fff', fontWeight: '800' },
+  recordDetailBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginLeft: 8,
+  },
+  recordDetailBadgeText: { fontSize: 11, fontWeight: '900', letterSpacing: 0.7 },
+  recordDetailHeaderBlock: {
+    marginTop: 2,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  recordDetailTypeLabel: { color: C.accent, fontSize: 12, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase' },
+  recordDetailMainTitle: { color: C.text, fontSize: 18, fontWeight: '900', marginTop: 3 },
+  recordDetailHeaderLine: { color: C.muted, fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  recordDetailReminderCard: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,107,53,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,53,0.18)',
+  },
+  recordDetailReminderLabel: { color: C.text, fontSize: 12, fontWeight: '800', lineHeight: 17 },
+  recordDetailSectionTitle: { color: C.text, fontSize: 14, fontWeight: '900', marginBottom: 10, letterSpacing: 0.3 },
+  recordDetailSection: {
+    backgroundColor: '#171717',
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 20,
+    padding: 14,
+  },
+  recordDetailRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    gap: 4,
+  },
+  recordDetailNotesRow: { paddingBottom: 12 },
+  recordDetailFieldLabel: { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
+  recordDetailFieldValue: { color: C.text, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  recordDetailNotesValue: { lineHeight: 21 },
+  recordDetailEmptyText: { color: C.muted, fontSize: 13, fontStyle: 'italic' },
+  datePickerLabel: { color: C.muted, fontSize: 12, fontWeight: '800', marginBottom: 6 },
+  datePickerField: {
+    backgroundColor: C.bg,
+    borderColor: C.border,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  datePickerFieldText: { color: C.text, fontSize: 14, fontWeight: '700', flex: 1, paddingRight: 12 },
+  datePickerPlaceholder: { color: C.muted, fontWeight: '600' },
+  datePickerChevron: { color: C.accent, fontSize: 18, fontWeight: '900' },
+  datePickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  datePickerModal: {
+    width: '100%',
+    backgroundColor: C.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 16,
+  },
+  datePickerModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  datePickerModalTitle: { color: C.text, fontSize: 16, fontWeight: '900' },
+  datePickerModalClose: { color: C.muted, fontSize: 18, fontWeight: '900' },
+  datePickerPickerWrap: {
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  datePickerButtons: { flexDirection: 'row', gap: 10 },
   addPetModal: {
     backgroundColor: '#1b1b1b',
     borderRadius: 28,
@@ -4906,17 +6991,115 @@ healthScoreCard: {
   postPetType:       { color: C.muted, fontSize: 12, marginTop: 2 },
   postContent:       { color: C.text, fontSize: 15, lineHeight: 21, marginBottom: 12 },
   postMediaPlaceholder: { height: 150, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  postActions:       { flexDirection: 'row', alignItems: 'center', gap: 22, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 },
-  postAction:        { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  postActionText:    { color: C.muted, fontSize: 13, fontWeight: '700' },
-  alertNeighborsBtn: { marginTop: 12, backgroundColor: C.red, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
-  alertNeighborsBtnText: { color: '#fff', fontWeight: '900' },
-  composeInput:      { flex: 1, color: C.text, fontSize: 18, padding: 16, textAlignVertical: 'top' },
-  composeTips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
-  composeTip:        { backgroundColor: C.card, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
+    postActions:       { flexDirection: 'row', alignItems: 'center', gap: 22, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 },
+    postAction:        { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    postActionText:    { color: C.muted, fontSize: 13, fontWeight: '700' },
+    alertNeighborsBtn: { marginTop: 12, backgroundColor: C.red, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+    alertNeighborsBtnText: { color: '#fff', fontWeight: '900' },
+    composeInput:      { flex: 1, color: C.text, fontSize: 18, padding: 16, textAlignVertical: 'top' },
+    composeTips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+    composeTip:        { backgroundColor: C.card, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
+    communityTabRow:   { gap: 10, paddingBottom: 14 },
+    communityTabPill:  { backgroundColor: C.card, borderRadius: 999, paddingHorizontal: 15, paddingVertical: 10, borderWidth: 1, borderColor: C.border },
+    communityTabPillActive: { backgroundColor: C.accent + '22', borderColor: C.accent },
+    communityTabText:  { color: C.muted, fontSize: 13, fontWeight: '800' },
+    communityTabTextActive: { color: C.text },
+    recipeSafetyNote:  { backgroundColor: C.blue + '18', borderLeftWidth: 3, borderLeftColor: C.blue, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 14 },
+    recipeSafetyNoteText: { color: C.text, fontSize: 13, lineHeight: 19, fontWeight: '700' },
+    recipeHeroRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+    recipeEmojiWrap:   { width: 56, height: 56, borderRadius: 18, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
+    recipeEmoji:       { fontSize: 30 },
+    recipeTitle:       { color: C.text, fontSize: 17, fontWeight: '900', lineHeight: 22 },
+    recipeMeta:        { color: C.muted, fontSize: 12, marginTop: 3, fontWeight: '700' },
+    recipeDescription: { color: C.text, fontSize: 14, lineHeight: 20, marginBottom: 12 },
+    recipeMetaRow:     { flexDirection: 'row', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
+    recipePill:        { flexGrow: 1, flexBasis: '48%', backgroundColor: C.cardHigh, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: C.border },
+    recipePillLabel:   { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
+    recipePillValue:   { color: C.text, fontSize: 13, fontWeight: '800', marginTop: 4 },
+    recipeIngredientsBlock: { backgroundColor: C.bg, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
+    recipeIngredientsLabel: { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 },
+    recipeIngredientsText: { color: C.text, fontSize: 13, lineHeight: 19, fontWeight: '600' },
+    recipeExpandToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.cardHigh, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
+    recipeExpandToggleText: { color: C.text, fontSize: 13, fontWeight: '900' },
+    recipeExpandChevron: { color: C.muted, fontSize: 16, fontWeight: '900' },
+    recipeInstructionsBlock: { backgroundColor: C.bg, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
+    recipeInstructionsLabel: { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },
+    recipeInstructionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+    recipeInstructionNumber: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.cardHigh, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border, marginTop: 1 },
+    recipeInstructionNumberText: { color: C.text, fontSize: 11, fontWeight: '900' },
+    recipeInstructionText: { flex: 1, color: C.text, fontSize: 13, lineHeight: 19, fontWeight: '600' },
+    recipeIngredientsFullBlock: { marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
+    recipeIngredientFullText: { color: C.muted, fontSize: 13, lineHeight: 18, fontWeight: '600', marginBottom: 3 },
+    recipeActions:     { flexDirection: 'row', alignItems: 'center', gap: 22, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 },
+    recipeOwnerActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+    recipeOwnerBtn:    { flex: 1, backgroundColor: C.cardHigh, borderRadius: 14, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+    recipeOwnerBtnDanger: { backgroundColor: C.red + '20', borderColor: C.red + '40' },
+    recipeOwnerBtnText: { color: C.text, fontSize: 13, fontWeight: '900' },
+    recipeOwnerBtnTextDanger: { color: C.red },
+    recipeFieldLabel:  { color: C.text, fontSize: 13, fontWeight: '800', marginBottom: 8, marginTop: 14 },
+    recipeInput:       { backgroundColor: C.card, color: C.text, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: C.border },
+    recipeTextArea:    { minHeight: 92, textAlignVertical: 'top' },
+    recipeModalTip:    { marginTop: 16, backgroundColor: C.cardHigh, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: C.border },
+    recipeModalTipText: { color: C.muted, fontSize: 12, lineHeight: 18, fontWeight: '600' },
 
-  // Settings
-  profileCard:       { margin: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    // Health Hub local vet finder
+    localVetFinderToggle: { marginTop: 12, marginHorizontal: 16, backgroundColor: C.cardHigh, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: C.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    localVetFinderToggleTitle: { color: C.text, fontSize: 14, fontWeight: '900' },
+    localVetFinderToggleSub: { color: C.muted, fontSize: 12, marginTop: 3, fontWeight: '600' },
+    localVetFinderChevron: { color: C.accent, fontSize: 18, fontWeight: '900' },
+    localVetFinderModalScreen: { flex: 1, backgroundColor: C.bg },
+    localVetFinderModalHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: '#101c2a' },
+    localVetFinderModalTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
+    localVetFinderModalSubtitle: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 4, fontWeight: '600' },
+    localVetFinderCloseBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: C.cardHigh, borderWidth: 1, borderColor: C.border, marginTop: 2 },
+    localVetFinderCloseBtnText: { color: C.text, fontSize: 18, fontWeight: '900' },
+    localVetFinderModalScroll: { flex: 1 },
+    localVetFinderModalScrollContent: { paddingTop: 14, paddingBottom: 34, paddingHorizontal: 16 },
+    localVetFinderScroll: { maxHeight: Dimensions.get('window').height * 0.78, marginHorizontal: 0 },
+    localVetFinderScrollContent: { paddingBottom: 120 },
+    localVetFinderCard: { padding: 16, marginBottom: 14, borderRadius: 24, backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: 'rgba(255, 153, 0, 0.12)' },
+    localVetFinderHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 },
+    localVetFinderTitle: { color: C.text, fontSize: 17, fontWeight: '900' },
+    localVetFinderSubtitle: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 4, fontWeight: '600' },
+    localVetFinderButtonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
+    localVetFinderMainBtn: { backgroundColor: C.accent, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+    localVetFinderMainBtnText: { color: '#fff', fontSize: 12, fontWeight: '900' },
+    localVetFinderSecondaryBtn: { backgroundColor: C.cardHigh, borderWidth: 1, borderColor: C.border },
+    localVetFinderSecondaryBtnText: { color: C.text, fontSize: 12, fontWeight: '900' },
+    localVetFinderSaveBtn: { backgroundColor: C.green, borderColor: C.green, borderRadius: 14, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+    localVetFinderSaveBtnText: { color: C.bg, fontSize: 12, fontWeight: '900' },
+    localVetWarning: { backgroundColor: C.red + '18', borderLeftWidth: 3, borderLeftColor: C.red, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 14 },
+    localVetWarningText: { color: C.text, fontSize: 12, lineHeight: 18, fontWeight: '700' },
+    localVetSavedSection: { marginTop: 2 },
+    localVetSavedSectionTitle: { color: C.text, fontSize: 14, fontWeight: '900', marginBottom: 10 },
+    localVetEmptyState: { backgroundColor: C.bg, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
+    localVetEmptyStateText: { color: C.muted, fontSize: 12, lineHeight: 18, fontWeight: '600' },
+    localVetCard: { backgroundColor: C.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
+    localVetCardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+    localVetAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
+    localVetAvatarText: { fontSize: 18 },
+    localVetName: { color: C.text, fontSize: 15, fontWeight: '900' },
+    localVetType: { color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 2 },
+    localVetStatusPill: { backgroundColor: C.cardHigh, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.border },
+    localVetStatusText: { color: C.text, fontSize: 11, fontWeight: '800' },
+    localVetMetaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
+    localVetMetaItem: { flexBasis: '48%', backgroundColor: C.bg, borderRadius: 14, padding: 10, borderWidth: 1, borderColor: C.border },
+    localVetMetaLabel: { color: C.muted, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.7 },
+    localVetMetaValue: { color: C.text, fontSize: 12, fontWeight: '700', marginTop: 5, lineHeight: 17 },
+    localVetActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    localVetActionBtn: { flexGrow: 1, flexBasis: '31%', backgroundColor: C.cardHigh, borderRadius: 14, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+    localVetActionBtnAccent: { backgroundColor: C.accent, borderColor: C.accent },
+    localVetActionBtnText: { color: C.text, fontSize: 13, fontWeight: '900' },
+    localVetActionBtnTextAccent: { color: '#fff', fontSize: 13, fontWeight: '900' },
+    localVetEditDeleteRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    localVetActionBtnAccentSoft: { backgroundColor: C.blue + '20', borderColor: C.blue + '55' },
+    localVetActionBtnTextAccentSoft: { color: C.blue, fontSize: 13, fontWeight: '900' },
+    localVetActionBtnDanger: { backgroundColor: C.red + '18', borderColor: C.red + '40' },
+    localVetActionBtnTextDanger: { color: C.red, fontSize: 13, fontWeight: '900' },
+    vetModalLabel: { color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 6, marginTop: 10 },
+    
+    // Settings
+    profileCard:       { margin: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   profileAvatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   profileName:       { color: C.text, fontSize: 18, fontWeight: '900' },
   profileEmail:      { color: C.muted, fontSize: 12, marginTop: 2 },
