@@ -1,0 +1,1578 @@
+import React, { useState, useRef } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  TextInput, FlatList, Dimensions, Modal, Alert,
+  KeyboardAvoidingView, Platform, StatusBar,
+} from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+// ─────────────────────────────────────────────
+// COLORS & THEME
+// ─────────────────────────────────────────────
+const C = {
+  bg:        '#0d1b2a',
+  card:      '#1a2d40',
+  cardHigh:  '#1f3347',
+  accent:    '#ff6b35',
+  green:     '#4ade80',
+  yellow:    '#fbbf24',
+  red:       '#f87171',
+  blue:      '#60a5fa',
+  text:      '#f0f4f8',
+  muted:     '#8fb3c8',
+  faint:     '#3a5a72',
+  border:    '#1f3347',
+};
+
+// ─────────────────────────────────────────────
+// MOCK DATA
+// ─────────────────────────────────────────────
+const PETS = [
+  { id: '1', name: 'Max',   species: 'dog',  breed: 'Golden Retriever', age: '3 yrs', emoji: '🐕', score: 87 },
+  { id: '2', name: 'Luna',  species: 'cat',  breed: 'Tabby Cat',        age: '2 yrs', emoji: '🐈', score: 92 },
+  { id: '3', name: 'Buddy', species: 'dog',  breed: 'Beagle',           age: '5 yrs', emoji: '🐶', score: 74 },
+  { id: '4', name: 'Bubbles', species: 'fish', breed: 'Betta Fish',      age: '1 yr',  emoji: '',    score: 89 },
+];
+
+const TASKS = [
+  { id: '1', petId: '1', title: 'Morning Breakfast',      time: '7:00 AM',  done: true,  icon: '🍽️', type: 'feeding'     },
+  { id: '2', petId: '1', title: 'Heartworm Medication',   time: '9:00 AM',  done: false, icon: '💊', type: 'medication'  },
+  { id: '3', petId: '1', title: 'Afternoon Walk',         time: '2:00 PM',  done: false, icon: '🦮', type: 'walk'       },
+  { id: '4', petId: '1', title: 'Vet Appointment',        time: '4:30 PM',  done: false, icon: '🏥', type: 'vet'        },
+  { id: '5', petId: '1', title: 'Evening Dinner',         time: '6:00 PM',  done: false, icon: '🍽️', type: 'feeding'    },
+  { id: '6', petId: '2', title: 'Luna Morning Feed',      time: '7:30 AM',  done: true,  icon: '🍽️', type: 'feeding'    },
+  { id: '7', petId: '2', title: 'Luna Flea Treatment',    time: '12:00 PM', done: false, icon: '💊', type: 'medication' },
+  { id: '8', petId: '3', title: 'Buddy Walk',             time: '8:00 AM',  done: true,  icon: '🦮', type: 'walk'       },
+  { id: '9', petId: '3', title: 'Buddy Dinner',           time: '5:30 PM',  done: false, icon: '🍽️', type: 'feeding'    },
+];
+
+const HEALTH_RECORDS = [
+  { id: '1', petId: '1', type: 'vaccination', title: 'Rabies Vaccine',        date: 'Jan 15, 2026', provider: 'Dr. Smith',   status: 'current',   icon: '💉', nextDue: 'Jan 2027' },
+  { id: '2', petId: '1', type: 'vaccination', title: 'DHPP Booster',          date: 'Jan 15, 2026', provider: 'Dr. Smith',   status: 'current',   icon: '💉', nextDue: 'Mar 2027' },
+  { id: '3', petId: '1', type: 'vaccination', title: 'Bordetella',            date: 'Dec 01, 2025', provider: 'Dr. Smith',   status: 'due_soon',  icon: '💉', nextDue: 'Jun 2026' },
+  { id: '4', petId: '1', type: 'medication',  title: 'Heartworm Prevention',  date: 'May 01, 2026', provider: 'Dr. Johnson', status: 'current',   icon: '💊', nextDue: 'Jun 2026' },
+  { id: '5', petId: '1', type: 'medication',  title: 'Flea & Tick Treatment', date: 'May 01, 2026', provider: 'Dr. Johnson', status: 'current',   icon: '💊', nextDue: 'Jun 2026' },
+  { id: '6', petId: '1', type: 'appointment', title: 'Annual Wellness Exam',  date: 'Jun 15, 2026', provider: 'Dr. Smith',   status: 'upcoming',  icon: '🏥', nextDue: null       },
+  { id: '7', petId: '1', type: 'weight',      title: 'Weight Check',          date: 'May 10, 2026', provider: null,          status: 'current',   icon: '⚖️', nextDue: null      },
+  { id: '8', petId: '2', type: 'vaccination', title: 'FVRCP Vaccine',         date: 'Feb 20, 2026', provider: 'Dr. Lee',     status: 'current',   icon: '💉', nextDue: 'Feb 2027' },
+  { id: '9', petId: '2', type: 'medication',  title: 'Flea Treatment',        date: 'May 05, 2026', provider: 'Dr. Lee',     status: 'current',   icon: '💊', nextDue: 'Jun 2026' },
+];
+
+const MEMORIES = [
+  { id: '1',  petId: '1', emoji: '🌊', color: '#1e4976', caption: "Max's beach day!",       milestone: true,  date: 'May 20' },
+  { id: '2',  petId: '1', emoji: '🌿', color: '#1a4a2e', caption: 'Park run',               milestone: false, date: 'May 18' },
+  { id: '3',  petId: '1', emoji: '🎂', color: '#4a1a1a', caption: 'Birthday boy! 🎉',       milestone: true,  date: 'May 10' },
+  { id: '4',  petId: '1', emoji: '🏕️', color: '#2d3a1a', caption: 'Camping trip',           milestone: false, date: 'May 05' },
+  { id: '5',  petId: '1', emoji: '❄️', color: '#1a2a4a', caption: 'First snow!',            milestone: true,  date: 'Jan 15' },
+  { id: '6',  petId: '1', emoji: '🛁', color: '#1a3a3a', caption: 'Bath time',              milestone: false, date: 'Jan 10' },
+  { id: '7',  petId: '2', emoji: '🐱', color: '#3a1a4a', caption: 'Luna nap time',          milestone: false, date: 'May 22' },
+  { id: '8',  petId: '2', emoji: '🌸', color: '#4a1a2d', caption: 'Garden explorer',        milestone: false, date: 'May 15' },
+  { id: '9',  petId: '2', emoji: '🎀', color: '#4a2a1a', caption: 'Dressed up!',            milestone: false, date: 'May 01' },
+  { id: '10', petId: '3', emoji: '🐾', color: '#2a1a4a', caption: 'Buddy loves hiking',     milestone: true,  date: 'Apr 28' },
+  { id: '11', petId: '3', emoji: '🦴', color: '#3a2a1a', caption: 'Treat time',             milestone: false, date: 'Apr 20' },
+  { id: '12', petId: '3', emoji: '💤', color: '#1a2a3a', caption: 'Sleepy Buddy',           milestone: false, date: 'Apr 15' },
+];
+
+const POSTS = [
+  { id: '1', author: 'Sarah M.',    petType: 'Golden Retriever Mom', time: '2h ago', content: 'Anyone know a good dog-friendly trail near Ocean County? Max loved Cattus Island but want to try somewhere new! 🐾', emoji: '🌲', likes: 24, comments: 8,  type: 'question'     },
+  { id: '2', author: 'Mike R.',     petType: 'Beagle Dad',           time: '4h ago', content: '🚨 MISSING: Bella (Beagle, 3 yrs) — last seen near Lacey Township. Wearing red collar. PLEASE SHARE! 🚨',        emoji: '🚨', likes: 89, comments: 34, type: 'lost_pet',    lost: true },
+  { id: '3', author: 'Johnson Fam', petType: 'Multi-pet household',  time: '1d ago', content: 'Rocky just graduated from puppy training! 8 weeks of hard work and this guy nailed every single command 🎓🐶',    emoji: '🎓', likes: 67, comments: 14, type: 'celebration'  },
+  { id: '4', author: 'Vet Dr. Kim', petType: 'Animal Clinic Partner', time: '2d ago', content: 'Summer reminder: sidewalks can reach 150°F on hot days. Test with your hand for 5 seconds — if you can\'t hold it, neither can your pet! 🌡️', emoji: '☀️', likes: 103, comments: 22, type: 'tip' },
+];
+
+const AI_SUGGESTIONS = [
+  'My pet is scratching a lot',
+  'Is chocolate really toxic to pets?',
+  'My cat is not eating today',
+  'Signs my pet is overweight?',
+];
+
+// ─────────────────────────────────────────────
+// REUSABLE COMPONENTS
+// ─────────────────────────────────────────────
+function Card({ children, style }) {
+  return (
+    <View style={[s.card, style]}>
+      {children}
+    </View>
+  );
+}
+function Badge({ label, color }) {
+  return (
+    <View
+      style={{
+        backgroundColor: color,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
+      }}
+    >
+      <Text
+        style={{
+          color: '#fff',
+          fontSize: 12,
+          fontWeight: '700',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+function PetAvatarRow({ pets, selectedId, onSelect }) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{
+        paddingHorizontal: 20,
+        paddingTop: 18,
+      }}
+    >
+      {pets.map((pet) => {
+        const selected = pet.id === selectedId;
+
+        return (
+          <TouchableOpacity
+            key={pet.id}
+            onPress={() => onSelect(pet.id)}
+            style={{
+              alignItems: 'center',
+              marginRight: 16,
+            }}
+          >
+            <View
+              style={{
+                width: selected ? 82 : 72,
+                height: selected ? 82 : 72,
+
+                borderRadius: 41,
+
+                backgroundColor: selected
+                  ? 'rgba(255,122,26,0.16)'
+                  : '#1e1e1e',
+
+                borderWidth: selected ? 3 : 0,
+
+                borderColor: '#ff7a1a',
+
+                alignItems: 'center',
+                justifyContent: 'center',
+
+                shadowColor: selected ? '#ff7a1a' : '#000',
+
+                shadowOffset: { width: 0, height: 6 },
+
+                shadowOpacity: selected ? 0.28 : 0.08,
+
+                shadowRadius: 14,
+
+                elevation: selected ? 8 : 2,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: selected ? 38 : 32,
+                }}
+              >
+                {pet.emoji}
+              </Text>
+            </View>
+
+            <Text
+              style={{
+                color: selected ? '#fff' : '#a1a1aa',
+
+                fontSize: selected ? 15 : 13,
+
+                fontWeight: selected ? '700' : '500',
+
+                marginTop: 8,
+              }}
+            >
+              {pet.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+// ─────────────────────────────────────────────
+// SCREEN: DASHBOARD
+// ─────────────────────────────────────────────
+function DashboardScreen({ navigation }) {
+  const [selectedPetId, setSelectedPetId] = useState('1');
+  const [tasks, setTasks] = useState(TASKS);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const pet = PETS.find(p => p.id === selectedPetId);
+  const petTasks = tasks.filter(t => t.petId === selectedPetId);
+  const pending = petTasks.filter(t => !t.done).length;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? '☀️ Good morning' : hour < 17 ? '🌤️ Good afternoon' : '🌙 Good evening';
+
+  const toggleTask = (taskId) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: !t.done } : t));
+  };
+
+  const addActivityLog = (type, title, icon) => {
+    const now = new Date();
+    const newLog = {
+      id: Date.now().toString(),
+      petId: pet.id,
+      type,
+      title,
+      icon,
+      time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    };
+
+    setActivityLogs(prev => [newLog, ...prev].slice(0, 5));
+  };
+
+  const scoreColor = pet.score >= 85 ? C.green : pet.score >= 65 ? C.yellow : C.red;
+  const recentActivity = activityLogs.filter(log => log.petId === pet.id);
+  const quickActions = pet.species === 'fish'
+    ? [
+        { icon: '🍽️', label: 'Feed Fish', action: () => addActivityLog('feeding', 'Fish fed', '🍽️') },
+        { icon: '💧', label: 'Water Change', action: () => addActivityLog('water_change', 'Water changed', '💧') },
+        { icon: '🌡️', label: 'Tank Temp', action: () => addActivityLog('tank_temp', 'Tank temperature checked', '🌡️') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+      ]
+    : pet.species === 'cat'
+      ? [
+          { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+          { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
+          { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+          { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+        ]
+      : [
+          { icon: '🍽️', label: 'Log Meal', action: () => addActivityLog('meal', 'Meal logged', '🍽️') },
+          { icon: '🦮', label: 'Log Walk', action: () => addActivityLog('walk', 'Walk logged', '🦮') },
+          { icon: '⚖️', label: 'Log Weight', action: () => addActivityLog('weight', 'Weight updated', '⚖️') },
+          { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+        ];
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+<View style={s.dashHeader}>
+  <View style={{ flex: 1, paddingRight: 60 }}>
+    <Text
+      style={s.greeting}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.7}
+    >
+      {greeting}, Raymond! 👋
+    </Text>
+
+    <Text style={s.subGreeting} numberOfLines={1}>
+      Monday, May 25 · {PETS.length} pets
+    </Text>
+  </View>
+
+  <TouchableOpacity style={s.sosButton} onPress={() => navigation.navigate('LostPet')}>
+    <Text style={s.sosText}>🚨 SOS</Text>
+  </TouchableOpacity>
+</View>
+        {/* Pet Switcher */}
+        <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
+
+        {/* Health Score */}
+        <Card style={s.healthScoreCard}>
+          <View style={s.healthScoreLeft}>
+            <View style={[s.scoreCircle, { borderColor: scoreColor }]}>
+              <Text style={[s.scoreNumber, { color: scoreColor }]}>{pet.score}</Text>
+              <Text style={s.scoreLabel}>/100</Text>
+            </View>
+          </View>
+          <View style={s.healthScoreRight}>
+            <Text style={s.healthScoreTitle}>{pet.name}'s Health Score</Text>
+            <Text style={s.healthScoreSub}>🐾 {pet.breed} · {pet.age}</Text>
+            <View style={{ marginTop: 8 }}>
+              <Text style={s.healthScoreCheck}>🟢 All vaccines up to date</Text>
+              <Text style={s.healthScoreCheck}>🟡 Weight check due in 5 days</Text>
+              <Text style={s.healthScoreCheck}>🟢 Medications on schedule</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* Quick Actions */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Quick Actions</Text>
+          <View style={s.quickActionsRow}>
+            {quickActions.map(item => (
+              <TouchableOpacity key={item.label} style={s.quickAction} onPress={item.action}>
+                <Text style={s.quickActionIcon}>{item.icon}</Text>
+                <Text style={s.quickActionLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Recent Activity */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Recent Activity</Text>
+          {recentActivity.length === 0 ? (
+            <Card style={s.recentActivityEmptyCard}>
+              <Text style={s.recentActivityEmptyText}>No activity yet for {pet.name}</Text>
+            </Card>
+          ) : (
+            recentActivity.map(log => (
+              <Card key={log.id} style={s.recentActivityCard}>
+                <View style={s.recentActivityIconWrap}>
+                  <Text style={s.recentActivityIcon}>{log.icon}</Text>
+                </View>
+                <View style={s.recentActivityContent}>
+                  <Text style={s.recentActivityTitle}>{log.title}</Text>
+                  <View style={s.recentActivityMetaRow}>
+                    <Text style={s.recentActivityTime}>{log.time}</Text>
+                    <View style={s.recentActivityTypePill}>
+                      <Text style={s.recentActivityTypeText}>{log.type}</Text>
+                    </View>
+                  </View>
+                </View>
+              </Card>
+            ))
+          )}
+        </View>
+
+        {/* Today's Tasks */}
+        <View style={s.section}>
+          <View style={s.sectionHeaderRow}>
+            <Text style={s.sectionTitle}>Today's Tasks</Text>
+            {pending > 0 && <Badge label={`${pending} pending`} color={C.accent} />}
+          </View>
+          {petTasks.length === 0 ? (
+            <Card><Text style={{ color: C.muted, textAlign: 'center', padding: 16 }}>🎉 No tasks today!</Text></Card>
+          ) : (
+            petTasks.map(task => (
+              <TouchableOpacity key={task.id} style={[s.taskCard, task.done && s.taskCardDone]} onPress={() => toggleTask(task.id)}>
+                <Text style={s.taskCheck}>{task.done ? '✅' : '⬜️'}</Text>
+                <View style={s.taskInfo}>
+                  <Text style={[s.taskTitle, task.done && s.taskTitleDone]}>{task.title}</Text>
+                  <Text style={s.taskTime}>{task.time}</Text>
+                </View>
+                <Text style={{ fontSize: 24 }}>{task.icon}</Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+
+<View style={{ height: 130 }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ─────────────────────────────────────────────
+function HealthHubScreen() {
+  const [selectedPetId, setSelectedPetId] = useState('1');
+  const [activeTab, setActiveTab] = useState('all');
+
+  const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight'];
+  const tabLabels = {
+    all: '📋 All',
+    vaccines: '💉 Vaccines',
+    meds: '💊 Meds',
+    appointments: '🏥 Visits',
+    weight: '⚖️ Weight',
+  };
+
+  const typeMap = {
+    vaccination: 'vaccines',
+    medication: 'meds',
+    appointment: 'appointments',
+    weight: 'weight',
+  };
+
+  const records = HEALTH_RECORDS.filter(
+    (r) =>
+      r.petId === selectedPetId &&
+      (activeTab === 'all' || typeMap[r.type] === activeTab)
+  );
+
+  const pet = PETS.find((p) => p.id === selectedPetId);
+
+  const statusInfo = {
+    current: { label: 'CURRENT', color: C.green },
+    due_soon: { label: 'DUE SOON', color: C.yellow },
+    overdue: { label: 'OVERDUE', color: C.red },
+    upcoming: { label: 'UPCOMING', color: C.blue },
+  };
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <View style={[s.pageHeader, { paddingTop: 2, marginTop: 0, marginBottom: 0 }]}>
+        <Text style={s.pageTitle}>Health Hub</Text>
+
+        <TouchableOpacity style={s.exportBtn}>
+          <Text style={s.exportBtnText}>Export PDF</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ marginTop: -10, marginBottom: -8 }}>
+        <PetAvatarRow
+          pets={PETS}
+          selectedId={selectedPetId}
+          onSelect={setSelectedPetId}
+        />
+      </View>
+
+      {/* Summary Card */}
+      <Card
+        style={{
+          marginHorizontal: 16,
+          marginTop: 20,
+          marginBottom: 6,
+          paddingVertical: 10,
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+        }}
+      >
+        {[
+          {
+            num: records.filter((r) => r.status === 'current').length,
+            label: 'Current',
+            color: C.green,
+          },
+          {
+            num: records.filter((r) => r.status === 'due_soon').length,
+            label: 'Due Soon',
+            color: C.yellow,
+          },
+          {
+            num: records.filter((r) => r.status === 'overdue').length,
+            label: 'Overdue',
+            color: C.red,
+          },
+        ].map((item) => (
+          <View key={item.label} style={{ alignItems: 'center' }}>
+            <Text
+              style={{
+                color: item.color,
+                fontSize: 24,
+                fontWeight: '800',
+              }}
+            >
+              {item.num}
+            </Text>
+
+            <Text
+              style={{
+                color: C.muted,
+                fontSize: 11,
+              }}
+            >
+              {item.label}
+            </Text>
+          </View>
+        ))}
+      </Card>
+
+      {/* Tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{
+          marginTop: 0,
+          marginBottom: 6,
+          maxHeight: 40,
+        }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          gap: 6,
+          paddingTop: 0,
+          paddingBottom: 0,
+          alignItems: 'center',
+        }}
+      >
+        {tabs.map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[
+              s.tabPill,
+              activeTab === tab && s.tabPillActive,
+              {
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 14,
+                marginRight: 6,
+                alignSelf: 'center',
+              },
+            ]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text
+              style={[
+                s.tabPillText,
+                activeTab === tab && s.tabPillTextActive,
+                {
+                  fontSize: 12,
+                  fontWeight: '600',
+                },
+              ]}
+            >
+              {tabLabels[tab]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Records */}
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 4,
+          paddingBottom: 150,
+        }}
+      >
+        {records.length === 0 ? (
+          <Card style={{ alignItems: 'center', padding: 40 }}>
+            <Text style={{ fontSize: 48 }}>📋</Text>
+
+            <Text
+              style={{
+                color: C.text,
+                fontWeight: '700',
+                marginTop: 12,
+              }}
+            >
+              No records yet
+            </Text>
+
+            <Text
+              style={{
+                color: C.muted,
+                marginTop: 4,
+              }}
+            >
+              Tap + to add {pet.name}'s first record
+            </Text>
+          </Card>
+        ) : (
+          records.map((record) => (
+            <Card
+              key={record.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <View style={s.recordIconWrap}>
+                <Text style={{ fontSize: 22 }}>{record.icon}</Text>
+              </View>
+
+              <View style={s.flex}>
+                <Text style={s.recordTitle}>{record.title}</Text>
+                <Text style={s.recordDate}>{record.date}</Text>
+
+                {record.provider && (
+                  <Text style={s.recordProvider}>{record.provider}</Text>
+                )}
+
+                {record.nextDue && (
+                  <Text style={s.recordDue}>Next: {record.nextDue}</Text>
+                )}
+              </View>
+
+              {record.status && statusInfo[record.status] && (
+                <Badge
+                  label={statusInfo[record.status].label}
+                  color={statusInfo[record.status].color}
+                />
+              )}
+            </Card>
+          ))
+        )}
+      </ScrollView>
+
+      {/* FAB */}
+      <TouchableOpacity
+        style={s.fab}
+        onPress={() =>
+          Alert.alert(
+            'Add Record',
+            'Choose record type:\n\n💉 Vaccination\n💊 Medication\n🏥 Appointment\n⚖️ Weight\n🤒 Symptom',
+            [{ text: 'OK' }]
+          )
+        }
+      >
+        <Text style={s.fabText}>＋</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}
+// ─────────────────────────────────────────────
+// SCREEN: MEMORY VAULT
+// ─────────────────────────────────────────────
+function MemoryVaultScreen() {
+  const [selectedPetId, setSelectedPetId] = useState('1');
+  const [activeTab, setActiveTab] = useState('all');
+  const { width } = Dimensions.get('window');
+  const cellSize = (width - 32 - 8) / 3;
+
+  const memories = MEMORIES.filter(m =>
+    m.petId === selectedPetId && (activeTab === 'all' || (activeTab === 'milestones' && m.milestone))
+  );
+
+  const pet = PETS.find(p => p.id === selectedPetId);
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <View style={s.pageHeader}>
+        <View>
+          <Text style={s.pageTitle}>Memory Vault</Text>
+          <Text style={s.pageSub}>{memories.length} memories · {memories.filter(m => m.milestone).length} milestones</Text>
+        </View>
+        <TouchableOpacity style={s.iconBtn} onPress={() => Alert.alert('Add Memory', 'Choose an option:\n📷 Take Photo\n🖼️ From Library\n🎥 Record Video')}>
+          <Text style={{ fontSize: 24 }}>📷</Text>
+        </TouchableOpacity>
+      </View>
+
+      <PetAvatarRow pets={PETS} selectedId={selectedPetId} onSelect={setSelectedPetId} />
+
+      {/* Memory of the Day */}
+      <Card style={s.motdCard}>
+        <Text style={s.motdBadge}>✨ Memory of the Day</Text>
+        <Text style={{ fontSize: 48, textAlign: 'center', marginVertical: 8 }}>🌊</Text>
+        <Text style={s.motdCaption}>{pet.name}'s first beach trip!</Text>
+        <Text style={s.motdDate}>May 2026</Text>
+      </Card>
+
+      {/* Tabs */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 12 }}>
+        {['all', 'milestones', 'videos'].map(tab => (
+          <TouchableOpacity key={tab} style={[s.tabPill, activeTab === tab && s.tabPillActive]} onPress={() => setActiveTab(tab)}>
+            <Text style={[s.tabPillText, activeTab === tab && s.tabPillTextActive]}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Photo Grid */}
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 60 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+          {memories.map(mem => (
+            <TouchableOpacity
+              key={mem.id}
+              style={[s.memCell, { width: cellSize, height: cellSize, backgroundColor: mem.color }]}
+              onPress={() => Alert.alert(mem.caption, `📅 ${mem.date}${mem.milestone ? '\n⭐ Milestone' : ''}`)}
+            >
+              <Text style={s.memEmoji}>{mem.emoji}</Text>
+              {mem.milestone && <View style={s.mileStar}><Text style={{ fontSize: 10 }}>⭐</Text></View>}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+
+      <TouchableOpacity style={s.fab} onPress={() => Alert.alert('Add Memory', '📷 Open camera to capture a new memory for ' + pet.name)}>
+        <Text style={s.fabText}>＋</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}
+
+// ─────────────────────────────────────────────
+// SCREEN: COMMUNITY
+// ─────────────────────────────────────────────
+function CommunityScreen() {
+  const [posts, setPosts] = useState(POSTS);
+  const [showCompose, setShowCompose] = useState(false);
+  const [postText, setPostText] = useState('');
+
+  const toggleLike = (postId) => {
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: p.likes + (p.liked ? -1 : 1), liked: !p.liked } : p));
+  };
+
+  const submitPost = () => {
+    if (!postText.trim()) return;
+    const newPost = { id: Date.now().toString(), author: 'Raymond', petType: 'Multi-pet Dad', time: 'Just now', content: postText, emoji: '🐾', likes: 0, comments: 0, type: 'general' };
+    setPosts(prev => [newPost, ...prev]);
+    setPostText('');
+    setShowCompose(false);
+  };
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <View style={s.pageHeader}>
+        <View>
+          <Text style={s.pageTitle}>Community</Text>
+          <Text style={s.pageSub}>📍 Bayville, NJ</Text>
+        </View>
+        <TouchableOpacity style={s.accentBtn} onPress={() => setShowCompose(true)}>
+          <Text style={s.accentBtnText}>＋ Post</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {posts.map(post => (
+          <Card key={post.id} style={{ marginBottom: 14 }}>
+            {/* Lost pet special header */}
+            {post.lost && (
+              <View style={s.lostBanner}>
+                <Text style={s.lostBannerText}>🚨 LOST PET ALERT</Text>
+              </View>
+            )}
+            {/* Author */}
+            <View style={s.postAuthorRow}>
+              <View style={s.postAvatar}>
+                <Text style={{ fontSize: 18 }}>{post.emoji}</Text>
+              </View>
+              <View style={s.flex}>
+                <Text style={s.postAuthor}>{post.author}</Text>
+                <Text style={s.postPetType}>{post.petType} · {post.time}</Text>
+              </View>
+            </View>
+            {/* Content */}
+            <Text style={s.postContent}>{post.content}</Text>
+            {/* Media placeholder */}
+            <View style={[s.postMediaPlaceholder, { backgroundColor: post.lost ? '#3a0a0a' : C.cardHigh }]}>
+              <Text style={{ fontSize: 40 }}>{post.emoji}</Text>
+            </View>
+            {/* Actions */}
+            <View style={s.postActions}>
+              <TouchableOpacity style={s.postAction} onPress={() => toggleLike(post.id)}>
+                <Text style={{ fontSize: 18 }}>{post.liked ? '❤️' : '🤍'}</Text>
+                <Text style={[s.postActionText, post.liked && { color: '#e74c3c' }]}>{post.likes}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Comments', `${post.comments} people commented on this post.`)}>
+                <Text style={{ fontSize: 18 }}>💬</Text>
+                <Text style={s.postActionText}>{post.comments}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Share', 'Share this post to Facebook, Nextdoor, or Twitter')}>
+                <Text style={{ fontSize: 18 }}>↗️</Text>
+                <Text style={s.postActionText}>Share</Text>
+              </TouchableOpacity>
+            </View>
+            {post.lost && (
+              <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('🚨 Alert Sent!', '156 pet owners in your area have been notified.')}>
+                <Text style={s.alertNeighborsBtnText}>🚨 Alert My Neighborhood</Text>
+              </TouchableOpacity>
+            )}
+          </Card>
+        ))}
+      </ScrollView>
+
+      {/* Compose Modal */}
+      <Modal visible={showCompose} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[s.screen, { backgroundColor: C.bg }]}>
+          <View style={s.modalHeader}>
+            <TouchableOpacity onPress={() => { setShowCompose(false); setPostText(''); }}>
+              <Text style={{ color: C.muted, fontSize: 16 }}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={s.modalTitle}>New Post</Text>
+            <TouchableOpacity onPress={submitPost}>
+              <Text style={{ color: C.accent, fontSize: 16, fontWeight: '700' }}>Share</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={s.composeInput}
+            placeholder="What's your pet up to today? 🐾"
+            placeholderTextColor={C.muted}
+            value={postText}
+            onChangeText={setPostText}
+            multiline
+            autoFocus
+          />
+          <View style={s.composeTips}>
+            {['📷 Photo', '🎥 Video', '📍 Location', '🏷️ Tag Pet'].map(tip => (
+              <TouchableOpacity key={tip} style={s.composeTip} onPress={() => Alert.alert('Coming Soon', 'This feature is coming in the next update!')}>
+                <Text style={{ color: C.accent, fontSize: 13 }}>{tip}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+// ─────────────────────────────────────────────
+// SCREEN: SETTINGS
+// ─────────────────────────────────────────────
+function SettingsScreen({ navigation }) {
+  const menuSections = [
+    {
+      title: 'Account',
+      items: [
+        { icon: '👤', label: 'Profile', sub: 'Raymond · rayray579@gmail.com' },
+        { icon: '🏠', label: 'Family Sharing', sub: '2 household members' },
+        { icon: '💳', label: 'Subscription', sub: '⭐ Premium — renews Aug 2026', accent: true },
+      ],
+    },
+    {
+      title: 'Pets',
+      items: [
+        { icon: '🐕', label: 'Max', sub: 'Golden Retriever · 3 yrs' },
+        { icon: '🐈', label: 'Luna', sub: 'Tabby Cat · 2 yrs' },
+        { icon: '🐶', label: 'Buddy', sub: 'Beagle · 5 yrs' },
+        { icon: '➕', label: 'Add a Pet', sub: '', accent: true },
+      ],
+    },
+    {
+      title: 'Preferences',
+      items: [
+        { icon: '🔔', label: 'Notifications', sub: 'Medications, vaccines, walks' },
+        { icon: '🔒', label: 'Privacy & Data', sub: 'GDPR · Data export' },
+        { icon: '🌙', label: 'Dark Mode', sub: 'Currently on' },
+      ],
+    },
+    {
+      title: 'Support',
+      items: [
+        { icon: '❓', label: 'Help Center', sub: '20+ articles' },
+        { icon: '⭐', label: 'Rate PetSync+', sub: 'Love it? Leave a review!' },
+        { icon: '📣', label: 'Refer a Friend', sub: 'Get 1 month free' },
+      ],
+    },
+  ];
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <Text style={[s.pageTitle, { paddingHorizontal: 16, paddingTop: 8, marginBottom: 4 }]}>Settings</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Profile Card */}
+        <Card style={s.profileCard}>
+          <View style={s.profileAvatarCircle}>
+            <Text style={{ fontSize: 32 }}>👤</Text>
+          </View>
+          <View style={s.flex}>
+            <Text style={s.profileName}>Raymond</Text>
+            <Text style={s.profileEmail}>rayray579@gmail.com</Text>
+          </View>
+          <View style={s.premiumBadge}>
+            <Text style={s.premiumBadgeText}>⭐ Premium</Text>
+          </View>
+        </Card>
+
+        {menuSections.map(section => (
+          <View key={section.title} style={{ marginBottom: 8 }}>
+            <Text style={s.menuSectionTitle}>{section.title.toUpperCase()}</Text>
+            <Card style={{ paddingVertical: 0 }}>
+              {section.items.map((item, i) => (
+                <TouchableOpacity
+                  key={item.label}
+                  style={[s.menuItem, i < section.items.length - 1 && s.menuItemBorder]}
+                  onPress={() => Alert.alert(item.label, item.sub || 'Coming soon!')}
+                >
+                  <Text style={s.menuIcon}>{item.icon}</Text>
+                  <View style={s.flex}>
+                    <Text style={[s.menuLabel, item.accent && { color: C.accent }]}>{item.label}</Text>
+                    {item.sub ? <Text style={s.menuSub}>{item.sub}</Text> : null}
+                  </View>
+                  <Text style={s.menuChevron}>›</Text>
+                </TouchableOpacity>
+              ))}
+            </Card>
+          </View>
+        ))}
+
+        <TouchableOpacity style={s.signOutBtn} onPress={() => Alert.alert('Sign Out', 'Are you sure you want to sign out?', [{ text: 'Cancel' }, { text: 'Sign Out', style: 'destructive' }])}>
+          <Text style={s.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+        <Text style={s.versionText}>PetSync+ v1.0.0 · Made with 🐾 for pet families</Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODAL: AI VET ASSISTANT
+// ─────────────────────────────────────────────
+function AIVetScreen({ navigation }) {
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      text: "Hi! I'm your AI Vet Assistant 🩺 I have Max's profile loaded — 3 years old, 68 lbs. What's going on with him today?",
+      time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef(null);
+
+  const EMERGENCY_KEYWORDS = [
+    'glass',
+    'swallowed glass',
+    'ate glass',
+    'choking',
+    'seizure',
+    'poison',
+    'chocolate',
+    'grapes',
+    'xylitol',
+    'antifreeze',
+    'bleeding',
+    'unconscious',
+    "can't breathe",
+    'cant breathe',
+    'collapse',
+    'collapsed',
+  ];
+
+  const detectEmergency = (message) => {
+    const lower = message.toLowerCase();
+    return EMERGENCY_KEYWORDS.some(word =>
+      lower.includes(word)
+    );
+  };
+
+  const AI_RESPONSES = [
+    "Based on what you've described, this is something many pet parents run into. I'd recommend monitoring for 24 hours.\n\n🔍 Most likely causes:\n• Dietary indiscretion\n• Minor infection\n• Environmental allergies\n\n⚡ Triage Level: WATCH AT HOME\n\nIf symptoms persist over 48 hours or worsen, schedule a vet visit.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet for diagnosis.",
+    "Great question! This is something many pet parents deal with.\n\n✅ Safe steps:\n1. Check for visible irritation\n2. Keep the area clean and dry\n3. Prevent excessive licking\n\n📅 Triage Level: SCHEDULE A VET\n\nI'd recommend booking an appointment within 2-3 days for a proper examination.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care.",
+    "I understand your concern! Here's what I know about Max's situation:\n\n🌡️ Temperature, appetite, and energy levels are key indicators to watch.\n\n⚡ Triage Level: WATCH AT HOME\n\nThis pet is resilient — this is likely nothing serious. Keep an eye on him for the next 24 hours.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet.",
+  ];
+
+  const EMERGENCY_RESPONSE = "EMERGENCY CARE ADVISED\n\nContact a veterinarian or emergency vet immediately. This should NOT be monitored at home.\n\nDo NOT induce vomiting unless directed by a veterinarian.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care.";
+  const formatTime = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  const send = async (text) => {
+    const msg = text || input;
+    if (!msg.trim()) return;
+    setMessages(prev => [...prev, { role: 'user', text: msg, time: formatTime() }]);
+    setInput('');
+    if (detectEmergency(msg)) {
+      setMessages(prev => [...prev, { role: 'assistant', text: EMERGENCY_RESPONSE, time: formatTime(), emergency: true }]);
+      setIsTyping(false);
+      return;
+    }
+    setIsTyping(true);
+    setTimeout(() => {
+      const reply = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
+      setMessages(prev => [...prev, { role: 'assistant', text: reply, time: formatTime() }]);
+      setIsTyping(false);
+    }, 1200);
+  };
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={s.modalHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ color: C.accent, fontSize: 16 }}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={s.modalTitle}>AI Vet Assistant</Text>
+        <View style={{ width: 60 }} />
+      </View>
+      {/* Disclaimer */}
+      <View style={s.disclaimer}>
+        <Text style={s.disclaimerText}>⚕️ AI assistant only — not a substitute for professional veterinary care</Text>
+      </View>
+      {/* Pet Context */}
+      <View style={s.petContextBar}>
+        <Text style={s.petContextText}>🐕 Max · 3 yrs · 68 lbs · Premium Member</Text>
+      </View>
+      {/* Messages */}
+      <ScrollView ref={scrollRef} style={s.flex} contentContainerStyle={{ padding: 16 }} onContentSizeChange={() => scrollRef.current?.scrollToEnd()}>
+        {messages.map((msg, i) => (
+          <View
+            key={i}
+            style={[
+              s.chatBubbleWrap,
+              msg.role === 'user'
+                ? { alignSelf: 'flex-end', marginLeft: 36 }
+                : { alignSelf: 'flex-start', marginRight: 36 },
+            ]}
+          >
+            {msg.role === 'assistant' && <Text style={{ fontSize: 24, marginBottom: 4 }}>🩺</Text>}
+            <View
+              style={[
+                s.chatBubble,
+                msg.role === 'user'
+                  ? s.chatBubbleUserBg
+                  : msg.emergency
+                    ? { backgroundColor: '#3a1111', borderBottomLeftRadius: 5, borderWidth: 1, borderColor: C.red }
+                    : s.chatBubbleAIBg,
+              ]}
+            >
+              <Text style={[s.chatText, msg.role === 'user' && { color: '#fff' }, msg.emergency && { color: '#ffd7d7', fontWeight: '600' }]}>{msg.text}</Text>
+            </View>
+            <Text style={[s.recordDate, { marginTop: 4, textAlign: msg.role === 'user' ? 'right' : 'left' }]}>
+              {msg.time}
+            </Text>
+          </View>
+        ))}
+        {isTyping && (
+          <View style={[s.chatBubbleWrap, { alignSelf: 'flex-start', marginRight: 36 }]}>
+            <Text style={{ fontSize: 24 }}>🩺</Text>
+            <View style={s.chatBubbleAIBg}>
+              <Text style={s.chatText}>Vet Assistant is typing...</Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+      {/* Suggestions */}
+      {messages.length < 2 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 12, gap: 8 }}>
+          {AI_SUGGESTIONS.map(s_ => (
+            <TouchableOpacity key={s_} style={s.suggestion} onPress={() => send(s_)}>
+              <Text style={s.suggestionText}>{s_}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+      {/* Input */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={s.chatInputRow}>
+          <TextInput style={s.chatInput} value={input} onChangeText={setInput} placeholder="Ask about Max..." placeholderTextColor={C.muted} multiline />
+          <TouchableOpacity style={[s.sendBtn, !input.trim() && { backgroundColor: C.faint }]} onPress={() => send()} disabled={!input.trim() || isTyping}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>➤</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODAL: LOST PET MODE
+// ─────────────────────────────────────────────
+function LostPetScreen({ navigation }) {
+  const [step, setStep] = useState(1);
+  const [selectedPet, setSelectedPet] = useState(PETS[0]);
+  const [description, setDescription] = useState('');
+  const [radius, setRadius] = useState(2);
+  const [activated, setActivated] = useState(false);
+
+  const activate = () => {
+    setStep(3);
+    setTimeout(() => { setActivated(true); setStep(4); }, 2000);
+  };
+
+  if (step === 1) return (
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+      <View style={s.modalHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={{ color: C.muted }}>✕ Cancel</Text></TouchableOpacity>
+        <Text style={[s.modalTitle, { color: C.red }]}>🚨 Lost Pet Mode</Text>
+        <View style={{ width: 60 }} />
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text style={s.stepTitle}>Which pet is missing?</Text>
+        {PETS.map(pet => (
+          <TouchableOpacity key={pet.id} style={[s.petSelectCard, selectedPet.id === pet.id && s.petSelectCardActive]} onPress={() => setSelectedPet(pet)}>
+            <Text style={{ fontSize: 40 }}>{pet.emoji}</Text>
+            <View style={s.flex}>
+              <Text style={s.petSelectName}>{pet.name}</Text>
+              <Text style={s.petSelectBreed}>{pet.breed}</Text>
+            </View>
+            {selectedPet.id === pet.id && <Text style={{ fontSize: 22 }}>✅</Text>}
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity style={s.bigRedBtn} onPress={() => setStep(2)}>
+          <Text style={s.bigRedBtnText}>Continue →</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+
+  if (step === 2) return (
+    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+      <View style={s.modalHeader}>
+        <TouchableOpacity onPress={() => setStep(1)}><Text style={{ color: C.accent }}>← Back</Text></TouchableOpacity>
+        <Text style={[s.modalTitle, { color: C.red }]}>Alert Details</Text>
+        <View style={{ width: 60 }} />
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={s.redAlertBanner}>
+          <Text style={s.redAlertText}>🚨 This will notify all PetSync+ users within {radius} miles of you immediately</Text>
+        </View>
+        <Text style={s.inputLabel}>Describe {selectedPet.name}</Text>
+        <TextInput style={s.textAreaInput} value={description} onChangeText={setDescription} placeholder={`E.g. ${selectedPet.name} was wearing a red collar, last seen near the park...`} placeholderTextColor={C.muted} multiline numberOfLines={3} />
+        <Text style={s.inputLabel}>Alert Radius</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          {[1, 2, 5, 10].map(r => (
+            <TouchableOpacity key={r} style={[s.radiusBtn, radius === r && s.radiusBtnActive]} onPress={() => setRadius(r)}>
+              <Text style={[s.radiusBtnText, radius === r && { color: '#fff' }]}>{r} mi</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={s.bigRedBtn} onPress={activate}>
+          <Text style={s.bigRedBtnText}>🚨 ACTIVATE LOST PET ALERT</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+
+  if (step === 3) return (
+    <SafeAreaView style={[s.screen, { justifyContent: 'center', alignItems: 'center' }]}>
+      <Text style={{ fontSize: 64 }}>📡</Text>
+      <Text style={[s.modalTitle, { marginTop: 16 }]}>Broadcasting Alert...</Text>
+      <Text style={{ color: C.muted, textAlign: 'center', marginTop: 8, paddingHorizontal: 32 }}>Notifying all PetSync+ users within {radius} miles of your last location</Text>
+    </SafeAreaView>
+  );
+
+  return (
+    <SafeAreaView style={[s.screen, { padding: 16 }]} edges={['top', 'bottom']}>
+      <Text style={[s.modalTitle, { color: C.red, textAlign: 'center', fontSize: 28, marginTop: 20 }]}>🚨 ALERT ACTIVE</Text>
+      <Text style={{ color: C.text, textAlign: 'center', marginTop: 8 }}>Nearby PetSync+ users have been notified about {selectedPet.name}</Text>
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 24, marginBottom: 24 }}>
+        {[{ num: '156', label: 'Users Notified' }, { num: `${radius} mi`, label: 'Alert Radius' }].map(stat => (
+          <Card key={stat.label} style={[s.flex, { alignItems: 'center', padding: 20 }]}>
+            <Text style={{ color: C.accent, fontSize: 28, fontWeight: '800' }}>{stat.num}</Text>
+            <Text style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{stat.label}</Text>
+          </Card>
+        ))}
+      </View>
+      <Text style={[s.sectionTitle, { marginBottom: 12 }]}>Share on social media</Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
+        {['📘 Facebook', '🏘️ Nextdoor', '🐦 Twitter'].map(btn => (
+          <TouchableOpacity key={btn} style={[s.shareBtn]} onPress={() => Alert.alert('Share', `Opening ${btn.split(' ')[1]}...`)}>
+            <Text style={{ color: C.text, fontSize: 12, fontWeight: '600' }}>{btn}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TouchableOpacity style={s.foundBtn} onPress={() => { Alert.alert('🎉 So happy!', `${selectedPet.name} has been marked as found! Thank you to everyone who helped.`); navigation.goBack(); }}>
+        <Text style={s.foundBtnText}>🎉 {selectedPet.name} is Found!</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={{ alignItems: 'center', marginTop: 16 }} onPress={() => navigation.goBack()}>
+        <Text style={{ color: C.muted, textDecorationLine: 'underline' }}>Cancel Alert</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}
+
+// ─────────────────────────────────────────────
+// NAVIGATION SETUP
+// ─────────────────────────────────────────────
+const Tab   = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+function TabNavigator() {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+
+        tabBarStyle: {
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: 18,
+
+          height: 82,
+
+          borderRadius: 28,
+          backgroundColor: '#1e1e1e',
+
+          borderTopWidth: 0,
+
+          paddingTop: 6,
+          paddingBottom: 12,
+
+          elevation: 0,
+
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.12,
+          shadowRadius: 20,
+        },
+
+        tabBarActiveTintColor: C.accent,
+        tabBarInactiveTintColor: C.muted,
+
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={DashboardScreen}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused
+                  ? 'rgba(255,107,53,0.18)'
+                  : 'transparent',
+
+                padding: 5,
+                borderRadius: 16,
+              }}
+            >
+              <MaterialCommunityIcons
+                name="paw"
+                size={22}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Health"
+        component={HealthHubScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              💊
+            </Text>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Memories"
+        component={MemoryVaultScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              📸
+            </Text>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Community"
+        component={CommunityScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              👥
+            </Text>
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              ⚙️
+            </Text>
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+export default function App() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Main"    component={TabNavigator}  />
+            <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
+            <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+// ─────────────────────────────────────────────
+// ALL STYLES
+// ─────────────────────────────────────────────
+const s = StyleSheet.create({
+  // Layout
+  screen:            { flex: 1, backgroundColor: C.bg },
+  flex:              { flex: 1 },
+  card:              { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 0, borderWidth: 1, borderColor: C.border },
+section: {
+  marginTop: 28,
+  paddingHorizontal: 20,
+},
+  sectionHeaderRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+sectionTitle: {
+  fontSize: 24,
+  fontWeight: '800',
+  marginBottom: 16,
+  color: C.text,
+},
+  // Header
+  dashHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+greeting: {
+  color: C.text,
+  fontSize: 30,
+  fontWeight: '800',
+  letterSpacing: -0.6,
+},
+subGreeting: {
+  color: C.muted,
+  fontSize: 15,
+  marginTop: 4,
+},
+sosButton: {
+  backgroundColor: C.red,
+  borderRadius: 20,
+  paddingHorizontal: 10,
+  paddingVertical: 7,
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: 64,
+  marginLeft: -60,
+  marginTop: -20,
+},  sosText:           { color: '#fff', fontWeight: '700', fontSize: 13 },
+
+  // Page headers
+  pageHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+  pageTitle:         { color: C.text, fontSize: 26, fontWeight: '800' },
+  pageSub:           { color: C.muted, fontSize: 13, marginTop: 2 },
+  exportBtn:         { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+  exportBtnText:     { color: C.muted, fontSize: 12 },
+  iconBtn:           { width: 42, height: 42, justifyContent: 'center', alignItems: 'center' },
+  accentBtn:         { backgroundColor: C.accent, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
+  accentBtnText:     { color: '#fff', fontWeight: '700', fontSize: 13 },
+
+  // Pet Avatars
+  petRow:            { marginBottom: 12 },
+  petAvatar:         { width: 64, height: 64, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12, backgroundColor: C.card },
+  petAvatarActive:   { backgroundColor: C.cardHigh, borderWidth: 2, borderColor: C.accent },
+  petAvatarEmoji:    { fontSize: 26 },
+  petAvatarName:     { color: C.muted, fontSize: 11, marginTop: 3, fontWeight: '700' },
+
+  // Generic badges/tabs/buttons
+  badge:             { borderWidth: 1, borderRadius: 16, paddingHorizontal: 9, paddingVertical: 3 },
+  badgeText:         { fontSize: 10, fontWeight: '800' },
+  tabPill:           { backgroundColor: C.card, borderRadius: 20, paddingHorizontal: 13, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
+  tabPillActive:     { backgroundColor: C.accent, borderColor: C.accent },
+  tabPillText:       { color: C.muted, fontSize: 13, fontWeight: '700' },
+  tabPillTextActive: { color: '#fff' },
+  fab:               { position: 'absolute', right: 22, bottom: 28, width: 58, height: 58, borderRadius: 29, backgroundColor: C.accent, justifyContent: 'center', alignItems: 'center', shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  fabText:           { color: '#fff', fontSize: 30, fontWeight: '300', lineHeight: 56 },
+
+  // Dashboard
+healthScoreCard: {
+  marginHorizontal: 16,
+  marginTop: 18,
+  marginBottom: 8,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 16,
+},
+  healthScoreLeft:   { width: 92, alignItems: 'center' },
+  healthScoreRight:  { flex: 1 },
+  scoreCircle:       { width: 84, height: 84, borderRadius: 42, borderWidth: 5, alignItems: 'center', justifyContent: 'center' },
+  scoreNumber:       { fontSize: 28, fontWeight: '900' },
+  scoreLabel:        { color: C.muted, fontSize: 11, marginTop: -4 },
+  healthScoreTitle:  { color: C.text, fontSize: 17, fontWeight: '800' },
+  healthScoreSub:    { color: C.muted, fontSize: 13, marginTop: 4 },
+  healthScoreCheck:  { color: C.muted, fontSize: 12, marginTop: 2 },
+  recentActivityEmptyCard: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  recentActivityEmptyText: {
+    color: C.muted,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  recentActivityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  recentActivityIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.bg,
+    marginRight: 12,
+  },
+  recentActivityIcon: {
+    fontSize: 22,
+  },
+  recentActivityContent: {
+    flex: 1,
+  },
+  recentActivityTitle: {
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  recentActivityMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  recentActivityTime: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  recentActivityTypePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,107,53,0.12)',
+  },
+  recentActivityTypeText: {
+    color: C.accent,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
+taskCard: {
+  flexDirection: 'row',
+  alignItems: 'center',
+
+  backgroundColor: '#1e1e1e',
+
+  padding: 18,
+  borderRadius: 22,
+
+  marginBottom: 14,
+
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.08,
+  shadowRadius: 14,
+
+  elevation: 3,
+},
+  taskCardDone:      { opacity: 0.55 },
+  taskCheck:         { fontSize: 20 },
+  taskInfo:          { flex: 1 },
+  taskTitle:         { color: C.text, fontSize: 15, fontWeight: '700' },
+  taskTitleDone:     { textDecorationLine: 'line-through', color: C.muted },
+  taskTime:          { color: C.muted, fontSize: 12, marginTop: 3 },
+  quickActionsRow:   { flexDirection: 'row', gap: 8, marginTop: 0 },
+quickAction: {
+  flex: 1,
+  backgroundColor: '#1e1e1e',
+
+  borderRadius: 22,
+
+  paddingVertical: 18,
+  alignItems: 'center',
+
+  marginHorizontal: 2,
+
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 10,
+
+  elevation: 2,
+},
+  quickActionIcon:   { fontSize: 36, marginBottom: 6 },
+  quickActionLabel:  { color: C.muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+
+  // Health
+  recordIconWrap:    { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  recordTitle:       { color: C.text, fontSize: 15, fontWeight: '800' },
+  recordDate:        { color: C.muted, fontSize: 12, marginTop: 2 },
+  recordProvider:    { color: C.faint, fontSize: 12, marginTop: 2 },
+  recordDue:         { color: C.muted, fontSize: 12, marginTop: 2 },
+
+  // Memories
+  motdCard:          { marginHorizontal: 16, marginBottom: 14, alignItems: 'center' },
+  motdBadge:         { color: C.accent, fontSize: 12, fontWeight: '900', alignSelf: 'flex-start' },
+  motdCaption:       { color: C.text, fontSize: 16, fontWeight: '800' },
+  motdDate:          { color: C.muted, fontSize: 12, marginTop: 3 },
+  memCell:           { borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 4, overflow: 'hidden' },
+  memEmoji:          { fontSize: 36 },
+  mileStar:          { position: 'absolute', top: 5, right: 5, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, padding: 3 },
+
+  // Community
+  lostBanner:        { backgroundColor: C.red, borderRadius: 10, paddingVertical: 7, alignItems: 'center', marginBottom: 12 },
+  lostBannerText:    { color: '#fff', fontWeight: '900', fontSize: 12 },
+  postAuthorRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  postAvatar:        { width: 42, height: 42, borderRadius: 21, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  postAuthor:        { color: C.text, fontSize: 15, fontWeight: '800' },
+  postPetType:       { color: C.muted, fontSize: 12, marginTop: 2 },
+  postContent:       { color: C.text, fontSize: 15, lineHeight: 21, marginBottom: 12 },
+  postMediaPlaceholder: { height: 150, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  postActions:       { flexDirection: 'row', alignItems: 'center', gap: 22, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 },
+  postAction:        { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  postActionText:    { color: C.muted, fontSize: 13, fontWeight: '700' },
+  alertNeighborsBtn: { marginTop: 12, backgroundColor: C.red, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  alertNeighborsBtnText: { color: '#fff', fontWeight: '900' },
+  composeInput:      { flex: 1, color: C.text, fontSize: 18, padding: 16, textAlignVertical: 'top' },
+  composeTips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  composeTip:        { backgroundColor: C.card, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
+
+  // Settings
+  profileCard:       { margin: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  profileAvatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  profileName:       { color: C.text, fontSize: 18, fontWeight: '900' },
+  profileEmail:      { color: C.muted, fontSize: 12, marginTop: 2 },
+  premiumBadge:      { backgroundColor: C.accent + '30', borderWidth: 1, borderColor: C.accent, borderRadius: 14, paddingHorizontal: 8, paddingVertical: 4 },
+  premiumBadgeText:  { color: C.accent, fontSize: 11, fontWeight: '900' },
+  menuSectionTitle:  { color: C.faint, fontSize: 11, fontWeight: '900', marginLeft: 20, marginTop: 14, marginBottom: 8, letterSpacing: 1 },
+  menuItem:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: 12 },
+  menuItemBorder:    { borderBottomWidth: 1, borderBottomColor: C.border },
+  menuIcon:          { fontSize: 22, width: 28, textAlign: 'center' },
+  menuLabel:         { color: C.text, fontSize: 15, fontWeight: '700' },
+  menuSub:           { color: C.muted, fontSize: 12, marginTop: 2 },
+  menuChevron:       { color: C.faint, fontSize: 26 },
+  signOutBtn:        { marginHorizontal: 16, marginTop: 18, backgroundColor: C.card, borderRadius: 14, paddingVertical: 15, alignItems: 'center', borderWidth: 1, borderColor: C.red + '70' },
+  signOutText:       { color: C.red, fontWeight: '800' },
+  versionText:       { color: C.faint, fontSize: 12, textAlign: 'center', marginTop: 18, marginBottom: 24 },
+
+  // Modals / AI Vet
+  modalHeader:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  modalTitle:        { color: C.text, fontSize: 17, fontWeight: '900' },
+  disclaimer:        { margin: 12, backgroundColor: C.blue + '20', borderLeftWidth: 3, borderLeftColor: C.blue, borderRadius: 10, padding: 10 },
+  disclaimerText:    { color: C.blue, fontSize: 12, lineHeight: 17 },
+  petContextBar:     { marginHorizontal: 12, marginBottom: 4, backgroundColor: C.card, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.border },
+  petContextText:    { color: C.muted, fontSize: 12, textAlign: 'center', fontWeight: '700' },
+  chatBubbleWrap:    { marginBottom: 14, maxWidth: '86%' },
+  chatBubbleAI:      { alignSelf: 'flex-start' },
+  chatBubbleUser:    { alignSelf: 'flex-end' },
+  chatBubble:        { borderRadius: 18, padding: 13 },
+  chatBubbleAIBg:    { backgroundColor: C.card, borderBottomLeftRadius: 5 },
+  chatBubbleUserBg:  { backgroundColor: C.accent, borderBottomRightRadius: 5 },
+  chatText:          { color: C.text, fontSize: 14, lineHeight: 20 },
+  suggestion:        { backgroundColor: C.card, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
+  suggestionText:    { color: C.muted, fontSize: 12, fontWeight: '700' },
+  chatInputRow:      { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: C.border },
+  chatInput:         { flex: 1, minHeight: 46, maxHeight: 110, backgroundColor: C.card, borderRadius: 18, color: C.text, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15 },
+  sendBtn:           { width: 46, height: 46, borderRadius: 23, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+
+  // Lost pet flow
+  stepTitle:         { color: C.text, fontSize: 24, fontWeight: '900', marginBottom: 16 },
+  petSelectCard:     { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.card, borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: C.border },
+  petSelectCardActive: { borderColor: C.red, backgroundColor: C.cardHigh },
+  petSelectName:     { color: C.text, fontSize: 17, fontWeight: '900' },
+  petSelectBreed:    { color: C.muted, fontSize: 13, marginTop: 3 },
+  bigRedBtn:         { backgroundColor: C.red, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 18 },
+  bigRedBtnText:     { color: '#fff', fontSize: 15, fontWeight: '900' },
+  redAlertBanner:    { backgroundColor: C.red + '25', borderLeftWidth: 4, borderLeftColor: C.red, borderRadius: 12, padding: 12, marginBottom: 18 },
+  redAlertText:      { color: C.red, fontSize: 13, fontWeight: '800', lineHeight: 19 },
+  inputLabel:        { color: C.text, fontSize: 14, fontWeight: '800', marginBottom: 8 },
+  textAreaInput:     { backgroundColor: C.card, color: C.text, borderRadius: 14, padding: 13, minHeight: 98, textAlignVertical: 'top', marginBottom: 16, borderWidth: 1, borderColor: C.border },
+  radiusBtn:         { flex: 1, backgroundColor: C.card, borderRadius: 14, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+  radiusBtnActive:   { backgroundColor: C.red, borderColor: C.red },
+  radiusBtnText:     { color: C.muted, fontWeight: '900' },
+  shareBtn:          { flex: 1, backgroundColor: C.card, borderRadius: 14, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+  foundBtn:          { backgroundColor: C.green, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  foundBtnText:      { color: C.bg, fontWeight: '900', fontSize: 16 },
+});

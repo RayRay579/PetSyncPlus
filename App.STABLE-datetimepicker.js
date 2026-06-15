@@ -12,12 +12,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { supabase } from './supabase';
 // ─────────────────────────────────────────────
 // COLORS & THEME
 // ─────────────────────────────────────────────
@@ -96,100 +92,10 @@ const MEMORIES = [
 ];
 
 const POSTS = [
-  { id: '1', author: 'Sarah M.',    owner: false, petType: 'Golden Retriever Mom', time: '2h ago', content: 'Anyone know a good dog-friendly trail near Ocean County? Max loved Cattus Island but want to try somewhere new! 🐾', emoji: '🌲', likes: 24, comments: 8,  type: 'question'     },
-  { id: '2', author: 'Mike R.',     owner: false, petType: 'Beagle Dad',           time: '4h ago', content: '🚨 MISSING: Bella (Beagle, 3 yrs) — last seen near Lacey Township. Wearing red collar. PLEASE SHARE! 🚨',        emoji: '🚨', likes: 89, comments: 34, type: 'lost_pet',    lost: true },
-  { id: '3', author: 'Johnson Fam', owner: false, petType: 'Multi-pet household',  time: '1d ago', content: 'Rocky just graduated from puppy training! 8 weeks of hard work and this guy nailed every single command 🎓🐶',    emoji: '🎓', likes: 67, comments: 14, type: 'celebration'  },
-  { id: '4', author: 'Vet Dr. Kim', owner: false, petType: 'Animal Clinic Partner', time: '2d ago', content: 'Summer reminder: sidewalks can reach 150°F on hot days. Test with your hand for 5 seconds — if you can\'t hold it, neither can your pet! 🌡️', emoji: '☀️', likes: 103, comments: 22, type: 'tip' },
-];
-
-const COMMUNITY_TABS = [
-  { key: 'feed', label: 'Feed' },
-  { key: 'recipes', label: 'Recipes' },
-  { key: 'lostPets', label: 'Lost Pets' },
-  { key: 'tips', label: 'Tips' },
-];
-
-const RECIPE_POSTS = [
-  {
-    id: 'recipe-1',
-    author: 'Mia S.',
-    owner: false,
-    petType: 'Dog Parent',
-    title: 'Frozen Peanut Butter Banana Dog Treats',
-    description: 'A cool, high-value treat for hot days with simple ingredients your pup already loves.',
-    ingredients: ['1 banana', '2 tbsp xylitol-free peanut butter', '1/2 cup plain yogurt', 'Ice tray molds'],
-    safeFor: ['dog'],
-    prepTime: '10 min',
-    likes: 58,
-    comments: 12,
-    emoji: '🍌🐶',
-    instructions: [
-      'Mash the banana until smooth.',
-      'Stir in the peanut butter and yogurt.',
-      'Spoon into ice tray molds.',
-      'Freeze until firm, then serve one at a time.',
-    ],
-  },
-  {
-    id: 'recipe-2',
-    author: 'Tina L.',
-    owner: false,
-    petType: 'Cat Parent',
-    title: 'Cat Tuna Bites',
-    description: 'Small savory bites for cats who want a little extra crunch without anything heavy.',
-    ingredients: ['1 can tuna in water', '1 egg', '2 tbsp oat flour', 'Pinch of catnip'],
-    safeFor: ['cat'],
-    prepTime: '20 min',
-    likes: 44,
-    comments: 9,
-    emoji: '🐟🐱',
-    instructions: [
-      'Preheat the oven to 325°F.',
-      'Mix tuna, egg, oat flour, and catnip into a thick dough.',
-      'Shape into tiny bite-size pieces.',
-      'Bake until set and cool completely before serving.',
-    ],
-  },
-  {
-    id: 'recipe-3',
-    author: 'Dr. Lane',
-    owner: false,
-    petType: 'Aquarium Keeper',
-    title: 'Fish Feeding Schedule Mix',
-    description: 'A simple way to prep a varied feeding routine for healthy tanks and happier fish.',
-    ingredients: ['Pellet blend', 'Freeze-dried bloodworms', 'Brine shrimp cubes', 'Vitamin drops'],
-    safeFor: ['fish'],
-    prepTime: '5 min',
-    likes: 31,
-    comments: 6,
-    emoji: '🐟✨',
-    instructions: [
-      'Measure your tank-safe pellet blend.',
-      'Add freeze-dried bloodworms or shrimp in small amounts.',
-      'Store in a sealed container for the week.',
-      'Follow your tank’s feeding schedule and portion carefully.',
-    ],
-  },
-  {
-    id: 'recipe-4',
-    author: 'Nora G.',
-    owner: false,
-    petType: 'Rabbit Parent',
-    title: 'Rabbit Veggie Snack Bowl',
-    description: 'Fresh, crunchy veggies that work as a supervised snack or enrichment bowl.',
-    ingredients: ['Romaine lettuce', 'Parsley', 'Bell pepper', 'Small carrot slices'],
-    safeFor: ['rabbit'],
-    prepTime: '8 min',
-    likes: 36,
-    comments: 11,
-    emoji: '🥬🐇',
-    instructions: [
-      'Wash and dry all produce thoroughly.',
-      'Chop the vegetables into rabbit-safe bite sizes.',
-      'Arrange in a bowl or foraging tray.',
-      'Serve fresh and remove leftovers after the session.',
-    ],
-  },
+  { id: '1', author: 'Sarah M.',    petType: 'Golden Retriever Mom', time: '2h ago', content: 'Anyone know a good dog-friendly trail near Ocean County? Max loved Cattus Island but want to try somewhere new! 🐾', emoji: '🌲', likes: 24, comments: 8,  type: 'question'     },
+  { id: '2', author: 'Mike R.',     petType: 'Beagle Dad',           time: '4h ago', content: '🚨 MISSING: Bella (Beagle, 3 yrs) — last seen near Lacey Township. Wearing red collar. PLEASE SHARE! 🚨',        emoji: '🚨', likes: 89, comments: 34, type: 'lost_pet',    lost: true },
+  { id: '3', author: 'Johnson Fam', petType: 'Multi-pet household',  time: '1d ago', content: 'Rocky just graduated from puppy training! 8 weeks of hard work and this guy nailed every single command 🎓🐶',    emoji: '🎓', likes: 67, comments: 14, type: 'celebration'  },
+  { id: '4', author: 'Vet Dr. Kim', petType: 'Animal Clinic Partner', time: '2d ago', content: 'Summer reminder: sidewalks can reach 150°F on hot days. Test with your hand for 5 seconds — if you can\'t hold it, neither can your pet! 🌡️', emoji: '☀️', likes: 103, comments: 22, type: 'tip' },
 ];
 
 const PET_SPECIES_EMOJIS = {
@@ -307,523 +213,6 @@ const parseStoredDateKey = (value) => {
 
   const parsed = new Date(text);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const savePetToSupabase = async (pet) => {
-  const weightMatch = String(pet.weight || '').match(/[\d.]+/);
-  const parsedWeight = weightMatch ? Number(weightMatch[0]) : null;
-  const normalizedWeight = Number.isFinite(parsedWeight) ? parsedWeight : null;
-
-  const { error } = await supabase.from('pets').insert([
-    {
-      id: pet.id,
-      name: pet.name || '',
-      species: pet.species || '',
-      breed: pet.breed || '',
-      birthday: pet.birthday && String(pet.birthday).trim() ? pet.birthday : null,
-      weight: normalizedWeight,
-      gender: pet.gender || '',
-      photo_url: pet.photoUri || null,
-      care_goals: pet.careGoals || '',
-      health_score: pet.score ?? null,
-    },
-  ]);
-
-  if (error) {
-    console.log('Supabase pet save error:', error);
-    return;
-  }
-
-  console.log('Pet saved to Supabase');
-};
-
-const loadPetsFromSupabase = async () => {
-  const { data, error } = await supabase
-    .from('pets')
-    .select('*')
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.log('Supabase pets load error:', error);
-    return [];
-  }
-
-  if (!data || data.length === 0) {
-    console.log('No Supabase pets found, using local pets');
-    return [];
-  }
-
-  const mappedPets = data.map((row) => ({
-    id: row.id,
-    name: row.name,
-    species: row.species,
-    breed: row.breed,
-    birthday: row.birthday,
-    age: row.birthday ? calculateAgeLabelFromBirthday(row.birthday) : 'Unknown',
-    weight: row.weight ? `${row.weight} lbs` : '',
-    gender: row.gender,
-    photoUri: row.photo_url,
-    careGoals: row.care_goals,
-    emoji: getDefaultPetEmoji(row.species),
-    score: row.health_score ?? 80,
-  }));
-
-  console.log('Loaded pets from Supabase');
-  return mappedPets;
-};
-
-const getHealthRecordIcon = (type) => {
-  const iconMap = {
-    vaccination: '💉',
-    medication: '💊',
-    appointment: '🏥',
-    weight: '⚖️',
-    symptom: '🤒',
-    surgery: '🩺',
-    allergy: '⚠️',
-    diagnosis: '📋',
-    lab: '🧪',
-    fish: '🐟',
-    imported_file: '📎',
-  };
-
-  return iconMap[type] || '📋';
-};
-
-const getHealthRecordNotes = (type, details = {}, fallback = '') => {
-  const detailMap = {
-    vaccination: details.vaccineNotes,
-    medication: details.medicationNotes,
-    appointment: details.appointmentNotes,
-    weight: details.weightNotes,
-    symptom: details.symptomNotes,
-    surgery: details.recoveryNotes,
-    allergy: details.allergyNotes,
-    diagnosis: details.diagnosisNotes,
-    lab: details.labNotes,
-    fish: details.readingNotes,
-  };
-
-  return String(detailMap[type] || fallback || '').trim();
-};
-
-const normalizeHealthRecordFromSupabase = (row) => ({
-  id: row.id,
-  petId: row.pet_id,
-  type: row.type,
-  title: row.title,
-  date: row.record_date,
-  nextDue: row.next_due,
-  details: row.details || {},
-  notes: row.notes || '',
-  icon: getHealthRecordIcon(row.type),
-  status: 'current',
-  fileUri: row.type === 'imported_file' ? (row.details?.fileUrl || row.details?.fileUri || row.details?.file_uri || '') : '',
-  fileUrl: row.type === 'imported_file' ? (row.details?.fileUrl || row.details?.fileUri || row.details?.file_uri || '') : '',
-  filePath: row.type === 'imported_file' ? (row.details?.filePath || row.details?.file_path || '') : '',
-  fileName: row.type === 'imported_file' ? (row.details?.fileName || row.title || '') : '',
-  mimeType: row.type === 'imported_file' ? (row.details?.mimeType || row.details?.mime_type || '') : '',
-  size: row.type === 'imported_file' ? (row.details?.size || null) : null,
-  provider: row.details?.provider
-    || row.details?.providerClinic
-    || row.details?.vetClinic
-    || row.details?.prescribingVet
-    || row.details?.diagnosisVet
-    || row.details?.labVet
-    || row.details?.clinicVet
-    || '',
-});
-
-const saveHealthRecordToSupabase = async (record) => {
-  const payload = {
-    id: record.id,
-    pet_id: record.petId,
-    user_id: null,
-    type: record.type,
-    title: record.title,
-    record_date: record.date || null,
-    next_due: record.nextDue || null,
-    details: record.details || {},
-    notes: record.notes || '',
-  };
-
-  const { error } = await supabase.from('health_records').insert([payload]);
-
-  if (error) {
-    console.log('Supabase health record save error:', error);
-    return;
-  }
-
-  console.log('Health record saved to Supabase');
-};
-
-const updateHealthRecordInSupabase = async (record) => {
-  const payload = {
-    pet_id: record.petId,
-    user_id: null,
-    type: record.type,
-    title: record.title,
-    record_date: record.date || null,
-    next_due: record.nextDue || null,
-    details: record.details || {},
-    notes: record.notes || '',
-  };
-
-  const { error } = await supabase
-    .from('health_records')
-    .update(payload)
-    .eq('id', record.id);
-
-  if (error) {
-    console.log('Supabase health record update error:', error);
-    return;
-  }
-
-  console.log('Health record updated in Supabase');
-};
-
-const deleteHealthRecordFromSupabase = async (recordId) => {
-  const { error } = await supabase
-    .from('health_records')
-    .delete()
-    .eq('id', recordId);
-
-  if (error) {
-    console.log('Supabase health record delete error:', error);
-    return;
-  }
-
-  console.log('Health record deleted from Supabase');
-};
-
-const loadHealthRecordsFromSupabase = async () => {
-  const { data, error } = await supabase
-    .from('health_records')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.log('Supabase health records load error:', error);
-    return null;
-  }
-
-  if (!data || data.length === 0) {
-    console.log('No Supabase health records found, using empty state');
-    return [];
-  }
-
-  const mappedRecords = data.map(normalizeHealthRecordFromSupabase);
-  console.log('Loaded health records from Supabase');
-  return mappedRecords;
-};
-
-const saveCareReminderToSupabase = async (reminder) => {
-  const payload = {
-    id: reminder.id,
-    pet_id: reminder.petId,
-    user_id: null,
-    title: reminder.title,
-    reminder_date: reminder.date || null,
-    reminder_time: reminder.time || '',
-    completed: !!reminder.completed,
-    source: reminder.source || 'manual',
-    source_record_id: reminder.sourceRecordId || null,
-  };
-
-  const { error } = await supabase.from('care_reminders').insert([payload]);
-
-  if (error) {
-    console.log('Supabase care reminder save error:', error);
-    return;
-  }
-
-  console.log('Care reminder saved to Supabase');
-};
-
-const updateCareReminderInSupabase = async (reminder) => {
-  const payload = {
-    pet_id: reminder.petId,
-    user_id: null,
-    title: reminder.title,
-    reminder_date: reminder.date || null,
-    reminder_time: reminder.time || '',
-    completed: !!reminder.completed,
-    source: reminder.source || 'manual',
-    source_record_id: reminder.sourceRecordId || null,
-  };
-
-  const { error } = await supabase
-    .from('care_reminders')
-    .update(payload)
-    .eq('id', reminder.id);
-
-  if (error) {
-    console.log('Supabase care reminder update error:', error);
-    return;
-  }
-
-  console.log('Care reminder updated in Supabase');
-};
-
-const deleteCareReminderFromSupabase = async (reminderId) => {
-  const { error } = await supabase
-    .from('care_reminders')
-    .delete()
-    .eq('id', reminderId);
-
-  if (error) {
-    console.log('Supabase care reminder delete error:', error);
-    return;
-  }
-
-  console.log('Care reminder deleted from Supabase');
-};
-
-const loadCareRemindersFromSupabase = async () => {
-  const { data, error } = await supabase
-    .from('care_reminders')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.log('Supabase care reminders load error:', error);
-    return null;
-  }
-
-  if (!data || data.length === 0) {
-    console.log('No Supabase care reminders found, using empty state');
-    return [];
-  }
-
-  const mappedReminders = data.map((row) => ({
-    id: row.id,
-    petId: row.pet_id,
-    title: row.title,
-    date: row.reminder_date,
-    time: row.reminder_time,
-    completed: row.completed,
-    source: row.source,
-    sourceRecordId: row.source_record_id,
-    icon: '',
-  }));
-
-  console.log('Loaded care reminders from Supabase');
-  return mappedReminders;
-};
-
-const saveCommunityPostToSupabase = async (post) => {
-  const payload = {
-    id: post.id,
-    user_id: null,
-    author: post.author || 'Pet Parent',
-    content: post.content || '',
-    image_url: null,
-    likes: post.likes || 0,
-    comments: post.comments || 0,
-  };
-
-  const { error } = await supabase.from('community_posts').insert([payload]);
-
-  if (error) {
-    console.log('Supabase community post save error:', error);
-    return;
-  }
-
-  console.log('Community post saved to Supabase');
-};
-
-const updateCommunityPostLikesInSupabase = async (postId, likes) => {
-  const { error } = await supabase
-    .from('community_posts')
-    .update({ likes })
-    .eq('id', postId);
-
-  if (error) {
-    console.log('Supabase community post likes update error:', error);
-    return;
-  }
-
-  console.log('Community post likes updated in Supabase');
-};
-
-const updateCommunityPostInSupabase = async (post) => {
-  const { error } = await supabase
-    .from('community_posts')
-    .update({
-      author: post.author || 'Pet Parent',
-      content: post.content || '',
-      likes: post.likes || 0,
-      comments: post.comments || 0,
-    })
-    .eq('id', post.id);
-
-  if (error) {
-    console.log('Supabase community post update error:', error);
-    return;
-  }
-
-  console.log('Community post updated in Supabase');
-};
-
-const deleteCommunityPostFromSupabase = async (postId) => {
-  const { error } = await supabase
-    .from('community_posts')
-    .delete()
-    .eq('id', postId);
-
-  if (error) {
-    console.log('Supabase community post delete error:', error);
-    return;
-  }
-
-  console.log('Community post deleted from Supabase');
-};
-
-const loadCommunityPostsFromSupabase = async () => {
-  const { data, error } = await supabase
-    .from('community_posts')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.log('Supabase community posts load error:', error);
-    return null;
-  }
-
-  if (!data || data.length === 0) {
-    console.log('No Supabase community posts found, using mock posts');
-    return [];
-  }
-
-  const mappedPosts = data.map((row) => ({
-    id: row.id,
-    author: row.author || 'Pet Parent',
-    owner: row.author === 'Raymond',
-    petType: 'Community Member',
-    time: 'Just now',
-    content: row.content,
-    emoji: '',
-    likes: row.likes || 0,
-    comments: row.comments || 0,
-    type: 'general',
-    liked: false,
-  }));
-
-  console.log('Loaded community posts from Supabase');
-  return mappedPosts;
-};
-
-const normalizeRecipeSafeFor = (value) => {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  const text = String(value || '').trim();
-  if (!text) return [];
-  return text.split(',').map((item) => item.trim()).filter(Boolean);
-};
-
-const normalizeRecipeIngredients = (value) => {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  const text = String(value || '').trim();
-  if (!text) return [];
-  return text.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
-};
-
-const saveRecipeToSupabase = async (recipe) => {
-  const payload = {
-    id: recipe.id,
-    user_id: null,
-    author: recipe.author || 'Pet Parent',
-    title: recipe.title || '',
-    description: recipe.description || '',
-    ingredients: recipe.ingredients || [],
-    pet_type: Array.isArray(recipe.safeFor) ? recipe.safeFor.join(', ') : String(recipe.safeFor || ''),
-    prep_time: recipe.prepTime || '',
-    likes: recipe.likes || 0,
-    comments: recipe.comments || 0,
-  };
-
-  const { error } = await supabase.from('recipes').insert([payload]);
-
-  if (error) {
-    console.log('Supabase recipe save error:', error);
-    return;
-  }
-
-  console.log('Recipe saved to Supabase');
-};
-
-const updateRecipeInSupabase = async (recipe) => {
-  const payload = {
-    author: recipe.author || 'Pet Parent',
-    title: recipe.title || '',
-    description: recipe.description || '',
-    ingredients: recipe.ingredients || [],
-    pet_type: Array.isArray(recipe.safeFor) ? recipe.safeFor.join(', ') : String(recipe.safeFor || ''),
-    prep_time: recipe.prepTime || '',
-    likes: recipe.likes || 0,
-    comments: recipe.comments || 0,
-  };
-
-  const { error } = await supabase
-    .from('recipes')
-    .update(payload)
-    .eq('id', recipe.id);
-
-  if (error) {
-    console.log('Supabase recipe update error:', error);
-    return;
-  }
-
-  console.log('Recipe updated in Supabase');
-};
-
-const deleteRecipeFromSupabase = async (recipeId) => {
-  const { error } = await supabase
-    .from('recipes')
-    .delete()
-    .eq('id', recipeId);
-
-  if (error) {
-    console.log('Supabase recipe delete error:', error);
-    return;
-  }
-
-  console.log('Recipe deleted from Supabase');
-};
-
-const loadRecipesFromSupabase = async () => {
-  const { data, error } = await supabase
-    .from('recipes')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.log('Supabase recipes load error:', error);
-    return null;
-  }
-
-  if (!data || data.length === 0) {
-    console.log('No Supabase recipes found, using existing recipe list');
-    return [];
-  }
-
-  const mappedRecipes = data.map((row) => ({
-    id: row.id,
-    author: row.author || 'Pet Parent',
-    owner: row.author === 'Raymond',
-    title: row.title,
-    description: row.description,
-    ingredients: normalizeRecipeIngredients(row.ingredients),
-    safeFor: normalizeRecipeSafeFor(row.pet_type),
-    prepTime: row.prep_time,
-    likes: row.likes || 0,
-    comments: row.comments || 0,
-    emoji: row.emoji || '🥣',
-    instructions: [],
-    liked: false,
-  }));
-
-  console.log('Loaded recipes from Supabase');
-  return mappedRecipes;
 };
 
 const DatePickerField = ({ label, value, onChange, placeholder }) => {
@@ -2171,8 +1560,7 @@ function DashboardScreen({ navigation }) {
       date: trimmedDate,
       time: reminderTime.trim(),
       completed: editingReminder ? !!editingReminder.completed : false,
-      source: editingReminder?.source || 'manual',
-      sourceRecordId: editingReminder?.sourceRecordId || null,
+      source: 'manual',
     };
 
     setCareReminders(prev => (
@@ -2180,11 +1568,6 @@ function DashboardScreen({ navigation }) {
         ? prev.map(reminder => (reminder.id === editingReminder.id ? nextReminder : reminder))
         : [nextReminder, ...prev]
     ));
-    if (editingReminder) {
-      updateCareReminderInSupabase(nextReminder);
-    } else {
-      saveCareReminderToSupabase(nextReminder);
-    }
     setShowReminderModal(false);
     setEditingReminder(null);
     setReminderTitle('');
@@ -2193,18 +1576,11 @@ function DashboardScreen({ navigation }) {
     setReminderTime('');
   };
   const toggleReminderComplete = (reminderId) => {
-    setCareReminders(prev => {
-      const nextList = prev.map(reminder => (
-        reminder.id === reminderId
-          ? { ...reminder, completed: !reminder.completed }
-          : reminder
-      ));
-      const nextReminder = nextList.find((reminder) => reminder.id === reminderId);
-      if (nextReminder) {
-        updateCareReminderInSupabase(nextReminder);
-      }
-      return nextList;
-    });
+    setCareReminders(prev => prev.map(reminder => (
+      reminder.id === reminderId
+        ? { ...reminder, completed: !reminder.completed }
+        : reminder
+    )));
   };
   const openEditReminder = (reminder) => {
     setEditingReminder(reminder);
@@ -2225,7 +1601,6 @@ function DashboardScreen({ navigation }) {
           style: 'destructive',
           onPress: () => {
             setCareReminders(prev => prev.filter(reminder => reminder.id !== reminderId));
-            deleteCareReminderFromSupabase(reminderId);
           },
         },
       ]
@@ -2523,7 +1898,7 @@ const ACTION_ICONS = [
               </View>
             </View>
             <View style={s.healthScoreRight}>
-              <Text style={s.healthScoreTitle}>{pet.name}&apos;s Health Score</Text>
+              <Text style={s.healthScoreTitle}>{pet.name}'s Health Score</Text>
               <Text style={s.healthScoreSub}>🐾 {pet.breed} · {pet.age}</Text>
               <View style={{ marginTop: 8 }}>
                 {visibleHealthInsights.map((insight, index) => (
@@ -2832,16 +2207,12 @@ const ACTION_ICONS = [
 // ─────────────────────────────────────────────
 // SCREEN: PET PROFILE
 // ─────────────────────────────────────────────
-function PetProfileScreen({ navigation, route }) {
+function PetProfileScreen({ navigation, route, onDeletePet }) {
   const { pets, setPets } = useContext(PetsContext);
   const { petScores } = useContext(PetScoresContext);
   const { activityLogs } = useContext(ActivityLogsContext);
   const { healthRecords } = useContext(HealthRecordsContext);
   const { careReminders } = useContext(CareRemindersContext);
-  const { setActivityLogs } = useContext(ActivityLogsContext);
-  const { setHealthRecords } = useContext(HealthRecordsContext);
-  const { setCareReminders } = useContext(CareRemindersContext);
-  const { setPetScores } = useContext(PetScoresContext);
   const { openAddPetModal } = useContext(AddPetContext);
   const [showEditPetModal, setShowEditPetModal] = useState(false);
   const [editPetDraft, setEditPetDraft] = useState(() => buildPetEditDraft(null));
@@ -3065,6 +2436,11 @@ function PetProfileScreen({ navigation, route }) {
     });
   };
   const handleDeletePet = () => {
+    if (typeof onDeletePet !== 'function') {
+      Alert.alert('Delete Pet', 'Delete action is unavailable right now.');
+      return;
+    }
+
     Alert.alert(
       `Delete ${pet.name}?`,
       'This will remove this pet from the app.',
@@ -3074,15 +2450,7 @@ function PetProfileScreen({ navigation, route }) {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setPets((prev) => prev.filter((item) => item.id !== pet.id));
-            setActivityLogs((prev) => prev.filter((log) => log.petId !== pet.id));
-            setCareReminders((prev) => prev.filter((reminder) => reminder.petId !== pet.id));
-            setHealthRecords((prev) => prev.filter((record) => record.petId !== pet.id));
-            setPetScores((prev) => {
-              const next = { ...prev };
-              delete next[pet.id];
-              return next;
-            });
+            onDeletePet(pet.id);
             navigation.goBack();
           },
         },
@@ -3415,372 +2783,125 @@ function PetProfileScreen({ navigation, route }) {
 
 // ─────────────────────────────────────────────
 function HealthHubScreen({ navigation }) {
-    const { pets } = useContext(PetsContext);
-    const { openAddPetModal } = useContext(AddPetContext);
-    const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
-    const { careReminders, setCareReminders } = useContext(CareRemindersContext);
+  const { pets } = useContext(PetsContext);
+  const { openAddPetModal } = useContext(AddPetContext);
+  const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
+  const { careReminders, setCareReminders } = useContext(CareRemindersContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [pendingRecordType, setPendingRecordType] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
-  const [showRecordDetailModal, setShowRecordDetailModal] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState(null);
-    const [addReminderToCalendar, setAddReminderToCalendar] = useState(false);
-    const [reminderDate, setReminderDate] = useState('');
-    const [reminderTime, setReminderTime] = useState('');
-    const [savedVets, setSavedVets] = useState([]);
-    const [showVetModal, setShowVetModal] = useState(false);
-    const [isVetFinderExpanded, setIsVetFinderExpanded] = useState(false);
-    const [editingVetId, setEditingVetId] = useState(null);
-    const [vetDraft, setVetDraft] = useState({
-      name: '',
-      type: 'Vet Clinic',
-      distance: '',
-      phone: '',
-      address: '',
-      status: 'Open',
-      websiteUrl: '',
-    });
-    const [recordForm, setRecordForm] = useState({
+  const [addReminderToCalendar, setAddReminderToCalendar] = useState(false);
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderTime, setReminderTime] = useState('');
+  const [recordForm, setRecordForm] = useState({
     vaccineName: '',
-    dateGiven: '',
     providerClinic: '',
     nextDueDate: '',
     medicationName: '',
     dosage: '',
-    frequency: '',
-    startDate: '',
-    endDate: '',
-    prescribingVet: '',
-    medicationNotes: '',
     nextDoseDate: '',
-    visitReason: '',
+    appointmentReason: '',
     vetClinic: '',
     appointmentDate: '',
-    diagnosisFindings: '',
-    followUpDate: '',
-    appointmentNotes: '',
     weightValue: '',
-    weightDate: '',
     weightNotes: '',
     symptomName: '',
     severity: '',
-    symptomDate: '',
-    symptomFollowUpDate: '',
     symptomNotes: '',
-    procedureName: '',
-    surgeryDate: '',
-    surgeryFollowUpDate: '',
-    recoveryNotes: '',
-    allergyName: '',
-    reaction: '',
-    allergyNotes: '',
-    diagnosisName: '',
-    diagnosedDate: '',
-    diagnosisVet: '',
-    treatmentPlan: '',
-    diagnosisNotes: '',
-    testName: '',
-    testDate: '',
-    resultSummary: '',
-    labVet: '',
-    labNotes: '',
-    readingType: '',
-    readingValue: '',
-    readingDate: '',
-    readingNotes: '',
   });
-    const [showExportPreview, setShowExportPreview] = useState(false);
-    const [exportFileUri, setExportFileUri] = useState('');
-    const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight', 'procedures', 'conditions', 'labs', 'aquatic'];
-    const tabLabels = {
-      all: 'All',
-      vaccines: 'Vaccines',
-    meds: 'Meds',
-    appointments: 'Visits',
-    weight: 'Weight',
-    procedures: 'Procedures',
-    conditions: 'Conditions',
-    labs: 'Labs',
-      aquatic: 'Aquatic',
-    };
-    const openMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=vet+near+me');
-    const openEmergencyMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=emergency+vet+near+me');
-    const openVetCall = (phone) => Linking.openURL(`tel:${phone}`);
-    const openVetMaps = (clinic) => {
-      const query = encodeURIComponent(`${clinic.name} ${clinic.address}`);
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-    };
-    const openVetWebsite = (websiteUrl) => {
-      const normalized = String(websiteUrl || '').trim();
-      if (!normalized) return;
-
-      const url = /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
-      Linking.openURL(url);
-    };
-    const openVetAddModal = (defaults = {}) => {
-      setEditingVetId(defaults.id || null);
-      setVetDraft({
-        name: defaults.name || '',
-        type: defaults.type || 'Vet Clinic',
-        distance: defaults.distance || '',
-        phone: defaults.phone || '',
-        address: defaults.address || '',
-        status: defaults.status || 'Open',
-        websiteUrl: defaults.websiteUrl || '',
-      });
-      setShowVetModal(true);
-    };
-    const closeVetModal = () => {
-      setShowVetModal(false);
-      setEditingVetId(null);
-      setVetDraft({
-        name: '',
-        type: 'Vet Clinic',
-        distance: '',
-        phone: '',
-        address: '',
-        status: 'Open',
-        websiteUrl: '',
-      });
-    };
-    const toggleVetFinder = () => {
-      setIsVetFinderExpanded((prev) => !prev);
-    };
-    const saveVetCard = () => {
-      const name = vetDraft.name.trim();
-      const type = vetDraft.type.trim();
-      const distance = vetDraft.distance.trim();
-      const phone = vetDraft.phone.trim();
-      const address = vetDraft.address.trim();
-      const status = vetDraft.status.trim();
-      const websiteUrl = vetDraft.websiteUrl.trim();
-
-      if (!name || !type || !distance || !phone || !address || !status) {
-        Alert.alert('Missing details', 'Please complete all vet fields before saving.');
-        return;
-      }
-
-      const payload = {
-        id: editingVetId || `saved-vet-${Date.now()}`,
-        name,
-        type,
-        distance,
-        phone,
-        address,
-        status,
-        websiteUrl,
-      };
-
-      setSavedVets((prev) => {
-        if (editingVetId) {
-          return prev.map((vet) => (vet.id === editingVetId ? payload : vet));
-        }
-
-        return [payload, ...prev];
-      });
-      closeVetModal();
-    };
-    const editVetCard = (clinic) => openVetAddModal(clinic);
-    const deleteVetCard = (vetId) => {
-      Alert.alert('Delete Vet?', 'This saved vet card will be removed.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => setSavedVets((prev) => prev.filter((vet) => vet.id !== vetId)),
-        },
-      ]);
-    };
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight'];
+  const tabLabels = {
+    all: '📋 All',
+    vaccines: '💉 Vaccines',
+    meds: '💊 Meds',
+    appointments: '🏥 Visits',
+    weight: '⚖️ Weight',
+  };
 
   const typeMap = {
     vaccination: 'vaccines',
     medication: 'meds',
     appointment: 'appointments',
     weight: 'weight',
-    symptom: 'conditions',
-    surgery: 'procedures',
-    allergy: 'conditions',
-    diagnosis: 'conditions',
-    lab: 'labs',
-    fish: 'aquatic',
   };
 
   const createEmptyRecordForm = () => ({
     vaccineName: '',
-    dateGiven: '',
     providerClinic: '',
     nextDueDate: '',
     medicationName: '',
     dosage: '',
-    frequency: '',
-    startDate: '',
-    endDate: '',
-    prescribingVet: '',
-    medicationNotes: '',
     nextDoseDate: '',
-    visitReason: '',
+    appointmentReason: '',
     vetClinic: '',
     appointmentDate: '',
-    diagnosisFindings: '',
-    followUpDate: '',
-    appointmentNotes: '',
     weightValue: '',
-    weightDate: '',
     weightNotes: '',
     symptomName: '',
     severity: '',
-    symptomDate: '',
-    symptomFollowUpDate: '',
     symptomNotes: '',
-    procedureName: '',
-    surgeryDate: '',
-    surgeryFollowUpDate: '',
-    recoveryNotes: '',
-    allergyName: '',
-    reaction: '',
-    allergyNotes: '',
-    diagnosisName: '',
-    diagnosedDate: '',
-    diagnosisVet: '',
-    treatmentPlan: '',
-    diagnosisNotes: '',
-    testName: '',
-    testDate: '',
-    resultSummary: '',
-    labVet: '',
-    labNotes: '',
-    readingType: '',
-    readingValue: '',
-    readingDate: '',
-    readingNotes: '',
   });
 
   const recordFieldConfig = {
     vaccination: [
       { key: 'vaccineName', label: 'Vaccine name', placeholder: 'Vaccine name', required: true },
-      { key: 'dateGiven', label: 'Date given', placeholder: 'Date given' },
       { key: 'providerClinic', label: 'Provider / clinic', placeholder: 'Provider / clinic' },
       { key: 'nextDueDate', label: 'Next due date', placeholder: 'Next due date' },
-      { key: 'vaccineNotes', label: 'Notes', placeholder: 'Notes' },
     ],
     medication: [
       { key: 'medicationName', label: 'Medication name', placeholder: 'Medication name', required: true },
       { key: 'dosage', label: 'Dosage', placeholder: 'Dosage' },
-      { key: 'frequency', label: 'Frequency', placeholder: 'Frequency' },
-      { key: 'startDate', label: 'Start date', placeholder: 'Start date' },
-      { key: 'endDate', label: 'End date', placeholder: 'End date' },
-      { key: 'prescribingVet', label: 'Prescribing vet', placeholder: 'Prescribing vet' },
-      { key: 'medicationNotes', label: 'Notes', placeholder: 'Notes' },
+      { key: 'nextDoseDate', label: 'Next dose / due date', placeholder: 'Next dose / due date' },
     ],
     appointment: [
-      { key: 'visitReason', label: 'Visit reason', placeholder: 'Visit reason', required: true },
+      { key: 'appointmentReason', label: 'Reason', placeholder: 'Reason', required: true },
       { key: 'vetClinic', label: 'Vet / clinic', placeholder: 'Vet / clinic' },
       { key: 'appointmentDate', label: 'Appointment date', placeholder: 'Appointment date' },
-      { key: 'diagnosisFindings', label: 'Diagnosis / findings', placeholder: 'Diagnosis / findings' },
-      { key: 'followUpDate', label: 'Follow-up date', placeholder: 'Follow-up date' },
-      { key: 'appointmentNotes', label: 'Notes', placeholder: 'Notes' },
     ],
     weight: [
       { key: 'weightValue', label: 'Weight', placeholder: 'Weight', required: true },
-      { key: 'weightDate', label: 'Date recorded', placeholder: 'Date recorded' },
       { key: 'weightNotes', label: 'Notes', placeholder: 'Notes' },
     ],
     symptom: [
       { key: 'symptomName', label: 'Symptom', placeholder: 'Symptom', required: true },
       { key: 'severity', label: 'Severity', placeholder: 'Severity' },
-      { key: 'symptomDate', label: 'Date noticed', placeholder: 'Date noticed' },
-      { key: 'symptomFollowUpDate', label: 'Follow-up date', placeholder: 'Follow-up date' },
       { key: 'symptomNotes', label: 'Notes', placeholder: 'Notes' },
-    ],
-    surgery: [
-      { key: 'procedureName', label: 'Procedure name', placeholder: 'Procedure name', required: true },
-      { key: 'surgeryDate', label: 'Date', placeholder: 'Date' },
-      { key: 'vetClinic', label: 'Clinic / vet', placeholder: 'Clinic / vet' },
-      { key: 'recoveryNotes', label: 'Recovery notes', placeholder: 'Recovery notes' },
-      { key: 'surgeryFollowUpDate', label: 'Follow-up date', placeholder: 'Follow-up date' },
-    ],
-    allergy: [
-      { key: 'allergyName', label: 'Allergy name', placeholder: 'Allergy name', required: true },
-      { key: 'reaction', label: 'Reaction', placeholder: 'Reaction' },
-      { key: 'severity', label: 'Severity', placeholder: 'Severity' },
-      { key: 'allergyNotes', label: 'Notes', placeholder: 'Notes' },
-    ],
-    diagnosis: [
-      { key: 'diagnosisName', label: 'Diagnosis name', placeholder: 'Diagnosis name', required: true },
-      { key: 'diagnosedDate', label: 'Diagnosed date', placeholder: 'Diagnosed date' },
-      { key: 'diagnosisVet', label: 'Vet / clinic', placeholder: 'Vet / clinic' },
-      { key: 'treatmentPlan', label: 'Treatment plan', placeholder: 'Treatment plan' },
-      { key: 'diagnosisNotes', label: 'Notes', placeholder: 'Notes' },
-    ],
-    lab: [
-      { key: 'testName', label: 'Test name', placeholder: 'Test name', required: true },
-      { key: 'testDate', label: 'Test date', placeholder: 'Test date' },
-      { key: 'resultSummary', label: 'Result summary', placeholder: 'Result summary' },
-      { key: 'labVet', label: 'Vet / clinic', placeholder: 'Vet / clinic' },
-      { key: 'labNotes', label: 'Notes', placeholder: 'Notes' },
-    ],
-    fish: [
-      { key: 'readingType', label: 'Reading type', placeholder: 'Reading type', required: true },
-      { key: 'readingValue', label: 'Value', placeholder: 'Value', required: true },
-      { key: 'readingDate', label: 'Date', placeholder: 'Date' },
-      { key: 'readingNotes', label: 'Notes', placeholder: 'Notes' },
     ],
   };
 
   const recordMainFieldKey = {
     vaccination: 'vaccineName',
     medication: 'medicationName',
-    appointment: 'visitReason',
+    appointment: 'appointmentReason',
     weight: 'weightValue',
     symptom: 'symptomName',
-    surgery: 'procedureName',
-    allergy: 'allergyName',
-    diagnosis: 'diagnosisName',
-    lab: 'testName',
-    fish: 'readingType',
   };
 
   const recordTypeLabelMap = {
     vaccination: 'Vaccination',
     medication: 'Medication',
-    appointment: 'Appointment / Vet Visit',
+    appointment: 'Appointment',
     weight: 'Weight',
     symptom: 'Symptom',
-    surgery: 'Surgery / Procedure',
-    allergy: 'Allergy',
-    diagnosis: 'Diagnosis',
-    lab: 'Lab Result',
-    fish: 'Fish / Tank Reading',
   };
 
   const reminderEligibleTypes = new Set(['vaccination', 'medication', 'appointment', 'weight', 'symptom']);
 
   const getReminderDefaultDate = (type, form) => {
     if (type === 'vaccination') return String(form?.nextDueDate || '').trim();
-    if (type === 'medication') return String(form?.endDate || form?.nextDoseDate || '').trim();
+    if (type === 'medication') return String(form?.nextDoseDate || '').trim();
     if (type === 'appointment') return String(form?.appointmentDate || '').trim();
     if (type === 'weight') return '';
     if (type === 'symptom') return '';
     return '';
   };
 
-  const firstText = (...values) => values.map((value) => String(value || '').trim()).find(Boolean) || '';
-
   const getLinkedReminderForRecord = (recordId) => (
     careReminders.find((reminder) => reminder.source === 'healthRecord' && reminder.sourceRecordId === recordId) || null
   );
-
-  const openRecordDetail = (record) => {
-    setSelectedRecord(record);
-    setShowRecordDetailModal(true);
-  };
-
-  const closeRecordDetail = () => {
-    setShowRecordDetailModal(false);
-    setSelectedRecord(null);
-  };
 
   const getRecordDetailFromTitle = (record) => {
     const parts = String(record.title || '').split(': ');
@@ -3839,109 +2960,22 @@ function HealthHubScreen({ navigation }) {
     overdue: { label: 'OVERDUE', color: C.red },
     upcoming: { label: 'UPCOMING', color: C.blue },
   };
-  const getLocalDateOnly = (value) => {
-    if (!value) return null;
-    if (value instanceof Date && !Number.isNaN(value.getTime())) {
-      return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-    }
-
-    const text = String(value).trim();
-    if (!text) return null;
-
-    const parsedStored = parseStoredDateKey(text);
-    if (parsedStored) {
-      return new Date(parsedStored.getFullYear(), parsedStored.getMonth(), parsedStored.getDate());
-    }
-
-    const parsedLoose = new Date(text);
-    if (!Number.isNaN(parsedLoose.getTime())) {
-      return new Date(parsedLoose.getFullYear(), parsedLoose.getMonth(), parsedLoose.getDate());
-    }
-
-    return null;
-  };
-
-  const calculateHealthRecordStatus = (record) => {
-    const today = new Date();
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const nextDueDate = getLocalDateOnly(
-      record?.nextDue
-      || record?.details?.nextDueDate
-      || record?.details?.followUpDate
-      || record?.details?.symptomFollowUpDate
-      || record?.details?.surgeryFollowUpDate
-    );
-    const appointmentDate = record?.type === 'appointment'
-      ? getLocalDateOnly(record?.details?.appointmentDate || record?.date)
-      : null;
-
-    if (record?.type === 'appointment' && appointmentDate && appointmentDate > todayDate) {
-      return 'upcoming';
-    }
-
-    if (nextDueDate) {
-      const diffDays = Math.ceil((nextDueDate - todayDate) / (1000 * 60 * 60 * 24));
-      if (diffDays < 0) return 'overdue';
-      if (diffDays <= 30) return 'due_soon';
-      return 'current';
-    }
-
-    return record?.status || 'current';
-  };
-
-  const recordsWithDisplayStatus = records.map((record) => ({
-    ...record,
-    displayStatus: calculateHealthRecordStatus(record),
-  }));
   const getRecordFormFromRecord = (record) => {
     const base = {
       vaccineName: '',
-      dateGiven: '',
       providerClinic: '',
       nextDueDate: '',
       medicationName: '',
       dosage: '',
-      frequency: '',
-      startDate: '',
-      endDate: '',
-      prescribingVet: '',
-      medicationNotes: '',
       nextDoseDate: '',
-      visitReason: '',
+      appointmentReason: '',
       vetClinic: '',
       appointmentDate: '',
-      diagnosisFindings: '',
-      followUpDate: '',
-      appointmentNotes: '',
       weightValue: '',
-      weightDate: '',
       weightNotes: '',
       symptomName: '',
       severity: '',
-      symptomDate: '',
-      symptomFollowUpDate: '',
       symptomNotes: '',
-      procedureName: '',
-      surgeryDate: '',
-      surgeryFollowUpDate: '',
-      recoveryNotes: '',
-      allergyName: '',
-      reaction: '',
-      allergyNotes: '',
-      diagnosisName: '',
-      diagnosedDate: '',
-      diagnosisVet: '',
-      treatmentPlan: '',
-      diagnosisNotes: '',
-      testName: '',
-      testDate: '',
-      resultSummary: '',
-      labVet: '',
-      labNotes: '',
-      readingType: '',
-      readingValue: '',
-      readingDate: '',
-      readingNotes: '',
     };
 
     const parsedTitle = getRecordDetailFromTitle(record);
@@ -3952,84 +2986,17 @@ function HealthHubScreen({ navigation }) {
         record?.vaccineName ||
         record?.medicationName ||
         record?.appointmentReason ||
-        record?.visitReason ||
         record?.symptomText ||
-        record?.procedureName ||
-        record?.allergyName ||
-        record?.diagnosisName ||
-        record?.testName ||
-        record?.readingType ||
         (record?.type === 'weight' && record?.value != null ? `${record.value}${record.unit ? ` ${record.unit}` : ''}` : '') ||
         parsedTitle;
 
       merged[mainKey] = mainValue;
     }
 
-    if (record?.type === 'vaccination') {
-      merged.vaccineName = firstText(record?.vaccineName, merged.vaccineName, parsedTitle);
-      merged.dateGiven = firstText(record?.dateGiven, record?.date, merged.dateGiven);
-      merged.providerClinic = firstText(record?.provider, merged.providerClinic);
-      merged.nextDueDate = firstText(record?.nextDue, merged.nextDueDate, record?.nextDueDate);
-      merged.vaccineNotes = firstText(record?.notes, merged.vaccineNotes, record?.details?.vaccineNotes);
-    } else if (record?.type === 'medication') {
-      merged.medicationName = firstText(record?.medicationName, merged.medicationName, parsedTitle);
-      merged.dosage = firstText(record?.dosage, merged.dosage);
-      merged.frequency = firstText(record?.frequency, merged.frequency);
-      merged.startDate = firstText(record?.startDate, record?.date, merged.startDate);
-      merged.endDate = firstText(record?.endDate, record?.nextDue, record?.details?.nextDoseDate, merged.endDate);
-      merged.nextDoseDate = merged.endDate;
-      merged.prescribingVet = firstText(record?.provider, merged.prescribingVet);
-      merged.medicationNotes = firstText(record?.notes, merged.medicationNotes, record?.details?.medicationNotes);
-    } else if (record?.type === 'appointment') {
-      merged.visitReason = firstText(record?.appointmentReason, record?.visitReason, merged.visitReason, parsedTitle);
-      merged.appointmentDate = firstText(record?.appointmentDate, record?.date, merged.appointmentDate);
-      merged.vetClinic = firstText(record?.provider, merged.vetClinic, record?.details?.clinicVet);
-      merged.diagnosisFindings = firstText(record?.diagnosisFindings, merged.diagnosisFindings);
-      merged.followUpDate = firstText(record?.nextDue, merged.followUpDate);
-      merged.appointmentNotes = firstText(record?.notes, merged.appointmentNotes, record?.details?.appointmentNotes);
-    } else if (record?.type === 'weight') {
-      merged.weightValue = firstText(
-        record?.weightValue,
-        record?.value != null ? `${record.value}${record.unit ? ` ${record.unit}` : ''}` : '',
-        merged.weightValue,
-        parsedTitle
-      );
-      merged.weightDate = firstText(record?.weightDate, record?.date, merged.weightDate);
-      merged.weightNotes = firstText(record?.notes, merged.weightNotes, record?.details?.weightNotes);
-    } else if (record?.type === 'symptom') {
-      merged.symptomName = firstText(record?.symptomText, record?.symptomName, merged.symptomName, parsedTitle);
-      merged.severity = firstText(record?.severity, merged.severity);
-      merged.symptomDate = firstText(record?.symptomDate, record?.date, merged.symptomDate);
-      merged.symptomFollowUpDate = firstText(record?.nextDue, merged.symptomFollowUpDate);
-      merged.symptomNotes = firstText(record?.notes, merged.symptomNotes, record?.details?.symptomNotes);
-    } else if (record?.type === 'surgery') {
-      merged.procedureName = firstText(record?.procedureName, merged.procedureName, parsedTitle);
-      merged.surgeryDate = firstText(record?.surgeryDate, record?.date, merged.surgeryDate);
-      merged.vetClinic = firstText(record?.provider, merged.vetClinic);
-      merged.surgeryFollowUpDate = firstText(record?.nextDue, merged.surgeryFollowUpDate);
-      merged.recoveryNotes = firstText(record?.notes, merged.recoveryNotes, record?.details?.recoveryNotes);
-    } else if (record?.type === 'allergy') {
-      merged.allergyName = firstText(record?.allergyName, merged.allergyName, parsedTitle);
-      merged.reaction = firstText(record?.reaction, merged.reaction);
-      merged.severity = firstText(record?.severity, merged.severity);
-      merged.allergyNotes = firstText(record?.notes, merged.allergyNotes, record?.details?.allergyNotes);
-    } else if (record?.type === 'diagnosis') {
-      merged.diagnosisName = firstText(record?.diagnosisName, merged.diagnosisName, parsedTitle);
-      merged.diagnosedDate = firstText(record?.diagnosedDate, record?.date, merged.diagnosedDate);
-      merged.diagnosisVet = firstText(record?.provider, merged.diagnosisVet);
-      merged.treatmentPlan = firstText(record?.treatmentPlan, merged.treatmentPlan);
-      merged.diagnosisNotes = firstText(record?.notes, merged.diagnosisNotes, record?.details?.diagnosisNotes);
-    } else if (record?.type === 'lab') {
-      merged.testName = firstText(record?.testName, merged.testName, parsedTitle);
-      merged.testDate = firstText(record?.testDate, record?.date, merged.testDate);
-      merged.resultSummary = firstText(record?.resultSummary, merged.resultSummary);
-      merged.labVet = firstText(record?.provider, merged.labVet);
-      merged.labNotes = firstText(record?.notes, merged.labNotes, record?.details?.labNotes);
-    } else if (record?.type === 'fish') {
-      merged.readingType = firstText(record?.readingType, merged.readingType, parsedTitle);
-      merged.readingValue = firstText(record?.readingValue, merged.readingValue);
-      merged.readingDate = firstText(record?.readingDate, record?.date, merged.readingDate);
-      merged.readingNotes = firstText(record?.notes, merged.readingNotes, record?.details?.readingNotes);
+    if (record?.nextDue) {
+      if (record.type === 'vaccination') merged.nextDueDate = record.nextDue;
+      if (record.type === 'medication') merged.nextDoseDate = record.nextDue;
+      if (record.type === 'appointment') merged.appointmentDate = record.nextDue;
     }
 
     return merged;
@@ -4053,218 +3020,97 @@ function HealthHubScreen({ navigation }) {
     );
     const mainKey = recordMainFieldKey[type];
     const mainValue = clean[mainKey] || '';
-    const todayKey = toLocalDateKey(new Date());
 
     const typeConfig = {
       vaccination: {
         title: `Vaccination: ${mainValue}`,
         icon: '💉',
         status: 'current',
-        date: clean.dateGiven || todayKey,
         nextDue: clean.nextDueDate || '',
-        provider: clean.providerClinic || '',
+        vaccineName: mainValue,
         details: {
-          vaccineName: mainValue,
-          dateGiven: clean.dateGiven || todayKey,
           providerClinic: clean.providerClinic || '',
-          nextDueDate: clean.nextDueDate || '',
-          vaccineNotes: clean.vaccineNotes || '',
         },
+        detailLines: [
+          clean.providerClinic ? `Provider / clinic: ${clean.providerClinic}` : null,
+        ].filter(Boolean),
       },
       medication: {
         title: `Medication: ${mainValue}`,
         icon: '💊',
         status: 'current',
-        date: clean.startDate || todayKey,
-        nextDue: clean.endDate || clean.nextDoseDate || '',
-        provider: clean.prescribingVet || '',
+        nextDue: clean.nextDoseDate || '',
+        medicationName: mainValue,
         details: {
-          medicationName: mainValue,
           dosage: clean.dosage || '',
-          frequency: clean.frequency || '',
-          startDate: clean.startDate || todayKey,
-          endDate: clean.endDate || clean.nextDoseDate || '',
-          nextDoseDate: clean.endDate || clean.nextDoseDate || '',
-          prescribingVet: clean.prescribingVet || '',
-          medicationNotes: clean.medicationNotes || '',
         },
+        detailLines: [
+          clean.dosage ? `Dosage: ${clean.dosage}` : null,
+        ].filter(Boolean),
       },
       appointment: {
         title: `Appointment: ${mainValue}`,
         icon: '🏥',
         status: 'upcoming',
-        date: clean.appointmentDate || todayKey,
-        nextDue: clean.followUpDate || '',
-        provider: clean.vetClinic || '',
+        nextDue: clean.appointmentDate || '',
+        appointmentReason: mainValue,
         details: {
-          visitReason: mainValue,
-          appointmentDate: clean.appointmentDate || todayKey,
-          clinicVet: clean.vetClinic || '',
-          diagnosisFindings: clean.diagnosisFindings || '',
-          followUpDate: clean.followUpDate || '',
-          appointmentNotes: clean.appointmentNotes || '',
+          vetClinic: clean.vetClinic || '',
         },
+        detailLines: [
+          clean.vetClinic ? `Vet / clinic: ${clean.vetClinic}` : null,
+        ].filter(Boolean),
       },
       weight: {
         title: `Weight: ${mainValue}`,
         icon: '⚖️',
         status: 'current',
-        date: clean.weightDate || todayKey,
+        value: (() => {
+          const match = String(mainValue).match(/[\d.]+/);
+          return match ? Number(match[0]) : null;
+        })(),
+        unit: 'lbs',
         details: {
-          weightValue: mainValue,
-          weightDate: clean.weightDate || todayKey,
           weightNotes: clean.weightNotes || '',
         },
+        detailLines: [clean.weightNotes ? `Notes: ${clean.weightNotes}` : null].filter(Boolean),
       },
       symptom: {
         title: `Symptom: ${mainValue}`,
         icon: '🤒',
         status: 'due_soon',
-        date: clean.symptomDate || todayKey,
-        nextDue: clean.symptomFollowUpDate || '',
+        symptomText: mainValue,
         details: {
-          symptomName: mainValue,
           severity: clean.severity || '',
-          symptomDate: clean.symptomDate || todayKey,
-          symptomFollowUpDate: clean.symptomFollowUpDate || '',
           symptomNotes: clean.symptomNotes || '',
         },
-      },
-      surgery: {
-        title: `Surgery: ${mainValue}`,
-        icon: '🩺',
-        status: 'current',
-        date: clean.surgeryDate || todayKey,
-        nextDue: clean.surgeryFollowUpDate || '',
-        provider: clean.vetClinic || '',
-        details: {
-          procedureName: mainValue,
-          surgeryDate: clean.surgeryDate || todayKey,
-          clinicVet: clean.vetClinic || '',
-          recoveryNotes: clean.recoveryNotes || '',
-          surgeryFollowUpDate: clean.surgeryFollowUpDate || '',
-        },
-      },
-      allergy: {
-        title: `Allergy: ${mainValue}`,
-        icon: '⚠️',
-        status: 'current',
-        date: todayKey,
-        details: {
-          allergyName: mainValue,
-          reaction: clean.reaction || '',
-          severity: clean.severity || '',
-          allergyNotes: clean.allergyNotes || '',
-        },
-      },
-      diagnosis: {
-        title: `Diagnosis: ${mainValue}`,
-        icon: '📋',
-        status: 'current',
-        date: clean.diagnosedDate || todayKey,
-        provider: clean.diagnosisVet || '',
-        details: {
-          diagnosisName: mainValue,
-          diagnosedDate: clean.diagnosedDate || todayKey,
-          diagnosisVet: clean.diagnosisVet || '',
-          treatmentPlan: clean.treatmentPlan || '',
-          diagnosisNotes: clean.diagnosisNotes || '',
-        },
-      },
-      lab: {
-        title: `Lab Result: ${mainValue}`,
-        icon: '🧪',
-        status: 'current',
-        date: clean.testDate || todayKey,
-        provider: clean.labVet || '',
-        details: {
-          testName: mainValue,
-          testDate: clean.testDate || todayKey,
-          resultSummary: clean.resultSummary || '',
-          labVet: clean.labVet || '',
-          labNotes: clean.labNotes || '',
-        },
-      },
-      fish: {
-        title: `Tank Reading: ${mainValue}`,
-        icon: '🐟',
-        status: 'current',
-        date: clean.readingDate || todayKey,
-        details: {
-          readingType: mainValue,
-          readingValue: clean.readingValue || '',
-          readingDate: clean.readingDate || todayKey,
-          readingNotes: clean.readingNotes || '',
-        },
+        detailLines: [
+          clean.severity ? `Severity: ${clean.severity}` : null,
+          clean.symptomNotes ? `Notes: ${clean.symptomNotes}` : null,
+        ].filter(Boolean),
       },
     };
 
-    const selected = typeConfig[type];
-    return {
-      ...selected,
-      mainValue,
-      details: selected?.details || {},
-    };
+    return { ...typeConfig[type], mainValue, details: typeConfig[type].details };
   };
 
   const createHealthRecord = (type, form) => {
     const meta = buildRecordMeta(type, form);
     if (!meta || !meta.mainValue) return;
     const { detailLines, mainValue, ...recordMeta } = meta;
-    const notes = getHealthRecordNotes(type, meta.details);
 
     const newRecord = {
       id: Date.now().toString(),
       petId: selectedPetId,
       type,
-      date: recordMeta.date || toLocalDateKey(new Date()),
+      date: new Date().toLocaleDateString(),
+      provider: null,
       ...recordMeta,
       details: meta.details,
-      notes,
     };
 
     setHealthRecords((prev) => [newRecord, ...prev]);
     return newRecord;
-  };
-
-  const upsertHealthRecordReminder = (record, reminderEnabled, reminderDateValue, reminderTimeValue, existingReminder = null) => {
-    const linkedReminder = existingReminder || getLinkedReminderForRecord(record.id);
-
-    if (!reminderEnabled) {
-      if (linkedReminder) {
-        setCareReminders((prev) => prev.filter((reminder) => reminder.id !== linkedReminder.id));
-        deleteCareReminderFromSupabase(linkedReminder.id);
-      }
-      return;
-    }
-
-    const cleanedDate = String(reminderDateValue || '').trim();
-    const cleanedTime = String(reminderTimeValue || '').trim();
-    if (!cleanedDate) return;
-
-    const reminderPayload = {
-      id: linkedReminder?.id || Date.now().toString(),
-      petId: selectedPetId,
-      title: `${record.title} due`,
-      icon: record.icon,
-      date: cleanedDate,
-      time: cleanedTime,
-      completed: false,
-      source: 'healthRecord',
-      sourceRecordId: record.id,
-    };
-
-    setCareReminders((prev) => (
-      linkedReminder
-        ? prev.map((reminder) => (reminder.id === linkedReminder.id ? reminderPayload : reminder))
-        : [reminderPayload, ...prev]
-    ));
-
-    if (linkedReminder) {
-      updateCareReminderInSupabase(reminderPayload);
-    } else {
-      saveCareReminderToSupabase(reminderPayload);
-    }
   };
 
   const openRecordTypePrompt = (type) => {
@@ -4299,25 +3145,27 @@ function HealthHubScreen({ navigation }) {
 
     if (editingRecord) {
       const { detailLines, mainValue, ...recordMeta } = meta;
-      const updatedRecord = {
-        ...editingRecord,
-        type: pendingRecordType,
-        ...recordMeta,
-        details: meta.details,
-        notes: getHealthRecordNotes(pendingRecordType, meta.details, editingRecord?.notes || ''),
-      };
       setHealthRecords(prev => prev.map(record => (
         record.id === editingRecord.id
-          ? updatedRecord
+          ? {
+              ...record,
+              type: pendingRecordType,
+              ...recordMeta,
+              details: meta.details,
+            }
           : record
       )));
       upsertHealthRecordReminder(
-        updatedRecord,
+        {
+          ...editingRecord,
+          type: pendingRecordType,
+          ...recordMeta,
+          details: meta.details,
+        },
         reminderEnabled,
         effectiveReminderDate,
         reminderTime
       );
-      updateHealthRecordInSupabase(updatedRecord);
     } else {
       const newRecord = createHealthRecord(pendingRecordType, recordForm);
       if (newRecord) {
@@ -4327,7 +3175,6 @@ function HealthHubScreen({ navigation }) {
           effectiveReminderDate,
           reminderTime
         );
-        saveHealthRecordToSupabase(newRecord);
       }
     }
 
@@ -4335,9 +3182,6 @@ function HealthHubScreen({ navigation }) {
     setPendingRecordType(null);
     setRecordForm(createEmptyRecordForm());
     setEditingRecord(null);
-    setAddReminderToCalendar(false);
-    setReminderDate('');
-    setReminderTime('');
   };
 
   const closeRecordModal = () => {
@@ -4345,15 +3189,11 @@ function HealthHubScreen({ navigation }) {
     setPendingRecordType(null);
     setRecordForm(createEmptyRecordForm());
     setEditingRecord(null);
-    setAddReminderToCalendar(false);
-    setReminderDate('');
-    setReminderTime('');
   };
 
   const deleteRecord = (recordId) => {
     setHealthRecords(prev => prev.filter(record => record.id !== recordId));
     setCareReminders(prev => prev.filter((reminder) => reminder.sourceRecordId !== recordId));
-    deleteHealthRecordFromSupabase(recordId);
   };
 
   const handleRecordPress = (record) => {
@@ -4398,7 +3238,7 @@ function HealthHubScreen({ navigation }) {
   };
 
   const groupedTimeline = Object.values(
-    recordsWithDisplayStatus.reduce((acc, record) => {
+    records.reduce((acc, record) => {
       const recordDate = getRecordDate(record);
       const groupLabel = getTimelineLabel(recordDate);
       const groupKey = groupLabel;
@@ -4422,202 +3262,123 @@ function HealthHubScreen({ navigation }) {
     }))
     .sort((a, b) => b.date - a.date);
 
-  const buildRecordDetailLines = (record, compact = false) => {
+  const getRecordDisplayLines = (record) => {
     const details = record.details || {};
-    const lines = [];
-    const add = (label, value) => {
-      const text = String(value || '').trim();
-      if (text) lines.push(`${label}: ${text}`);
-    };
-
-    switch (record.type) {
-      case 'vaccination':
-        add('Vaccine name', details.vaccineName || record.vaccineName);
-        add('Date given', details.dateGiven || record.date);
-        add('Provider / clinic', details.providerClinic || record.provider);
-        add('Next due date', details.nextDueDate || record.nextDue);
-        add('Notes', details.vaccineNotes);
-        break;
-      case 'medication':
-        add('Medication name', details.medicationName || record.medicationName);
-        add('Dosage', details.dosage);
-        add('Frequency', details.frequency);
-        add('Start date', details.startDate || record.date);
-        add('End date', details.endDate || record.nextDue);
-        add('Prescribing vet', details.prescribingVet || record.provider);
-        add('Notes', details.medicationNotes);
-        break;
-      case 'appointment':
-        add('Visit reason', details.visitReason || record.visitReason || record.appointmentReason);
-        add('Appointment date', details.appointmentDate || record.date);
-        add('Clinic / vet', details.clinicVet || record.provider);
-        add('Diagnosis / findings', details.diagnosisFindings);
-        add('Follow-up date', details.followUpDate || record.nextDue);
-        add('Notes', details.appointmentNotes);
-        break;
-      case 'weight':
-        add('Weight', details.weightValue || (record.value != null ? `${record.value}${record.unit ? ` ${record.unit}` : ''}` : record.weightValue));
-        add('Date recorded', details.weightDate || record.date);
-        add('Notes', details.weightNotes);
-        break;
-      case 'symptom':
-        add('Symptom', details.symptomName || record.symptomText);
-        add('Severity', details.severity);
-        add('Date noticed', details.symptomDate || record.date);
-        add('Follow-up date', details.symptomFollowUpDate || record.nextDue);
-        add('Notes', details.symptomNotes);
-        break;
-      case 'surgery':
-        add('Procedure name', details.procedureName || record.procedureName);
-        add('Date', details.surgeryDate || record.date);
-        add('Clinic / vet', details.clinicVet || record.provider);
-        add('Recovery notes', details.recoveryNotes);
-        add('Follow-up date', details.surgeryFollowUpDate || record.nextDue);
-        break;
-      case 'allergy':
-        add('Allergy name', details.allergyName || record.allergyName);
-        add('Reaction', details.reaction);
-        add('Severity', details.severity);
-        add('Notes', details.allergyNotes);
-        break;
-      case 'diagnosis':
-        add('Diagnosis name', details.diagnosisName || record.diagnosisName);
-        add('Diagnosed date', details.diagnosedDate || record.date);
-        add('Vet / clinic', details.diagnosisVet || record.provider);
-        add('Treatment plan', details.treatmentPlan);
-        add('Notes', details.diagnosisNotes);
-        break;
-      case 'lab':
-        add('Test name', details.testName || record.testName);
-        add('Test date', details.testDate || record.date);
-        add('Result summary', details.resultSummary);
-        add('Vet / clinic', details.labVet || record.provider);
-        add('Notes', details.labNotes);
-        break;
-      case 'fish':
-        add('Reading type', details.readingType || record.readingType);
-        add('Value', details.readingValue || record.readingValue);
-        add('Date', details.readingDate || record.date);
-        add('Notes', details.readingNotes);
-        break;
-      case 'imported_file':
-        add('File name', record.fileName || record.title);
-        add('File type', record.mimeType || details.mimeType || 'Unknown');
-        add('Size', formatImportedFileSize(record.size));
-        add('Uploaded date', record.date);
-        add('Note', 'AI extraction coming soon');
-        break;
-      default:
-        break;
-    }
-
-    return compact ? lines.slice(0, 3) : lines;
-  };
-
-  const getRecordDisplayLines = (record) => buildRecordDetailLines(record, true);
-
-  const getRecordStatusBadge = (record) => {
-    const today = new Date();
-    const recordDate = parseStoredDateKey(record.date) || today;
-    const nextDueDateValue = parseStoredDateKey(
-      record.nextDue ||
-      record.details?.nextDueDate ||
-      record.details?.followUpDate ||
-      record.details?.symptomFollowUpDate ||
-      record.details?.surgeryFollowUpDate
-    );
-    const ageDays = Math.max(0, Math.floor((today - recordDate) / (1000 * 60 * 60 * 24)));
-    const nextDueDays = nextDueDateValue ? Math.floor((nextDueDateValue - today) / (1000 * 60 * 60 * 24)) : null;
-    const calculatedStatus = calculateHealthRecordStatus(record);
-
-    if (calculatedStatus && statusInfo[calculatedStatus]) {
-      return statusInfo[calculatedStatus];
-    }
-
-    if (record?.type === 'appointment' && nextDueDays != null && nextDueDays > 0) {
-      return { label: 'Upcoming', color: C.blue };
-    }
-    if (ageDays > 365) {
-      return { label: 'Archived', color: C.faint };
-    }
-    if (ageDays > 30) {
-      return { label: 'Completed', color: C.green };
-    }
-    return { label: 'Active', color: C.accent };
-  };
-
-  const getRecordHeaderLines = (record) => {
-    const details = record.details || {};
-    const dateLabel = formatDate(record.date);
 
     if (record.type === 'vaccination') {
-      return ['Vaccination', details.vaccineName || record.title, `Given ${formatDate(details.dateGiven || record.date)}`, details.nextDueDate ? `Next Due ${formatDate(details.nextDueDate)}` : null].filter(Boolean);
+      return [
+        details.providerClinic ? `Provider / clinic: ${details.providerClinic}` : null,
+      ].filter(Boolean);
     }
+
     if (record.type === 'medication') {
-      return ['Medication', details.medicationName || record.title, `Started ${formatDate(details.startDate || record.date)}`, details.endDate ? `Ends ${formatDate(details.endDate)}` : null].filter(Boolean);
+      return [
+        details.dosage ? `Dosage: ${details.dosage}` : null,
+      ].filter(Boolean);
     }
+
     if (record.type === 'appointment') {
-      return ['Appointment', details.visitReason || record.title, dateLabel, details.followUpDate ? `Follow-up ${formatDate(details.followUpDate)}` : null].filter(Boolean);
+      return [
+        details.vetClinic ? `Vet / clinic: ${details.vetClinic}` : null,
+      ].filter(Boolean);
     }
+
     if (record.type === 'weight') {
-      return ['Weight', details.weightValue || record.title, `Recorded ${formatDate(details.weightDate || record.date)}`].filter(Boolean);
+      return [
+        record.value != null ? `Value: ${record.value}${record.unit ? ` ${record.unit}` : ''}` : null,
+        details.weightNotes ? `Notes: ${details.weightNotes}` : null,
+      ].filter(Boolean);
     }
+
     if (record.type === 'symptom') {
-      return ['Symptom', details.symptomName || record.title, `Noted ${formatDate(details.symptomDate || record.date)}`, details.symptomFollowUpDate ? `Follow-up ${formatDate(details.symptomFollowUpDate)}` : null].filter(Boolean);
+      return [
+        details.severity ? `Severity: ${details.severity}` : null,
+        details.symptomNotes ? `Notes: ${details.symptomNotes}` : null,
+      ].filter(Boolean);
     }
-    if (record.type === 'surgery') {
-      return ['Surgery / Procedure', details.procedureName || record.title, dateLabel, details.surgeryFollowUpDate ? `Follow-up ${formatDate(details.surgeryFollowUpDate)}` : null].filter(Boolean);
-    }
-    if (record.type === 'allergy') {
-      return ['Allergy', details.allergyName || record.title, details.severity ? `Severity ${details.severity}` : null].filter(Boolean);
-    }
-    if (record.type === 'diagnosis') {
-      return ['Diagnosis', details.diagnosisName || record.title, `Diagnosed ${formatDate(details.diagnosedDate || record.date)}`].filter(Boolean);
-    }
-    if (record.type === 'lab') {
-      return ['Lab Result', details.testName || record.title, `Tested ${formatDate(details.testDate || record.date)}`].filter(Boolean);
-    }
-    if (record.type === 'fish') {
-      return ['Fish / Tank Reading', details.readingType || record.title, `Recorded ${formatDate(details.readingDate || record.date)}`].filter(Boolean);
-    }
-    if (record.type === 'imported_file') {
-      return ['Imported File', record.fileName || record.title, `Uploaded ${formatDate(record.date)}`].filter(Boolean);
-    }
-    return [record.title, dateLabel].filter(Boolean);
+
+    return [];
   };
 
-  const getRecordFullDetails = (record) => {
-    const lines = [record.title, `Date: ${formatDate(record.date)}`];
-    const linkedReminder = getLinkedReminderForRecord(record.id);
+  const getRecordAlertSummary = (record) => {
+    const lines = [record.title];
+
+    if (record.date) lines.push(`Date: ${formatDate(record.date)}`);
     if (record.provider) lines.push(`Provider: ${record.provider}`);
     if (record.nextDue) lines.push(`Next due: ${formatDate(record.nextDue)}`);
-    if (linkedReminder?.date) lines.push(`Reminder scheduled for ${formatDate(linkedReminder.date)}${linkedReminder.time ? ` at ${linkedReminder.time}` : ''}`);
-    const details = buildRecordDetailLines(record, false);
-    if (details.length > 0) lines.push('', ...details);
+
+    const details = getRecordDisplayLines(record);
+    if (details.length > 0) {
+      lines.push('', ...details);
+    }
+
     return lines.join('\n');
   };
 
+  const getRecordFullDetails = (record) => {
+    const details = record.details || {};
+    const parts = [record.title, `Date: ${formatDate(record.date)}`];
+
+    if (record.provider) parts.push(`Provider: ${record.provider}`);
+    if (record.nextDue) parts.push(`Next due: ${formatDate(record.nextDue)}`);
+
+    if (record.type === 'vaccination') {
+      if (details.providerClinic) parts.push(`Provider / clinic: ${details.providerClinic}`);
+    }
+
+    if (record.type === 'medication') {
+      if (details.dosage) parts.push(`Dosage: ${details.dosage}`);
+    }
+
+    if (record.type === 'appointment') {
+      if (details.vetClinic) parts.push(`Vet / clinic: ${details.vetClinic}`);
+    }
+
+    if (record.type === 'weight') {
+      if (record.value != null) parts.push(`Value: ${record.value}${record.unit ? ` ${record.unit}` : ''}`);
+      if (details.weightNotes) parts.push(`Notes: ${details.weightNotes}`);
+    }
+
+    if (record.type === 'symptom') {
+      if (details.severity) parts.push(`Severity: ${details.severity}`);
+      if (details.symptomNotes) parts.push(`Notes: ${details.symptomNotes}`);
+    }
+
+    return parts.filter(Boolean).join('\n');
+  };
+
   const showRecordActions = (record) => {
-    openRecordDetail(record);
+    Alert.alert(
+      record.title,
+      getRecordAlertSummary(record),
+      [
+        { text: 'View', onPress: () => Alert.alert(record.title, getRecordFullDetails(record)) },
+        {
+          text: 'Edit',
+          onPress: () => openRecordEditor(record),
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Delete Record?', 'This health record will be removed.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => deleteRecord(record.id) },
+            ]);
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
-  const formatImportedFileSize = (size) => {
-    if (typeof size !== 'number' || Number.isNaN(size) || size < 0) {
-      return 'Unknown';
-    }
-
-    if (size >= 1024 * 1024) {
-      return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-    }
-
-    return `${(size / 1024).toFixed(1)} KB`;
-  };
-
+  const currentScore = pets.find((p) => p.id === selectedPetId)?.score ?? 0;
+  const streakDays = Math.max(1, records.length ? new Set(records.map((record) => record.date)).size : 1);
   const latestRecords = [...records]
     .sort((a, b) => getRecordDate(b) - getRecordDate(a))
     .slice(0, 5);
 
-  const overdueRecords = recordsWithDisplayStatus.filter((record) => record.displayStatus === 'overdue');
+  const overdueRecords = records.filter((record) => record.status === 'overdue');
   const medicationRecords = records.filter((record) => record.type === 'medication');
   const weightRecords = records.filter((record) => record.type === 'weight');
   const recordCount = records.length;
@@ -4652,489 +3413,32 @@ function HealthHubScreen({ navigation }) {
   }
 
   const visibleInsights = insightLines.slice(0, 3);
-  const selectedRecordReminder = selectedRecord ? getLinkedReminderForRecord(selectedRecord.id) : null;
-  const selectedRecordStatus = selectedRecord ? getRecordStatusBadge(selectedRecord) : null;
-  const selectedRecordHeaderLines = selectedRecord ? getRecordHeaderLines(selectedRecord) : [];
-  const selectedRecordDetailLines = selectedRecord ? buildRecordDetailLines(selectedRecord, false) : [];
-
-  const formatSummaryDate = (value) => {
-    const text = String(value || '').trim();
-    return text ? formatDate(text) : 'No records.';
-  };
-
-  const formatSummaryValue = (value, fallback = 'No records.') => {
-    if (Array.isArray(value)) {
-      const text = value.map((item) => String(item || '').trim()).filter(Boolean).join(', ');
-      return text || fallback;
-    }
-
-    const text = String(value || '').trim();
-    return text || fallback;
-  };
-
-  const pushSummarySection = (lines, title, items, formatter) => {
-    lines.push(title);
-
-    if (!items.length) {
-      lines.push('No records.');
-      lines.push('');
-      return;
-    }
-
-    items.forEach((item) => {
-      const block = formatter(item) || {};
-      lines.push(`- ${block.title || 'Record'}`);
-
-      (block.details || []).forEach((detail) => {
-        if (detail) {
-          lines.push(`  ${detail}`);
-        }
-      });
-    });
-
-    lines.push('');
-  };
 
   const buildHealthSummary = () => {
-    const profileAge = pet.birthday
-      ? calculateAgeLabelFromBirthday(pet.birthday) || formatDate(pet.birthday)
-      : pet.age || 'Unknown';
-    const careGoalsText = Array.isArray(pet.careGoals)
-      ? (pet.careGoals.length ? pet.careGoals.join(', ') : 'Not set')
-      : (pet.careGoals || 'Not set');
-    const healthScoreText = pet.score != null ? `${pet.score}/100` : 'Not available';
-    const currentCount = recordsWithDisplayStatus.filter((record) => record.displayStatus === 'current').length;
-    const dueSoonCount = recordsWithDisplayStatus.filter((record) => record.displayStatus === 'due_soon').length;
-    const overdueCount = recordsWithDisplayStatus.filter((record) => record.displayStatus === 'overdue').length;
-    const upcomingCount = recordsWithDisplayStatus.filter((record) => record.displayStatus === 'upcoming').length;
-    const vaccinationRecords = records.filter((record) => record.type === 'vaccination');
-    const medicationRecords = records.filter((record) => record.type === 'medication');
-    const appointmentRecords = records.filter((record) => record.type === 'appointment');
-    const weightHistoryRecords = records.filter((record) => record.type === 'weight');
-    const symptomRecords = records.filter((record) => record.type === 'symptom');
-    const surgeryRecords = records.filter((record) => record.type === 'surgery');
-    const allergyRecords = records.filter((record) => record.type === 'allergy');
-    const diagnosisRecords = records.filter((record) => record.type === 'diagnosis');
-    const labRecords = records.filter((record) => record.type === 'lab');
-    const fishRecords = records.filter((record) => record.type === 'fish');
-    const upcomingDueRecords = records.filter((record) => {
-      const dueDate = record.nextDue
-        || record.details?.nextDueDate
-        || record.details?.followUpDate
-        || record.details?.symptomFollowUpDate
-        || record.details?.surgeryFollowUpDate;
-      return Boolean(String(dueDate || '').trim());
-    });
-
-    const formatNotes = (...values) => {
-      const text = values.map((value) => String(value || '').trim()).find(Boolean);
-      return text || 'No records.';
-    };
-
     const lines = [
       `Health Summary for ${pet.name}`,
+      `Species/Breed: ${pet.species || 'Unknown'} · ${pet.breed || 'Unknown'}`,
+      `Current Health Score: ${currentScore}/100`,
+      `Total Health Records: ${records.length}`,
+      `Current Streak: ${streakDays} day${streakDays === 1 ? '' : 's'}`,
       '',
-      'PET PROFILE',
-      `Name: ${pet.name || 'Unknown'}`,
-      `Species: ${pet.species || 'Unknown'}`,
-      `Breed/Type: ${pet.breed || 'Unknown'}`,
-      `Age/Birthday: ${profileAge}${pet.birthday ? ` (Birthday: ${formatDate(pet.birthday)})` : ''}`,
-      `Weight: ${pet.weight || 'Unknown'}`,
-      `Gender: ${pet.gender || 'Unknown'}`,
-      `Care Goals: ${careGoalsText}`,
-      `Health Score: ${healthScoreText}`,
-      '',
-      'HEALTH OVERVIEW',
-      `Total Records: ${records.length}`,
-      `Current: ${currentCount}`,
-      `Due Soon: ${dueSoonCount}`,
-      `Overdue: ${overdueCount}`,
-      `Upcoming: ${upcomingCount}`,
-      '',
+      'Latest Records:',
+      ...latestRecords.map((record) => `- ${record.title} (${formatDate(record.date)})`),
     ];
-
-    pushSummarySection(lines, 'VACCINATIONS', vaccinationRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.vaccineName || 'Vaccination',
-        details: [
-          `Date given: ${formatSummaryDate(details.dateGiven || record.date)}`,
-          `Provider/clinic: ${formatSummaryValue(details.providerClinic || record.provider)}`,
-          `Next due date: ${formatSummaryDate(details.nextDueDate || record.nextDue)}`,
-          `Notes/details: ${formatNotes(details.vaccinationNotes, record.notes, details.vaccineNotes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'MEDICATIONS', medicationRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.medicationName || 'Medication',
-        details: [
-          `Dosage: ${formatSummaryValue(details.dosage || record.dosage)}`,
-          `Frequency: ${formatSummaryValue(details.frequency || record.frequency)}`,
-          `Start date: ${formatSummaryDate(details.startDate || record.date)}`,
-          `End date: ${formatSummaryDate(details.endDate || details.nextDoseDate || record.nextDue)}`,
-          `Prescribing vet: ${formatSummaryValue(details.prescribingVet || record.provider)}`,
-          `Next dose/due date: ${formatSummaryDate(details.nextDoseDate || record.nextDue)}`,
-          `Notes/details: ${formatNotes(details.medicationNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'VET VISITS / APPOINTMENTS', appointmentRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.visitReason || 'Appointment',
-        details: [
-          `Visit reason: ${formatSummaryValue(details.visitReason || record.title)}`,
-          `Appointment date: ${formatSummaryDate(details.appointmentDate || record.date)}`,
-          `Clinic/vet: ${formatSummaryValue(details.clinicVet || details.vetClinic || record.provider)}`,
-          `Diagnosis/findings: ${formatSummaryValue(details.diagnosisFindings || record.notes)}`,
-          `Follow-up date: ${formatSummaryDate(details.followUpDate || record.nextDue)}`,
-          `Notes/details: ${formatNotes(details.appointmentNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'WEIGHT HISTORY', weightHistoryRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.weightValue || 'Weight entry',
-        details: [
-          `Weight value: ${formatSummaryValue(details.weightValue || record.weightValue || record.title)}`,
-          `Date recorded: ${formatSummaryDate(details.weightDate || record.date)}`,
-          `Notes: ${formatNotes(details.weightNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'SYMPTOMS', symptomRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.symptomName || 'Symptom',
-        details: [
-          `Symptom: ${formatSummaryValue(details.symptomName || record.symptomText || record.title)}`,
-          `Severity: ${formatSummaryValue(details.severity || record.severity)}`,
-          `Date noticed: ${formatSummaryDate(details.symptomDate || record.date)}`,
-          `Follow-up date: ${formatSummaryDate(details.symptomFollowUpDate || record.nextDue)}`,
-          `Notes: ${formatNotes(details.symptomNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'SURGERIES / PROCEDURES', surgeryRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.procedureName || 'Procedure',
-        details: [
-          `Procedure name: ${formatSummaryValue(details.procedureName || record.title)}`,
-          `Date: ${formatSummaryDate(details.surgeryDate || record.date)}`,
-          `Clinic/vet: ${formatSummaryValue(details.clinicVet || record.provider)}`,
-          `Recovery notes: ${formatSummaryValue(details.recoveryNotes || record.notes)}`,
-          `Follow-up date: ${formatSummaryDate(details.surgeryFollowUpDate || record.nextDue)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'ALLERGIES', allergyRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.allergyName || 'Allergy',
-        details: [
-          `Allergy name: ${formatSummaryValue(details.allergyName || record.title)}`,
-          `Reaction: ${formatSummaryValue(details.reaction || record.reaction)}`,
-          `Severity: ${formatSummaryValue(details.severity || record.severity)}`,
-          `Notes: ${formatNotes(details.allergyNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'DIAGNOSES', diagnosisRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.diagnosisName || 'Diagnosis',
-        details: [
-          `Diagnosis name: ${formatSummaryValue(details.diagnosisName || record.title)}`,
-          `Diagnosed date: ${formatSummaryDate(details.diagnosedDate || record.date)}`,
-          `Vet/clinic: ${formatSummaryValue(details.diagnosisVet || record.provider)}`,
-          `Treatment plan: ${formatSummaryValue(details.treatmentPlan || record.notes)}`,
-          `Notes: ${formatNotes(details.diagnosisNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'LAB RESULTS', labRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.testName || 'Lab result',
-        details: [
-          `Test name: ${formatSummaryValue(details.testName || record.title)}`,
-          `Test date: ${formatSummaryDate(details.testDate || record.date)}`,
-          `Result summary: ${formatSummaryValue(details.resultSummary || record.notes)}`,
-          `Vet/clinic: ${formatSummaryValue(details.labVet || record.provider)}`,
-          `Notes: ${formatNotes(details.labNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'FISH / TANK READINGS', fishRecords, (record) => {
-      const details = record.details || {};
-      return {
-        title: record.title || details.readingType || 'Tank reading',
-        details: [
-          `Reading type: ${formatSummaryValue(details.readingType || record.title)}`,
-          `Value: ${formatSummaryValue(details.readingValue || record.readingValue)}`,
-          `Date: ${formatSummaryDate(details.readingDate || record.date)}`,
-          `Notes: ${formatNotes(details.readingNotes, record.notes)}`,
-        ],
-      };
-    });
-
-    pushSummarySection(lines, 'UPCOMING DUE DATES', upcomingDueRecords, (record) => {
-      const details = record.details || {};
-      const dueDate = record.nextDue
-        || details.nextDueDate
-        || details.followUpDate
-        || details.symptomFollowUpDate
-        || details.surgeryFollowUpDate;
-      return {
-        title: record.title || 'Upcoming item',
-        details: [
-          `Due date: ${formatSummaryDate(dueDate)}`,
-          `Record type: ${record.type || 'Unknown'}`,
-        ],
-      };
-    });
-
-    lines.push('Latest Records');
-    if (latestRecords.length === 0) {
-      lines.push('No records.');
-    } else {
-      latestRecords.forEach((record) => {
-        lines.push(`- ${record.title} (${formatDate(record.date)})`);
-      });
-    }
 
     return lines.join('\n');
   };
 
-  const exportSummary = buildHealthSummary();
-
-  const escapeHtml = (value) => String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-  const buildHealthSummaryHtml = () => {
-    const summaryText = exportSummary;
-    return `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      body {
-        font-family: Arial, Helvetica, sans-serif;
-        padding: 24px;
-        color: #111827;
-        background: #ffffff;
-      }
-      h1 {
-        font-size: 26px;
-        margin: 0 0 8px;
-      }
-      .meta {
-        color: #4b5563;
-        font-size: 12px;
-        margin-bottom: 18px;
-      }
-      pre {
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        font-size: 12px;
-        line-height: 1.55;
-        margin: 0;
-      }
-      .card {
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        padding: 18px;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>PetSync+ Health Summary</h1>
-    <div class="meta">Export date: ${escapeHtml(formatDate(new Date()))}</div>
-    <div class="card">
-      <pre>${escapeHtml(summaryText)}</pre>
-    </div>
-  </body>
-</html>`;
-  };
-
-  const exportHealthPdf = async () => {
-    try {
-      console.log('PDF generation started');
-      const html = buildHealthSummaryHtml();
-      const { uri } = await Print.printToFileAsync({ html });
-      console.log('PDF generated successfully');
-      console.log('PDF file uri', uri);
-      setExportFileUri(uri);
-      Alert.alert('PDF created successfully', uri);
-
-      if (await Sharing.isAvailableAsync()) {
-        console.log('Sharing PDF');
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          UTI: 'com.adobe.pdf',
-          dialogTitle: 'Share Pet Health PDF',
-        });
-        return;
-      }
-
-      throw new Error('Sharing is not available on this device.');
-    } catch (error) {
-      console.log('PDF generation failed', error);
-      console.log('PDF sharing failed', error);
-      console.log('Using text fallback');
-      try {
-        await Share.share({ message: exportSummary });
-      } catch (shareError) {
-        console.log('Text share fallback failed:', shareError);
-        Alert.alert('Share failed', 'Unable to share the summary right now.');
-      }
-    }
-  };
-
-  const openExportPreview = async () => {
+  const openExportPreview = () => {
     setShowExportPreview(true);
-    await exportHealthPdf();
   };
 
   const shareSummary = async () => {
+    const summary = buildHealthSummary();
     try {
-      if (exportFileUri) {
-        if (await Sharing.isAvailableAsync()) {
-          console.log('Sharing PDF');
-          await Sharing.shareAsync(exportFileUri, {
-            mimeType: 'application/pdf',
-            UTI: 'com.adobe.pdf',
-            dialogTitle: 'Share Pet Health PDF',
-          });
-          return;
-        }
-      }
-
-      await exportHealthPdf();
+      await Share.share({ message: summary });
     } catch (error) {
-      console.log('PDF sharing failed', error);
-      console.log('Using text fallback');
-      try {
-        await Share.share({ message: exportSummary });
-      } catch (shareError) {
-        console.log('Text share fallback failed:', shareError);
-        Alert.alert('Share failed', 'Unable to share the summary right now.');
-      }
-    }
-  };
-
-  const uploadImportedFileToStorage = async (file) => {
-    const safeFileName = String(file?.name || 'health-record-file').replace(/[\\/:*?"<>|]/g, '_');
-    const storagePath = `health-records/${selectedPetId}/${Date.now()}-${safeFileName}`;
-    const fileResponse = await fetch(file.uri);
-    const fileBlob = await fileResponse.blob();
-
-    const { error: uploadError } = await supabase.storage
-      .from('health-record-files')
-      .upload(storagePath, fileBlob, {
-        contentType: file.mimeType || 'application/octet-stream',
-        upsert: false,
-      });
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data } = supabase.storage.from('health-record-files').getPublicUrl(storagePath);
-    return {
-      fileUrl: data?.publicUrl || file.uri,
-      filePath: storagePath,
-    };
-  };
-
-  const handleImportRecord = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'application/pdf',
-          'image/*',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'application/vnd.ms-excel',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (result.canceled) {
-        return;
-      }
-
-      const file = result.assets?.[0];
-      if (!file?.uri || !file?.name) {
-        Alert.alert('Import failed', 'Unable to read the selected file.');
-        return;
-      }
-
-      let fileUrl = file.uri;
-      let filePath = '';
-      let uploadWarning = '';
-
-      try {
-        const uploadResult = await uploadImportedFileToStorage(file);
-        fileUrl = uploadResult.fileUrl || file.uri;
-        filePath = uploadResult.filePath || '';
-      } catch (uploadError) {
-        uploadWarning = 'File upload failed. Saved locally only.';
-        console.log('Imported file upload error:', uploadError);
-      }
-
-      const importedRecord = {
-        id: Date.now().toString(),
-        petId: selectedPetId,
-        type: 'imported_file',
-        title: file.name,
-        date: toLocalDateKey(new Date()),
-        icon: '',
-        status: 'current',
-        fileUri: fileUrl,
-        fileUrl,
-        filePath,
-        fileName: file.name,
-        mimeType: file.mimeType || '',
-        size: file.size ?? null,
-        details: {
-          source: 'uploaded file',
-          fileUrl,
-          filePath,
-          fileName: file.name,
-          mimeType: file.mimeType || '',
-          size: file.size ?? null,
-        },
-      };
-
-      setHealthRecords((prev) => [importedRecord, ...prev]);
-      saveHealthRecordToSupabase(importedRecord);
-      if (uploadWarning) {
-        Alert.alert('Import saved', uploadWarning);
-      }
-    } catch (error) {
-      console.log('Import record failed:', error);
-      Alert.alert('Import failed', 'Unable to import the selected file right now.');
+      Alert.alert('Share failed', 'Unable to share the summary right now.');
     }
   };
   return (
@@ -5142,21 +3446,16 @@ function HealthHubScreen({ navigation }) {
       <View style={[s.pageHeader, { paddingTop: 2, marginTop: 0, marginBottom: 0 }]}>
         <Text style={s.pageTitle}>Health Hub</Text>
 
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={s.exportBtn} onPress={handleImportRecord}>
-            <Text style={s.exportBtnText}>Import Record</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.exportBtn} onPress={openExportPreview}>
-            <Text style={s.exportBtnText}>Export PDF</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={s.exportBtn} onPress={openExportPreview}>
+          <Text style={s.exportBtnText}>Export PDF</Text>
+        </TouchableOpacity>
       </View>
 
-        <View style={{ marginTop: 0 }}>
-          <View style={{ marginTop: -10, marginBottom: -8 }}>
-            <PetAvatarRow
-              pets={pets}
-              selectedId={selectedPetId}
+      <View style={{ marginTop: 0 }}>
+        <View style={{ marginTop: -10, marginBottom: -8 }}>
+          <PetAvatarRow
+            pets={pets}
+            selectedId={selectedPetId}
             onSelect={setSelectedPetId}
             onOpenProfile={(petId) => navigation.navigate('PetProfile', { petId })}
           />
@@ -5189,25 +3488,15 @@ function HealthHubScreen({ navigation }) {
               <Text style={{ color: C.accent, marginRight: 8, fontSize: 14 }}>•</Text>
               <Text style={{ color: C.text, fontSize: 13, lineHeight: 18, flex: 1 }}>{line}</Text>
             </View>
-            ))}
+          ))}
+        </Card>
+      </View>
 
-          <TouchableOpacity style={s.localVetFinderToggle} onPress={toggleVetFinder} activeOpacity={0.9}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.localVetFinderToggleTitle}>Local Vets & Emergency Care</Text>
-              <Text style={s.localVetFinderToggleSub}>
-                {isVetFinderExpanded ? 'Tap to close the vet finder sheet' : 'Tap to open nearby vet tools and saved clinics'}
-              </Text>
-            </View>
-            <Text style={s.localVetFinderChevron}>{isVetFinderExpanded ? '▴' : '▾'}</Text>
-          </TouchableOpacity>
-          </Card>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: 180,
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 180,
         }}
       >
         {/* Summary Card */}
@@ -5223,17 +3512,17 @@ function HealthHubScreen({ navigation }) {
         >
           {[
             {
-              num: recordsWithDisplayStatus.filter((r) => r.displayStatus === 'current').length,
+              num: records.filter((r) => r.status === 'current').length,
               label: 'Current',
               color: C.green,
             },
             {
-              num: recordsWithDisplayStatus.filter((r) => r.displayStatus === 'due_soon').length,
+              num: records.filter((r) => r.status === 'due_soon').length,
               label: 'Due Soon',
               color: C.yellow,
             },
             {
-              num: recordsWithDisplayStatus.filter((r) => r.displayStatus === 'overdue').length,
+              num: records.filter((r) => r.status === 'overdue').length,
               label: 'Overdue',
               color: C.red,
             },
@@ -5347,11 +3636,11 @@ function HealthHubScreen({ navigation }) {
               Tap + to get started
             </Text>
           </Card>
-          ) : (
-            groupedTimeline.map((group) => (
-              <View key={group.key} style={{ marginBottom: 18, paddingHorizontal: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingHorizontal: 4 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.accent, marginRight: 8 }} />
+        ) : (
+          groupedTimeline.map((group) => (
+            <View key={group.key} style={{ marginBottom: 18, paddingHorizontal: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingHorizontal: 4 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.accent, marginRight: 8 }} />
                 <Text style={{ color: C.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2 }}>
                   {group.label}
                 </Text>
@@ -5362,7 +3651,7 @@ function HealthHubScreen({ navigation }) {
                   <View style={s.timelineRail}>
                     <View style={s.timelineLine} />
                     <View style={s.timelineNode}>
-                      <Text style={s.timelineIcon}>{record.icon || getHealthRecordIcon(record.type)}</Text>
+                      <Text style={s.timelineIcon}>{record.icon}</Text>
                     </View>
                   </View>
 
@@ -5391,10 +3680,10 @@ function HealthHubScreen({ navigation }) {
                         )}
                       </View>
 
-                      {record.displayStatus && statusInfo[record.displayStatus] && (
-                        <View style={[s.timelineBadge, { borderColor: statusInfo[record.displayStatus].color, backgroundColor: `${statusInfo[record.displayStatus].color}15` }]}>
-                          <Text style={[s.timelineBadgeText, { color: statusInfo[record.displayStatus].color }]}>
-                            {statusInfo[record.displayStatus].label}
+                      {record.status && statusInfo[record.status] && (
+                        <View style={[s.timelineBadge, { borderColor: statusInfo[record.status].color, backgroundColor: `${statusInfo[record.status].color}15` }]}>
+                          <Text style={[s.timelineBadgeText, { color: statusInfo[record.status].color }]}>
+                            {statusInfo[record.status].label}
                           </Text>
                         </View>
                       )}
@@ -5402,11 +3691,10 @@ function HealthHubScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
               ))}
-              </View>
-            ))
-          )}
-
-        </ScrollView>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
       {/* FAB */}
       <TouchableOpacity
@@ -5533,165 +3821,40 @@ function HealthHubScreen({ navigation }) {
         </View>
       </Modal>
 
-      <Modal visible={showRecordDetailModal} transparent animationType="fade" onRequestClose={closeRecordDetail}>
-        <View style={s.modalOverlay}>
-          <View style={[s.customActionModal, { padding: 0, overflow: 'hidden', maxHeight: '88%' }]}>
-            <View style={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
-                <View style={{
-                  width: 58,
-                  height: 58,
-                  borderRadius: 18,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255,107,53,0.14)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,107,53,0.22)',
-                  marginRight: 12,
-                }}>
-                  <Text style={{ fontSize: 28 }}>{selectedRecord?.icon || '📄'}</Text>
-                </View>
-
-                <View style={{ flex: 1, paddingTop: 2 }}>
-                  <Text style={{ color: C.text, fontSize: 20, fontWeight: '900', lineHeight: 24 }}>
-                    {selectedRecord?.title || 'Record details'}
-                  </Text>
-                  <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 4 }}>
-                    {pet.name}
-                  </Text>
-                  <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 2 }}>
-                    {selectedRecord ? formatDate(selectedRecord.date) : ''}
-                  </Text>
-                </View>
-
-                {selectedRecordStatus ? (
-                  <View style={[
-                    s.recordDetailBadge,
-                    { borderColor: selectedRecordStatus.color, backgroundColor: `${selectedRecordStatus.color}15` }
-                  ]}>
-                    <Text style={[s.recordDetailBadgeText, { color: selectedRecordStatus.color }]}>
-                      {selectedRecordStatus.label}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {selectedRecord ? (
-                <View style={s.recordDetailHeaderBlock}>
-                  {selectedRecordHeaderLines.map((line, index) => (
-                    <Text
-                      key={`${line}-${index}`}
-                      style={[
-                        index === 0 ? s.recordDetailTypeLabel : index === 1 ? s.recordDetailMainTitle : s.recordDetailHeaderLine,
-                        index > 1 && { marginTop: 2 },
-                      ]}
-                    >
-                      {line}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-
-              {selectedRecord?.type === 'imported_file' && selectedRecord.fileUrl ? (
-                <TouchableOpacity
-                  style={[s.petProfileButton, { marginTop: 12 }]}
-                  onPress={() => Linking.openURL(selectedRecord.fileUrl)}
-                >
-                  <Text style={s.petProfileButtonText}>Open File</Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {selectedRecordReminder ? (
-                <View style={s.recordDetailReminderCard}>
-                  <Text style={s.recordDetailReminderLabel}>
-                    Reminder scheduled for {formatDate(selectedRecordReminder.date)}
-                    {selectedRecordReminder.time ? ` at ${selectedRecordReminder.time}` : ''}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-
-            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 18, paddingVertical: 16 }}>
-              {selectedRecord ? (
-                <>
-                  <Text style={s.recordDetailSectionTitle}>Chart Details</Text>
-                  <View style={s.recordDetailSection}>
-                    {selectedRecordDetailLines.length > 0 ? (
-                      selectedRecordDetailLines.map((line) => {
-                        const splitIndex = line.indexOf(': ');
-                        const label = splitIndex >= 0 ? line.slice(0, splitIndex) : line;
-                        const value = splitIndex >= 0 ? line.slice(splitIndex + 2) : '';
-                        const isNotes = /notes/i.test(label);
-
-                        return (
-                          <View
-                            key={`${label}-${value}`}
-                            style={[s.recordDetailRow, isNotes && s.recordDetailNotesRow]}
-                          >
-                            <Text style={s.recordDetailFieldLabel}>{label}</Text>
-                            <Text style={[s.recordDetailFieldValue, isNotes && s.recordDetailNotesValue]}>
-                              {value || '—'}
-                            </Text>
-                          </View>
-                        );
-                      })
-                    ) : (
-                      <Text style={s.recordDetailEmptyText}>No structured details available.</Text>
-                    )}
-                  </View>
-                </>
-              ) : null}
-            </ScrollView>
-
-            <View style={[s.customActionModalButtons, { paddingHorizontal: 18, paddingBottom: 18, marginTop: 0 }]}>
-              <TouchableOpacity
-                style={s.customActionCancelBtn}
-                onPress={() => {
-                  if (!selectedRecord) return;
-                  closeRecordDetail();
-                  openRecordEditor(selectedRecord);
-                }}
-              >
-                <Text style={s.customActionCancelText}>Edit</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[s.customActionCancelBtn, { borderColor: 'rgba(255, 92, 92, 0.25)', backgroundColor: 'rgba(255, 92, 92, 0.10)' }]}
-                onPress={() => {
-                  if (!selectedRecord) return;
-                  Alert.alert('Delete Record?', 'This health record will be removed.', [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: () => {
-                        deleteRecord(selectedRecord.id);
-                        closeRecordDetail();
-                      },
-                    },
-                  ]);
-                }}
-              >
-                <Text style={{ color: '#ff8080', fontWeight: '800' }}>Delete</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={s.customActionSaveBtn} onPress={closeRecordDetail}>
-                <Text style={s.customActionSaveText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       <Modal visible={showExportPreview} transparent animationType="fade" onRequestClose={() => setShowExportPreview(false)}>
         <View style={s.modalOverlay}>
           <View style={s.customActionModal}>
             <Text style={s.customActionModalTitle}>Export Preview</Text>
 
             <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-              <Text selectable style={{ color: C.text, fontSize: 13, lineHeight: 20 }}>
-                {exportSummary}
+              <Text style={{ color: C.text, fontWeight: '800', fontSize: 16, marginBottom: 10 }}>
+                {pet.name}
               </Text>
+              <Text style={{ color: C.muted, marginBottom: 6 }}>
+                Species/Breed: {pet.species || 'Unknown'} · {pet.breed || 'Unknown'}
+              </Text>
+              <Text style={{ color: C.muted, marginBottom: 6 }}>
+                Current Health Score: {currentScore}/100
+              </Text>
+              <Text style={{ color: C.muted, marginBottom: 6 }}>
+                Total Health Records: {records.length}
+              </Text>
+              <Text style={{ color: C.muted, marginBottom: 12 }}>
+                Current Streak: {streakDays} day{streakDays === 1 ? '' : 's'}
+              </Text>
+
+              <Text style={{ color: C.text, fontWeight: '700', marginBottom: 8 }}>
+                Latest 5 Records
+              </Text>
+              {latestRecords.length === 0 ? (
+                <Text style={{ color: C.muted }}>No records yet.</Text>
+              ) : (
+                latestRecords.map((record) => (
+                  <Text key={record.id} style={{ color: C.muted, marginBottom: 6 }}>
+                    • {record.title}
+                  </Text>
+                ))
+              )}
             </ScrollView>
 
             <View style={s.customActionModalButtons}>
@@ -5705,213 +3868,6 @@ function HealthHubScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-
-      <Modal visible={showVetModal} transparent animationType="fade" onRequestClose={closeVetModal}>
-        <KeyboardAvoidingView
-          style={s.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 28 : 0}
-        >
-          <View style={s.customActionModal}>
-            <Text style={s.customActionModalTitle}>{editingVetId ? 'Edit Vet Card' : 'Save Vet Card'}</Text>
-
-            <ScrollView
-              style={{ maxHeight: 360 }}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: 8 }}
-            >
-              <Text style={s.vetModalLabel}>Clinic name</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={vetDraft.name}
-                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, name: text }))}
-                placeholder="Clinic name"
-                placeholderTextColor={C.muted}
-              />
-
-              <Text style={s.vetModalLabel}>Type</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={vetDraft.type}
-                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, type: text }))}
-                placeholder="Vet Clinic / Emergency Vet / Mobile Vet"
-                placeholderTextColor={C.muted}
-              />
-
-              <Text style={s.vetModalLabel}>Distance</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={vetDraft.distance}
-                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, distance: text }))}
-                placeholder="2.4 mi"
-                placeholderTextColor={C.muted}
-              />
-
-              <Text style={s.vetModalLabel}>Phone</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={vetDraft.phone}
-                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, phone: text }))}
-                placeholder="732-555-0142"
-                placeholderTextColor={C.muted}
-                keyboardType="phone-pad"
-              />
-
-              <Text style={s.vetModalLabel}>Address</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={vetDraft.address}
-                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, address: text }))}
-                placeholder="Ocean County, NJ"
-                placeholderTextColor={C.muted}
-              />
-
-              <Text style={s.vetModalLabel}>Status</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={vetDraft.status}
-                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, status: text }))}
-                placeholder="Open / 24/7 Emergency / By appointment"
-                placeholderTextColor={C.muted}
-              />
-
-              <Text style={s.vetModalLabel}>Website link</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={vetDraft.websiteUrl}
-                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, websiteUrl: text }))}
-                placeholder="https://clinicwebsite.com"
-                placeholderTextColor={C.muted}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </ScrollView>
-
-            <View style={s.customActionModalButtons}>
-              <TouchableOpacity style={s.customActionCancelBtn} onPress={closeVetModal}>
-                <Text style={s.customActionCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.customActionSaveBtn} onPress={saveVetCard}>
-                <Text style={s.customActionSaveText}>{editingVetId ? 'Update Vet' : 'Save Vet'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      <Modal visible={isVetFinderExpanded} animationType="slide" onRequestClose={toggleVetFinder}>
-        <SafeAreaView style={s.localVetFinderModalScreen} edges={['top', 'bottom']}>
-          <View style={s.localVetFinderModalHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.localVetFinderModalTitle}>Local Vets & Emergency Care</Text>
-              <Text style={s.localVetFinderModalSubtitle}>
-                Search nearby clinics, then save the ones you want to keep on hand.
-              </Text>
-            </View>
-            <TouchableOpacity style={s.localVetFinderCloseBtn} onPress={toggleVetFinder} activeOpacity={0.85}>
-              <Text style={s.localVetFinderCloseBtnText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            style={s.localVetFinderModalScroll}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={s.localVetFinderModalScrollContent}
-          >
-            <View style={s.localVetWarning}>
-              <Text style={s.localVetWarningText}>
-                If your pet is having trouble breathing, bleeding heavily, collapsed, had a seizure, ate something toxic, or may have swallowed glass/sharp objects, contact an emergency vet immediately.
-              </Text>
-            </View>
-
-            <View style={s.localVetFinderButtonRow}>
-              <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1 }]} onPress={openMapsSearch} activeOpacity={0.9}>
-                <Text style={s.localVetFinderMainBtnText}>Find Vets Near Me</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1, backgroundColor: C.red, borderColor: C.red }]} onPress={openEmergencyMapsSearch} activeOpacity={0.9}>
-                <Text style={s.localVetFinderMainBtnText}>Find Emergency Vet Near Me</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity style={s.localVetFinderSaveBtn} onPress={() => openVetAddModal()} activeOpacity={0.9}>
-              <Text style={s.localVetFinderSaveBtnText}>＋ Add Vet Card</Text>
-            </TouchableOpacity>
-
-            <View style={s.localVetSavedSection}>
-              <Text style={s.localVetSavedSectionTitle}>Saved Vet Cards</Text>
-
-              {savedVets.length === 0 ? (
-                <View style={s.localVetEmptyState}>
-                  <Text style={s.localVetEmptyStateText}>
-                    Search for a clinic, open the website or map, then save the vet here so you can return to it later.
-                  </Text>
-                </View>
-              ) : (
-                savedVets.map((clinic) => (
-                  <View key={clinic.id} style={s.localVetCard}>
-                    <View style={s.localVetCardTopRow}>
-                      <View style={s.localVetAvatar}>
-                        <Text style={s.localVetAvatarText}>🏥</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.localVetName}>{clinic.name}</Text>
-                        <Text style={s.localVetType}>{clinic.type}</Text>
-                      </View>
-                      <View style={s.localVetStatusPill}>
-                        <Text style={s.localVetStatusText}>{clinic.status}</Text>
-                      </View>
-                    </View>
-
-                    <View style={s.localVetMetaGrid}>
-                      <View style={s.localVetMetaItem}>
-                        <Text style={s.localVetMetaLabel}>Distance</Text>
-                        <Text style={s.localVetMetaValue}>{clinic.distance}</Text>
-                      </View>
-                      <View style={s.localVetMetaItem}>
-                        <Text style={s.localVetMetaLabel}>Phone</Text>
-                        <Text style={s.localVetMetaValue}>{clinic.phone}</Text>
-                      </View>
-                      <View style={s.localVetMetaItem}>
-                        <Text style={s.localVetMetaLabel}>Address</Text>
-                        <Text style={s.localVetMetaValue}>{clinic.address}</Text>
-                      </View>
-                      <View style={s.localVetMetaItem}>
-                        <Text style={s.localVetMetaLabel}>Website</Text>
-                        <Text style={s.localVetMetaValue}>{clinic.websiteUrl ? 'Saved' : 'Not added'}</Text>
-                      </View>
-                    </View>
-
-                    <View style={s.localVetActionRow}>
-                      <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetCall(clinic.phone)} activeOpacity={0.85}>
-                        <Text style={s.localVetActionBtnText}>Call</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetMaps(clinic)} activeOpacity={0.85}>
-                        <Text style={s.localVetActionBtnText}>Open Maps</Text>
-                      </TouchableOpacity>
-                      {clinic.websiteUrl ? (
-                        <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetWebsite(clinic.websiteUrl)} activeOpacity={0.85}>
-                          <Text style={s.localVetActionBtnText}>Website</Text>
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-
-                    <View style={s.localVetEditDeleteRow}>
-                      <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnAccentSoft]} onPress={() => editVetCard(clinic)} activeOpacity={0.85}>
-                        <Text style={s.localVetActionBtnTextAccentSoft}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnDanger]} onPress={() => deleteVetCard(clinic.id)} activeOpacity={0.85}>
-                        <Text style={s.localVetActionBtnTextDanger}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))
-              )}
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -5923,18 +3879,12 @@ function MemoryVaultScreen({ navigation }) {
   const { openAddPetModal } = useContext(AddPetContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [activeTab, setActiveTab] = useState('all');
-  const [memories, setMemories] = useState([]);
-  const [showMemoryModal, setShowMemoryModal] = useState(false);
-  const [showMemoryDetailModal, setShowMemoryDetailModal] = useState(false);
-  const [selectedMemory, setSelectedMemory] = useState(null);
-  const [memoryDraft, setMemoryDraft] = useState({
-    caption: '',
-    memoryType: 'Photo',
-    date: '',
-    photoUri: '',
-  });
   const { width } = Dimensions.get('window');
   const cellSize = (width - 32 - 8) / 3;
+
+  const memories = MEMORIES.filter(m =>
+    m.petId === selectedPetId && (activeTab === 'all' || (activeTab === 'milestones' && m.milestone))
+  );
 
   const pet = pets.find(p => p.id === selectedPetId) || pets[0];
   useEffect(() => {
@@ -5942,111 +3892,6 @@ function MemoryVaultScreen({ navigation }) {
       setSelectedPetId(pets[0].id);
     }
   }, [pets, selectedPetId]);
-
-  const formatMemoryDateKey = (date) => {
-    const target = date instanceof Date ? date : new Date(date);
-    if (Number.isNaN(target.getTime())) return '';
-    const year = target.getFullYear();
-    const month = String(target.getMonth() + 1).padStart(2, '0');
-    const day = String(target.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const getMemoryDisplayEmoji = (memory) => {
-    if (memory?.photoUri) return '';
-    if (memory?.type === 'Milestone') return '🏆';
-    if (memory?.type === 'Video') return '🎥';
-    return '🖼️';
-  };
-
-  const openAddMemoryModal = () => {
-    setMemoryDraft({
-      caption: '',
-      memoryType: 'Photo',
-      date: formatMemoryDateKey(new Date()),
-      photoUri: '',
-    });
-    setShowMemoryModal(true);
-  };
-
-  const closeMemoryModal = () => {
-    setShowMemoryModal(false);
-    setMemoryDraft({
-      caption: '',
-      memoryType: 'Photo',
-      date: '',
-      photoUri: '',
-    });
-  };
-
-  const closeMemoryDetail = () => {
-    setShowMemoryDetailModal(false);
-    setSelectedMemory(null);
-  };
-
-  const pickMemoryMedia = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Please allow photo library access to add a memory.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
-      allowsEditing: false,
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setMemoryDraft((prev) => ({
-        ...prev,
-        photoUri: result.assets[0].uri,
-      }));
-    }
-  };
-
-  const saveMemory = () => {
-    const caption = memoryDraft.caption.trim();
-    const date = String(memoryDraft.date || '').trim() || formatMemoryDateKey(new Date());
-
-    if (!caption) {
-      Alert.alert('Caption required', 'Please add a caption for this memory.');
-      return;
-    }
-
-    const nextMemory = {
-      id: Date.now().toString(),
-      petId: selectedPetId,
-      photoUri: memoryDraft.photoUri || null,
-      caption,
-      milestone: memoryDraft.memoryType === 'Milestone',
-      type: memoryDraft.memoryType,
-      date,
-      emoji: memoryDraft.photoUri ? null : '',
-    };
-
-    setMemories((prev) => [nextMemory, ...prev]);
-    closeMemoryModal();
-  };
-
-  const openMemoryDetail = (memory) => {
-    setSelectedMemory(memory);
-    setShowMemoryDetailModal(true);
-  };
-
-  const deleteMemory = (memoryId) => {
-    Alert.alert('Delete Memory?', 'This memory will be removed from the vault.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          setMemories((prev) => prev.filter((memory) => memory.id !== memoryId));
-          closeMemoryDetail();
-        },
-      },
-    ]);
-  };
 
   if (!pet) {
     return (
@@ -6075,22 +3920,14 @@ function MemoryVaultScreen({ navigation }) {
     );
   }
 
-  const visibleMemories = memories.filter((memory) => {
-    if (memory.petId !== selectedPetId) return false;
-    if (activeTab === 'all') return true;
-    if (activeTab === 'milestones') return memory.milestone;
-    if (activeTab === 'videos') return memory.type === 'Video';
-    return true;
-  });
-
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.pageHeader}>
         <View>
           <Text style={s.pageTitle}>Memory Vault</Text>
-          <Text style={s.pageSub}>{visibleMemories.length} memories · {visibleMemories.filter((m) => m.milestone).length} milestones</Text>
+          <Text style={s.pageSub}>{memories.length} memories · {memories.filter(m => m.milestone).length} milestones</Text>
         </View>
-        <TouchableOpacity style={s.iconBtn} onPress={openAddMemoryModal}>
+        <TouchableOpacity style={s.iconBtn} onPress={() => Alert.alert('Add Memory', 'Choose an option:\n📷 Take Photo\n🖼️ From Library\n🎥 Record Video')}>
           <Text style={{ fontSize: 24 }}>📷</Text>
         </TouchableOpacity>
       </View>
@@ -6106,7 +3943,7 @@ function MemoryVaultScreen({ navigation }) {
       <Card style={s.motdCard}>
         <Text style={s.motdBadge}>✨ Memory of the Day</Text>
         <Text style={{ fontSize: 48, textAlign: 'center', marginVertical: 8 }}>🌊</Text>
-        <Text style={s.motdCaption}>{pet.name}&apos;s first beach trip!</Text>
+        <Text style={s.motdCaption}>{pet.name}'s first beach trip!</Text>
               <Text style={s.motdDate}>05/20/2026</Text>
       </Card>
 
@@ -6123,173 +3960,23 @@ function MemoryVaultScreen({ navigation }) {
 
       {/* Photo Grid */}
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 60 }}>
-        {visibleMemories.length === 0 ? (
-          <Card style={[s.petProfileInfoCard, { marginHorizontal: 0, alignItems: 'center' }]}>
-            <Text style={{ fontSize: 42, marginBottom: 10 }}>🖼️</Text>
-            <Text style={s.petProfileSectionTitle}>No memories yet</Text>
-            <Text style={[s.petProfileBodyText, { textAlign: 'center' }]}>
-              Add a photo, milestone, or video memory for {pet.name}.
-            </Text>
-            <TouchableOpacity style={[s.petProfileButton, { marginTop: 16, width: '100%' }]} onPress={openAddMemoryModal}>
-              <Text style={s.petProfileButtonText}>Add Memory</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+          {memories.map(mem => (
+            <TouchableOpacity
+              key={mem.id}
+              style={[s.memCell, { width: cellSize, height: cellSize, backgroundColor: mem.color }]}
+              onPress={() => Alert.alert(mem.caption, `📅 ${mem.date}${mem.milestone ? '\n⭐ Milestone' : ''}`)}
+            >
+              <Text style={s.memEmoji}>{mem.emoji}</Text>
+              {mem.milestone && <View style={s.mileStar}><Text style={{ fontSize: 10 }}>⭐</Text></View>}
             </TouchableOpacity>
-          </Card>
-        ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-            {visibleMemories.map((mem) => (
-              <TouchableOpacity
-                key={mem.id}
-                style={[s.memCell, { width: cellSize, height: cellSize, backgroundColor: '#1e1e1e' }]}
-                onPress={() => openMemoryDetail(mem)}
-                activeOpacity={0.85}
-              >
-                {mem.photoUri ? (
-                  mem.type === 'Video' ? (
-                    <View style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' }}>
-                      <Text style={{ fontSize: 30, marginBottom: 4 }}>🎥</Text>
-                      <Text style={{ color: C.text, fontSize: 11, fontWeight: '800' }}>Video</Text>
-                    </View>
-                  ) : (
-                    <Image source={{ uri: mem.photoUri }} style={{ width: '100%', height: '100%' }} />
-                  )
-                ) : (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                    <Text style={s.memEmoji}>{getMemoryDisplayEmoji(mem)}</Text>
-                    <Text style={{ color: C.text, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 }}>
-                      {mem.caption}
-                    </Text>
-                  </View>
-                )}
-                {mem.milestone && <View style={s.mileStar}><Text style={{ fontSize: 10 }}>⭐</Text></View>}
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+          ))}
+        </View>
       </ScrollView>
 
-      <TouchableOpacity style={s.fab} onPress={openAddMemoryModal}>
+      <TouchableOpacity style={s.fab} onPress={() => Alert.alert('Add Memory', '📷 Open camera to capture a new memory for ' + pet.name)}>
         <Text style={s.fabText}>＋</Text>
       </TouchableOpacity>
-
-      <Modal visible={showMemoryModal} transparent animationType="fade" onRequestClose={closeMemoryModal}>
-        <View style={s.modalOverlay}>
-          <View style={[s.customActionModal, { width: '100%', maxHeight: '88%' }]}>
-            <Text style={s.customActionModalTitle}>Add Memory</Text>
-
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 10 }}>
-              <Text style={s.vetModalLabel}>Media</Text>
-              <TouchableOpacity style={[s.petProfileButton, { marginBottom: 10 }]} onPress={pickMemoryMedia}>
-                <Text style={s.petProfileButtonText}>
-                  {memoryDraft.photoUri ? 'Change Photo / Video' : 'Pick Photo / Video'}
-                </Text>
-              </TouchableOpacity>
-
-              {memoryDraft.photoUri ? (
-                <View style={{ marginBottom: 10, borderRadius: 16, overflow: 'hidden', backgroundColor: C.bg, borderWidth: 1, borderColor: C.border }}>
-                  {memoryDraft.memoryType === 'Video' ? (
-                    <View style={{ height: 160, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 38 }}>🎥</Text>
-                      <Text style={{ color: C.muted, marginTop: 6 }}>Video selected</Text>
-                    </View>
-                  ) : (
-                    <Image source={{ uri: memoryDraft.photoUri }} style={{ width: '100%', height: 180 }} />
-                  )}
-                </View>
-              ) : null}
-
-              <Text style={s.vetModalLabel}>Caption</Text>
-              <TextInput
-                style={s.customActionInput}
-                value={memoryDraft.caption}
-                onChangeText={(text) => setMemoryDraft((prev) => ({ ...prev, caption: text }))}
-                placeholder="Write a memory caption"
-                placeholderTextColor={C.muted}
-              />
-
-              <Text style={s.vetModalLabel}>Memory type</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                {['Photo', 'Milestone', 'Video'].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      s.tabPill,
-                      { flex: 1, alignItems: 'center', paddingVertical: 10 },
-                      memoryDraft.memoryType === type && s.tabPillActive,
-                    ]}
-                    onPress={() => setMemoryDraft((prev) => ({ ...prev, memoryType: type }))}
-                  >
-                    <Text style={[s.tabPillText, memoryDraft.memoryType === type && s.tabPillTextActive]}>
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <DatePickerField
-                label="Date"
-                value={memoryDraft.date}
-                onChange={(date) => setMemoryDraft((prev) => ({ ...prev, date }))}
-                placeholder="Select date"
-              />
-
-              <View style={s.customActionModalButtons}>
-                <TouchableOpacity style={s.customActionCancelBtn} onPress={closeMemoryModal}>
-                  <Text style={s.customActionCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.customActionSaveBtn} onPress={saveMemory}>
-                  <Text style={s.customActionSaveText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showMemoryDetailModal} transparent animationType="fade" onRequestClose={closeMemoryDetail}>
-        <View style={s.modalOverlay}>
-          <View style={[s.customActionModal, { width: '100%', maxHeight: '88%' }]}>
-            <Text style={s.customActionModalTitle}>Memory Details</Text>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
-              {selectedMemory?.photoUri ? (
-                selectedMemory.type === 'Video' ? (
-                  <View style={{ height: 180, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg, borderRadius: 16, borderWidth: 1, borderColor: C.border, marginBottom: 12 }}>
-                    <Text style={{ fontSize: 40 }}>🎥</Text>
-                    <Text style={{ color: C.muted, marginTop: 6 }}>Video memory</Text>
-                  </View>
-                ) : (
-                  <Image source={{ uri: selectedMemory.photoUri }} style={{ width: '100%', height: 200, borderRadius: 16, marginBottom: 12 }} />
-                )
-              ) : (
-                <View style={{ height: 120, borderRadius: 16, marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg, borderWidth: 1, borderColor: C.border }}>
-                  <Text style={{ fontSize: 40 }}>{getMemoryDisplayEmoji(selectedMemory || {}) || '🖼️'}</Text>
-                </View>
-              )}
-
-              <Text style={{ color: C.text, fontSize: 18, fontWeight: '900', marginBottom: 6 }}>
-                {selectedMemory?.caption}
-              </Text>
-              <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>
-                Date: {selectedMemory ? formatDate(selectedMemory.date) : ''}
-              </Text>
-              <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>
-                Type: {selectedMemory?.type}
-              </Text>
-              <Text style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>
-                Pet: {pet?.name || 'Selected pet'}
-              </Text>
-
-              <View style={s.customActionModalButtons}>
-                <TouchableOpacity style={s.customActionCancelBtn} onPress={closeMemoryDetail}>
-                  <Text style={s.customActionCancelText}>Close</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.customActionSaveBtn} onPress={() => selectedMemory && deleteMemory(selectedMemory.id)}>
-                  <Text style={s.customActionSaveText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -6299,429 +3986,20 @@ function MemoryVaultScreen({ navigation }) {
 // ─────────────────────────────────────────────
 function CommunityScreen() {
   const [posts, setPosts] = useState(POSTS);
-  const [recipes, setRecipes] = useState(RECIPE_POSTS);
-  const [activeCommunityTab, setActiveCommunityTab] = useState('feed');
-  const [expandedRecipeId, setExpandedRecipeId] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
-  const [editingPostId, setEditingPostId] = useState(null);
   const [postText, setPostText] = useState('');
-  const [showRecipeModal, setShowRecipeModal] = useState(false);
-  const [editingRecipeId, setEditingRecipeId] = useState(null);
-  const [recipeDraft, setRecipeDraft] = useState({
-    title: '',
-    description: '',
-    ingredients: '',
-    safeFor: '',
-    prepTime: '',
-  });
-
-  useEffect(() => {
-    let isActive = true;
-
-    const run = async () => {
-      const loadedPosts = await loadCommunityPostsFromSupabase();
-
-      if (!isActive || loadedPosts == null) {
-        return;
-      }
-
-      if (loadedPosts.length > 0) {
-        setPosts(loadedPosts);
-      }
-    };
-
-    run();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const run = async () => {
-      const loadedRecipes = await loadRecipesFromSupabase();
-
-      if (!isActive || loadedRecipes == null) {
-        return;
-      }
-
-      if (loadedRecipes.length > 0) {
-        setRecipes(loadedRecipes);
-      }
-    };
-
-    run();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
 
   const toggleLike = (postId) => {
-    setPosts((prev) => {
-      const nextPosts = prev.map((post) => (
-        post.id === postId
-          ? { ...post, likes: post.likes + (post.liked ? -1 : 1), liked: !post.liked }
-          : post
-      ));
-      const updatedPost = nextPosts.find((post) => post.id === postId);
-      if (updatedPost) {
-        updateCommunityPostLikesInSupabase(postId, updatedPost.likes);
-      }
-      return nextPosts;
-    });
-  };
-
-  const openPostModal = (post = null) => {
-    setEditingPostId(post?.id || null);
-    setPostText(post?.content || '');
-    setShowCompose(true);
-  };
-
-  const closePostModal = () => {
-    setEditingPostId(null);
-    setPostText('');
-    setShowCompose(false);
-  };
-
-  const toggleRecipeLike = (recipeId) => {
-    setRecipes((prev) => {
-      const nextRecipes = prev.map((recipe) => (
-        recipe.id === recipeId
-          ? { ...recipe, likes: recipe.likes + (recipe.liked ? -1 : 1), liked: !recipe.liked }
-          : recipe
-      ));
-      const updatedRecipe = nextRecipes.find((recipe) => recipe.id === recipeId);
-      if (updatedRecipe) {
-        updateRecipeInSupabase(updatedRecipe);
-      }
-      return nextRecipes;
-    });
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: p.likes + (p.liked ? -1 : 1), liked: !p.liked } : p));
   };
 
   const submitPost = () => {
     if (!postText.trim()) return;
-    if (editingPostId) {
-      const existingPost = posts.find((post) => post.id === editingPostId);
-      const updatedPost = {
-        ...existingPost,
-        id: editingPostId,
-        author: 'Raymond',
-        owner: true,
-        petType: 'Multi-pet Dad',
-        time: 'Just now',
-        content: postText,
-        emoji: '🐾',
-        likes: existingPost?.likes ?? 0,
-        comments: existingPost?.comments ?? 0,
-        type: existingPost?.type || 'general',
-        liked: existingPost?.liked ?? false,
-      };
-
-      setPosts((prev) => prev.map((post) => (post.id === editingPostId ? updatedPost : post)));
-      updateCommunityPostInSupabase(updatedPost);
-      closePostModal();
-      return;
-    }
-
-    const newPost = { id: Date.now().toString(), author: 'Raymond', owner: true, petType: 'Multi-pet Dad', time: 'Just now', content: postText, emoji: '🐾', likes: 0, comments: 0, type: 'general', liked: false };
+    const newPost = { id: Date.now().toString(), author: 'Raymond', petType: 'Multi-pet Dad', time: 'Just now', content: postText, emoji: '🐾', likes: 0, comments: 0, type: 'general' };
     setPosts(prev => [newPost, ...prev]);
-    saveCommunityPostToSupabase(newPost);
-    closePostModal();
+    setPostText('');
+    setShowCompose(false);
   };
-
-  const deletePost = (postId) => {
-    Alert.alert('Delete Post?', 'This post will be removed.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          setPosts((prev) => prev.filter((post) => post.id !== postId));
-          deleteCommunityPostFromSupabase(postId);
-        },
-      },
-    ]);
-  };
-
-  const buildRecipeDraft = (recipe) => ({
-    title: recipe?.title || '',
-    description: recipe?.description || '',
-    ingredients: normalizeRecipeIngredients(recipe?.ingredients).join('\n'),
-    safeFor: normalizeRecipeSafeFor(recipe?.safeFor).join(', '),
-    prepTime: recipe?.prepTime || '',
-  });
-
-  const openRecipeModal = (recipe = null) => {
-    setEditingRecipeId(recipe?.id || null);
-    setRecipeDraft(buildRecipeDraft(recipe));
-    setShowRecipeModal(true);
-  };
-
-  const closeRecipeModal = () => {
-    setShowRecipeModal(false);
-    setEditingRecipeId(null);
-    setRecipeDraft({
-      title: '',
-      description: '',
-      ingredients: '',
-      safeFor: '',
-      prepTime: '',
-    });
-  };
-
-  const submitRecipe = () => {
-    const title = recipeDraft.title.trim();
-    const description = recipeDraft.description.trim();
-    const ingredients = recipeDraft.ingredients
-      .split(/\n|,/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-    const safeFor = recipeDraft.safeFor
-      .split(',')
-      .map((item) => item.trim().toLowerCase())
-      .filter(Boolean);
-    const prepTime = recipeDraft.prepTime.trim();
-
-    if (!title || !description || !ingredients.length || !safeFor.length || !prepTime) {
-      Alert.alert('Missing details', 'Please fill out every recipe field before posting.');
-      return;
-    }
-
-    const ownerLabel = `${safeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(' / ')} Parent`;
-    const generatedInstructions = [
-      'Gather the ingredients listed in this recipe.',
-      `Prepare and combine them according to the recipe for ${title}.`,
-      'Serve only in appropriate portions and monitor your pet the first time.',
-    ];
-    const recipePayload = {
-      id: editingRecipeId || `recipe-${Date.now()}`,
-      author: 'Raymond',
-      owner: true,
-      petType: ownerLabel,
-      title,
-      description,
-      ingredients,
-      safeFor,
-      prepTime,
-      likes: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.likes ?? 0 : 0,
-      comments: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.comments ?? 0 : 0,
-      emoji: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.emoji ?? '🥣' : '🥣',
-      instructions: editingRecipeId
-        ? recipes.find((recipe) => recipe.id === editingRecipeId)?.instructions ?? generatedInstructions
-        : generatedInstructions,
-    };
-
-    setRecipes((prev) => {
-      if (editingRecipeId) {
-        return prev.map((recipe) => (recipe.id === editingRecipeId ? { ...recipe, ...recipePayload } : recipe));
-      }
-
-      return [recipePayload, ...prev];
-    });
-
-    if (editingRecipeId) {
-      updateRecipeInSupabase(recipePayload);
-    } else {
-      saveRecipeToSupabase(recipePayload);
-    }
-
-    closeRecipeModal();
-    setActiveCommunityTab('recipes');
-  };
-
-  const deleteRecipe = (recipeId) => {
-    Alert.alert('Delete Recipe?', 'This recipe post will be removed.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          setRecipes((prev) => prev.filter((recipe) => recipe.id !== recipeId));
-          deleteRecipeFromSupabase(recipeId);
-        },
-      },
-    ]);
-  };
-
-  const shareRecipe = async (recipe) => {
-    Alert.alert('Share recipe coming soon');
-  };
-
-  const toggleRecipeExpanded = (recipeId) => {
-    setExpandedRecipeId((current) => (current === recipeId ? null : recipeId));
-  };
-
-  const visiblePosts = posts.filter((post) => {
-    if (activeCommunityTab === 'feed') {
-      return post.type !== 'lost_pet' && post.type !== 'tip';
-    }
-
-    if (activeCommunityTab === 'lostPets') {
-      return post.type === 'lost_pet';
-    }
-
-    if (activeCommunityTab === 'tips') {
-      return post.type === 'tip';
-    }
-
-    return false;
-  });
-
-  const renderPostCard = (post) => (
-    <Card key={post.id} style={{ marginBottom: 14 }}>
-      {post.lost && (
-        <View style={s.lostBanner}>
-          <Text style={s.lostBannerText}>🚨 LOST PET ALERT</Text>
-        </View>
-      )}
-      <View style={s.postAuthorRow}>
-        <View style={s.postAvatar}>
-          <Text style={{ fontSize: 18 }}>{post.emoji}</Text>
-        </View>
-        <View style={s.flex}>
-          <Text style={s.postAuthor}>{post.author}</Text>
-          <Text style={s.postPetType}>{post.petType} · {post.time}</Text>
-        </View>
-      </View>
-      <Text style={s.postContent}>{post.content}</Text>
-      <View style={[s.postMediaPlaceholder, { backgroundColor: post.lost ? '#3a0a0a' : C.cardHigh }]}>
-        <Text style={{ fontSize: 40 }}>{post.emoji}</Text>
-      </View>
-      <View style={s.postActions}>
-        <TouchableOpacity style={s.postAction} onPress={() => toggleLike(post.id)}>
-          <Text style={{ fontSize: 18 }}>{post.liked ? '❤️' : '🤍'}</Text>
-          <Text style={[s.postActionText, post.liked && { color: '#e74c3c' }]}>{post.likes}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Comments', `${post.comments} people commented on this post.`)}>
-          <Text style={{ fontSize: 18 }}>💬</Text>
-          <Text style={s.postActionText}>{post.comments}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Share', 'Share this post to Facebook, Nextdoor, or Twitter')}>
-          <Text style={{ fontSize: 18 }}>↗️</Text>
-          <Text style={s.postActionText}>Share</Text>
-        </TouchableOpacity>
-      </View>
-      {post.owner && (
-        <View style={s.recipeOwnerActions}>
-          <TouchableOpacity style={s.recipeOwnerBtn} onPress={() => openPostModal(post)}>
-            <Text style={s.recipeOwnerBtnText}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.recipeOwnerBtn, s.recipeOwnerBtnDanger]} onPress={() => deletePost(post.id)}>
-            <Text style={[s.recipeOwnerBtnText, s.recipeOwnerBtnTextDanger]}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {post.lost && (
-        <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('🚨 Alert Sent!', '156 pet owners in your area have been notified.')}>
-          <Text style={s.alertNeighborsBtnText}>🚨 Alert My Neighborhood</Text>
-        </TouchableOpacity>
-      )}
-    </Card>
-  );
-
-  const renderRecipeCard = (recipe) => (
-    <Card key={recipe.id} style={{ marginBottom: 14, paddingTop: 14 }}>
-      {(() => {
-        const recipeSafeFor = normalizeRecipeSafeFor(recipe.safeFor);
-        const recipeIngredients = normalizeRecipeIngredients(recipe.ingredients);
-        return (
-          <>
-      <View style={s.recipeHeroRow}>
-        <View style={s.recipeEmojiWrap}>
-          <Text style={s.recipeEmoji}>{recipe.emoji}</Text>
-        </View>
-        <View style={s.flex}>
-          <Text style={s.recipeTitle}>{recipe.title}</Text>
-          <Text style={s.recipeMeta}>
-            {recipe.author} · {recipe.petType} / {recipeSafeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={s.recipeDescription}>{recipe.description}</Text>
-
-      <View style={s.recipeMetaRow}>
-        <View style={s.recipePill}>
-          <Text style={s.recipePillLabel}>Safe for</Text>
-          <Text style={s.recipePillValue}>{recipeSafeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}</Text>
-        </View>
-        <View style={s.recipePill}>
-          <Text style={s.recipePillLabel}>Prep time</Text>
-          <Text style={s.recipePillValue}>{recipe.prepTime}</Text>
-        </View>
-      </View>
-
-        <View style={s.recipeIngredientsBlock}>
-          <Text style={s.recipeIngredientsLabel}>Ingredients preview</Text>
-          <Text style={s.recipeIngredientsText}>
-            {recipeIngredients.slice(0, 3).join(' • ')}
-            {recipeIngredients.length > 3 ? ' • …' : ''}
-          </Text>
-        </View>
-
-        <TouchableOpacity style={s.recipeExpandToggle} onPress={() => toggleRecipeExpanded(recipe.id)}>
-          <Text style={s.recipeExpandToggleText}>
-            {expandedRecipeId === recipe.id ? 'Hide full instructions' : 'Show full instructions'}
-          </Text>
-          <Text style={s.recipeExpandChevron}>{expandedRecipeId === recipe.id ? '▴' : '▾'}</Text>
-        </TouchableOpacity>
-
-        {expandedRecipeId === recipe.id && (
-          <View style={s.recipeInstructionsBlock}>
-            <Text style={s.recipeInstructionsLabel}>Full instructions</Text>
-            {(recipe.instructions || []).map((step, index) => (
-              <View key={`${recipe.id}-step-${index}`} style={s.recipeInstructionRow}>
-                <View style={s.recipeInstructionNumber}>
-                  <Text style={s.recipeInstructionNumberText}>{index + 1}</Text>
-                </View>
-                <Text style={s.recipeInstructionText}>{step}</Text>
-              </View>
-            ))}
-
-            <View style={s.recipeIngredientsFullBlock}>
-              <Text style={s.recipeInstructionsLabel}>Full ingredients</Text>
-              {recipeIngredients.map((ingredient, index) => (
-                <Text key={`${recipe.id}-ingredient-${index}`} style={s.recipeIngredientFullText}>
-                  • {ingredient}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
-
-        <View style={s.recipeActions}>
-        <TouchableOpacity style={s.postAction} onPress={() => toggleRecipeLike(recipe.id)}>
-          <Text style={{ fontSize: 18 }}>{recipe.liked ? '❤️' : '🤍'}</Text>
-          <Text style={[s.postActionText, recipe.liked && { color: '#e74c3c' }]}>{recipe.likes}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Comments', `${recipe.comments} people commented on this recipe.`)}>
-          <Text style={{ fontSize: 18 }}>💬</Text>
-          <Text style={s.postActionText}>{recipe.comments}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.postAction} onPress={() => shareRecipe(recipe)}>
-          <Text style={{ fontSize: 18 }}>↗️</Text>
-          <Text style={s.postActionText}>Share</Text>
-        </TouchableOpacity>
-      </View>
-
-      {recipe.owner && (
-        <View style={s.recipeOwnerActions}>
-          <TouchableOpacity style={s.recipeOwnerBtn} onPress={() => openRecipeModal(recipe)}>
-            <Text style={s.recipeOwnerBtnText}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.recipeOwnerBtn, s.recipeOwnerBtnDanger]} onPress={() => deleteRecipe(recipe.id)}>
-            <Text style={[s.recipeOwnerBtnText, s.recipeOwnerBtnTextDanger]}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-          </>
-        );
-      })()}
-    </Card>
-  );
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -6730,54 +4008,70 @@ function CommunityScreen() {
           <Text style={s.pageTitle}>Community</Text>
           <Text style={s.pageSub}>📍 Bayville, NJ</Text>
         </View>
-        <TouchableOpacity
-          style={s.accentBtn}
-          onPress={activeCommunityTab === 'recipes' ? openRecipeModal : () => openPostModal()}
-        >
-          <Text style={s.accentBtnText}>{activeCommunityTab === 'recipes' ? '＋ Recipe' : '＋ Post'}</Text>
+        <TouchableOpacity style={s.accentBtn} onPress={() => setShowCompose(true)}>
+          <Text style={s.accentBtnText}>＋ Post</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.communityTabRow}>
-          {COMMUNITY_TABS.map((tab) => (
-              <TouchableOpacity
-                key={tab.key}
-                style={[s.communityTabPill, activeCommunityTab === tab.key && s.communityTabPillActive]}
-                onPress={() => setActiveCommunityTab(tab.key)}
-              >
-              <Text style={[s.communityTabText, activeCommunityTab === tab.key && s.communityTabTextActive]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {activeCommunityTab === 'recipes' && (
-          <View style={s.recipeSafetyNote}>
-            <Text style={s.recipeSafetyNoteText}>Always check with your vet before introducing new foods.</Text>
-          </View>
-        )}
-
-        {activeCommunityTab === 'recipes' ? (
-          recipes.map(renderRecipeCard)
-        ) : (
-          visiblePosts.map(renderPostCard)
-        )}
+        {posts.map(post => (
+          <Card key={post.id} style={{ marginBottom: 14 }}>
+            {/* Lost pet special header */}
+            {post.lost && (
+              <View style={s.lostBanner}>
+                <Text style={s.lostBannerText}>🚨 LOST PET ALERT</Text>
+              </View>
+            )}
+            {/* Author */}
+            <View style={s.postAuthorRow}>
+              <View style={s.postAvatar}>
+                <Text style={{ fontSize: 18 }}>{post.emoji}</Text>
+              </View>
+              <View style={s.flex}>
+                <Text style={s.postAuthor}>{post.author}</Text>
+                <Text style={s.postPetType}>{post.petType} · {post.time}</Text>
+              </View>
+            </View>
+            {/* Content */}
+            <Text style={s.postContent}>{post.content}</Text>
+            {/* Media placeholder */}
+            <View style={[s.postMediaPlaceholder, { backgroundColor: post.lost ? '#3a0a0a' : C.cardHigh }]}>
+              <Text style={{ fontSize: 40 }}>{post.emoji}</Text>
+            </View>
+            {/* Actions */}
+            <View style={s.postActions}>
+              <TouchableOpacity style={s.postAction} onPress={() => toggleLike(post.id)}>
+                <Text style={{ fontSize: 18 }}>{post.liked ? '❤️' : '🤍'}</Text>
+                <Text style={[s.postActionText, post.liked && { color: '#e74c3c' }]}>{post.likes}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Comments', `${post.comments} people commented on this post.`)}>
+                <Text style={{ fontSize: 18 }}>💬</Text>
+                <Text style={s.postActionText}>{post.comments}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Share', 'Share this post to Facebook, Nextdoor, or Twitter')}>
+                <Text style={{ fontSize: 18 }}>↗️</Text>
+                <Text style={s.postActionText}>Share</Text>
+              </TouchableOpacity>
+            </View>
+            {post.lost && (
+              <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('🚨 Alert Sent!', '156 pet owners in your area have been notified.')}>
+                <Text style={s.alertNeighborsBtnText}>🚨 Alert My Neighborhood</Text>
+              </TouchableOpacity>
+            )}
+          </Card>
+        ))}
       </ScrollView>
 
       {/* Compose Modal */}
       <Modal visible={showCompose} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={[s.screen, { backgroundColor: C.bg }]}>
           <View style={s.modalHeader}>
-            <TouchableOpacity onPress={closePostModal}>
+            <TouchableOpacity onPress={() => { setShowCompose(false); setPostText(''); }}>
               <Text style={{ color: C.muted, fontSize: 16 }}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={s.modalTitle}>{editingPostId ? 'Edit Post' : 'New Post'}</Text>
+            <Text style={s.modalTitle}>New Post</Text>
             <TouchableOpacity onPress={submitPost}>
-              <Text style={{ color: C.accent, fontSize: 16, fontWeight: '700' }}>
-                {editingPostId ? 'Save' : 'Share'}
-              </Text>
+              <Text style={{ color: C.accent, fontSize: 16, fontWeight: '700' }}>Share</Text>
             </TouchableOpacity>
           </View>
           <TextInput
@@ -6795,76 +4089,7 @@ function CommunityScreen() {
                 <Text style={{ color: C.accent, fontSize: 13 }}>{tip}</Text>
               </TouchableOpacity>
             ))}
-            </View>
-          </SafeAreaView>
-        </Modal>
-
-        <Modal visible={showRecipeModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeRecipeModal}>
-        <SafeAreaView style={[s.screen, { backgroundColor: C.bg }]}>
-          <View style={s.modalHeader}>
-            <TouchableOpacity onPress={closeRecipeModal}>
-              <Text style={{ color: C.muted, fontSize: 16 }}>Cancel</Text>
-            </TouchableOpacity>
-              <Text style={s.modalTitle}>{editingRecipeId ? 'Edit Recipe' : 'New Recipe'}</Text>
-            <TouchableOpacity onPress={submitRecipe}>
-                <Text style={{ color: C.accent, fontSize: 16, fontWeight: '700' }}>
-                  {editingRecipeId ? 'Save' : 'Post'}
-                </Text>
-            </TouchableOpacity>
           </View>
-
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-            <Text style={s.recipeFieldLabel}>Recipe title</Text>
-            <TextInput
-              style={s.recipeInput}
-              placeholder="Frozen Peanut Butter Banana Dog Treats"
-              placeholderTextColor={C.muted}
-              value={recipeDraft.title}
-              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, title: text }))}
-            />
-
-            <Text style={s.recipeFieldLabel}>Description</Text>
-            <TextInput
-              style={[s.recipeInput, s.recipeTextArea]}
-              placeholder="What makes this recipe special?"
-              placeholderTextColor={C.muted}
-              value={recipeDraft.description}
-              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, description: text }))}
-              multiline
-            />
-
-            <Text style={s.recipeFieldLabel}>Ingredients</Text>
-            <TextInput
-              style={[s.recipeInput, s.recipeTextArea]}
-              placeholder="One ingredient per line"
-              placeholderTextColor={C.muted}
-              value={recipeDraft.ingredients}
-              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, ingredients: text }))}
-              multiline
-            />
-
-            <Text style={s.recipeFieldLabel}>Safe for pet type</Text>
-            <TextInput
-              style={s.recipeInput}
-              placeholder="dog, cat, rabbit"
-              placeholderTextColor={C.muted}
-              value={recipeDraft.safeFor}
-              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, safeFor: text }))}
-            />
-
-            <Text style={s.recipeFieldLabel}>Prep time</Text>
-            <TextInput
-              style={s.recipeInput}
-              placeholder="10 min"
-              placeholderTextColor={C.muted}
-              value={recipeDraft.prepTime}
-              onChangeText={(text) => setRecipeDraft((prev) => ({ ...prev, prepTime: text }))}
-            />
-
-            <View style={s.recipeModalTip}>
-              <Text style={s.recipeModalTipText}>Use simple, pet-safe ingredients and avoid anything your vet has flagged as unsafe.</Text>
-            </View>
-          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -7504,10 +4729,10 @@ function TabNavigator() {
   );
 }
 export default function App() {
-  const [pets, setPets] = useState([]);
+  const [pets, setPets] = useState(PETS);
   const [healthRecords, setHealthRecords] = useState(HEALTH_RECORDS);
   const [careReminders, setCareReminders] = useState([]);
-  const [petScores, setPetScores] = useState({});
+  const [petScores, setPetScores] = useState(Object.fromEntries(PETS.map(p => [p.id, p.score ?? 80])));
   const [activityLogs, setActivityLogs] = useState([]);
   const [showAddPetModal, setShowAddPetModal] = useState(false);
   const [addPetInitialSpecies, setAddPetInitialSpecies] = useState('dog');
@@ -7530,14 +4755,8 @@ export default function App() {
       ...prev,
       [newPet.id]: newPet.score ?? 80,
     }));
-    const starterReminders = buildStarterReminders(newPet);
-    setCareReminders(prev => [...starterReminders, ...prev]);
-    starterReminders.forEach((reminder) => {
-      saveCareReminderToSupabase(reminder);
-    });
+    setCareReminders(prev => [...buildStarterReminders(newPet), ...prev]);
     setHealthRecords(prev => [...buildStarterHealthRecords(newPet), ...prev]);
-
-    savePetToSupabase(newPet);
 
     const selectCreatedPet = addPetSelectCallbackRef.current;
     addPetSelectCallbackRef.current = null;
@@ -7548,72 +4767,21 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    let isActive = true;
+  const handleDeletePet = (petId) => {
+    setPets(prev => prev.filter(p => p.id !== petId));
+    setActivityLogs(prev => prev.filter(log => log.petId !== petId));
+    setCareReminders(prev => prev.filter(reminder => reminder.petId !== petId));
+    setHealthRecords(prev => prev.filter(record => record.petId !== petId));
+    setPetScores(prev => {
+      const next = { ...prev };
+      delete next[petId];
+      return next;
+    });
+  };
 
-    const run = async () => {
-      const mappedPets = await loadPetsFromSupabase();
-
-      if (!isActive) {
-        return;
-      }
-
-      if (mappedPets.length > 0) {
-        setPets(mappedPets);
-        setPetScores(Object.fromEntries(mappedPets.map((pet) => [pet.id, pet.score ?? 80])));
-        return;
-      }
-
-      setPets([]);
-      setPetScores({});
-    };
-
-    run();
-
-    return () => {
-      isActive = false;
-    };
-  }, [setPets, setPetScores]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const run = async () => {
-      const loadedHealthRecords = await loadHealthRecordsFromSupabase();
-
-      if (!isActive || loadedHealthRecords == null) {
-        return;
-      }
-
-      setHealthRecords(loadedHealthRecords);
-    };
-
-    run();
-
-    return () => {
-      isActive = false;
-    };
-  }, [setHealthRecords]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const run = async () => {
-      const loadedCareReminders = await loadCareRemindersFromSupabase();
-
-      if (!isActive || loadedCareReminders == null) {
-        return;
-      }
-
-      setCareReminders(loadedCareReminders);
-    };
-
-    run();
-
-    return () => {
-      isActive = false;
-    };
-  }, [setCareReminders]);
+  const PetProfileRoute = (props) => (
+    <PetProfileScreen {...props} onDeletePet={handleDeletePet} />
+  );
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -7629,7 +4797,7 @@ export default function App() {
                       <Stack.Navigator screenOptions={{ headerShown: false }}>
                         <Stack.Screen name="Main"    component={TabNavigator}  />
                         <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
-                        <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="PetProfile" component={PetProfileRoute} options={{ presentation: 'modal' }} />
                         <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
                       </Stack.Navigator>
                     </NavigationContainer>
@@ -8063,54 +5231,6 @@ healthScoreCard: {
   customActionCancelText: { color: C.muted, fontWeight: '700' },
   customActionSaveBtn: { flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center', backgroundColor: C.accent },
   customActionSaveText: { color: '#fff', fontWeight: '800' },
-  recordDetailBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    marginLeft: 8,
-  },
-  recordDetailBadgeText: { fontSize: 11, fontWeight: '900', letterSpacing: 0.7 },
-  recordDetailHeaderBlock: {
-    marginTop: 2,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  recordDetailTypeLabel: { color: C.accent, fontSize: 12, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase' },
-  recordDetailMainTitle: { color: C.text, fontSize: 18, fontWeight: '900', marginTop: 3 },
-  recordDetailHeaderLine: { color: C.muted, fontSize: 12, fontWeight: '700', lineHeight: 17 },
-  recordDetailReminderCard: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,107,53,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,107,53,0.18)',
-  },
-  recordDetailReminderLabel: { color: C.text, fontSize: 12, fontWeight: '800', lineHeight: 17 },
-  recordDetailSectionTitle: { color: C.text, fontSize: 14, fontWeight: '900', marginBottom: 10, letterSpacing: 0.3 },
-  recordDetailSection: {
-    backgroundColor: '#171717',
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 20,
-    padding: 14,
-  },
-  recordDetailRow: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-    gap: 4,
-  },
-  recordDetailNotesRow: { paddingBottom: 12 },
-  recordDetailFieldLabel: { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
-  recordDetailFieldValue: { color: C.text, fontSize: 14, fontWeight: '700', lineHeight: 20 },
-  recordDetailNotesValue: { lineHeight: 21 },
-  recordDetailEmptyText: { color: C.muted, fontSize: 13, fontStyle: 'italic' },
   datePickerLabel: { color: C.muted, fontSize: 12, fontWeight: '800', marginBottom: 6 },
   datePickerField: {
     backgroundColor: C.bg,
@@ -8444,115 +5564,17 @@ healthScoreCard: {
   postPetType:       { color: C.muted, fontSize: 12, marginTop: 2 },
   postContent:       { color: C.text, fontSize: 15, lineHeight: 21, marginBottom: 12 },
   postMediaPlaceholder: { height: 150, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-    postActions:       { flexDirection: 'row', alignItems: 'center', gap: 22, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 },
-    postAction:        { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    postActionText:    { color: C.muted, fontSize: 13, fontWeight: '700' },
-    alertNeighborsBtn: { marginTop: 12, backgroundColor: C.red, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
-    alertNeighborsBtnText: { color: '#fff', fontWeight: '900' },
-    composeInput:      { flex: 1, color: C.text, fontSize: 18, padding: 16, textAlignVertical: 'top' },
-    composeTips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
-    composeTip:        { backgroundColor: C.card, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
-    communityTabRow:   { gap: 10, paddingBottom: 14 },
-    communityTabPill:  { backgroundColor: C.card, borderRadius: 999, paddingHorizontal: 15, paddingVertical: 10, borderWidth: 1, borderColor: C.border },
-    communityTabPillActive: { backgroundColor: C.accent + '22', borderColor: C.accent },
-    communityTabText:  { color: C.muted, fontSize: 13, fontWeight: '800' },
-    communityTabTextActive: { color: C.text },
-    recipeSafetyNote:  { backgroundColor: C.blue + '18', borderLeftWidth: 3, borderLeftColor: C.blue, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 14 },
-    recipeSafetyNoteText: { color: C.text, fontSize: 13, lineHeight: 19, fontWeight: '700' },
-    recipeHeroRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-    recipeEmojiWrap:   { width: 56, height: 56, borderRadius: 18, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
-    recipeEmoji:       { fontSize: 30 },
-    recipeTitle:       { color: C.text, fontSize: 17, fontWeight: '900', lineHeight: 22 },
-    recipeMeta:        { color: C.muted, fontSize: 12, marginTop: 3, fontWeight: '700' },
-    recipeDescription: { color: C.text, fontSize: 14, lineHeight: 20, marginBottom: 12 },
-    recipeMetaRow:     { flexDirection: 'row', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
-    recipePill:        { flexGrow: 1, flexBasis: '48%', backgroundColor: C.cardHigh, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: C.border },
-    recipePillLabel:   { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
-    recipePillValue:   { color: C.text, fontSize: 13, fontWeight: '800', marginTop: 4 },
-    recipeIngredientsBlock: { backgroundColor: C.bg, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
-    recipeIngredientsLabel: { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 },
-    recipeIngredientsText: { color: C.text, fontSize: 13, lineHeight: 19, fontWeight: '600' },
-    recipeExpandToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.cardHigh, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
-    recipeExpandToggleText: { color: C.text, fontSize: 13, fontWeight: '900' },
-    recipeExpandChevron: { color: C.muted, fontSize: 16, fontWeight: '900' },
-    recipeInstructionsBlock: { backgroundColor: C.bg, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
-    recipeInstructionsLabel: { color: C.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },
-    recipeInstructionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
-    recipeInstructionNumber: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.cardHigh, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border, marginTop: 1 },
-    recipeInstructionNumberText: { color: C.text, fontSize: 11, fontWeight: '900' },
-    recipeInstructionText: { flex: 1, color: C.text, fontSize: 13, lineHeight: 19, fontWeight: '600' },
-    recipeIngredientsFullBlock: { marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
-    recipeIngredientFullText: { color: C.muted, fontSize: 13, lineHeight: 18, fontWeight: '600', marginBottom: 3 },
-    recipeActions:     { flexDirection: 'row', alignItems: 'center', gap: 22, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 },
-    recipeOwnerActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-    recipeOwnerBtn:    { flex: 1, backgroundColor: C.cardHigh, borderRadius: 14, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: C.border },
-    recipeOwnerBtnDanger: { backgroundColor: C.red + '20', borderColor: C.red + '40' },
-    recipeOwnerBtnText: { color: C.text, fontSize: 13, fontWeight: '900' },
-    recipeOwnerBtnTextDanger: { color: C.red },
-    recipeFieldLabel:  { color: C.text, fontSize: 13, fontWeight: '800', marginBottom: 8, marginTop: 14 },
-    recipeInput:       { backgroundColor: C.card, color: C.text, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: C.border },
-    recipeTextArea:    { minHeight: 92, textAlignVertical: 'top' },
-    recipeModalTip:    { marginTop: 16, backgroundColor: C.cardHigh, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: C.border },
-    recipeModalTipText: { color: C.muted, fontSize: 12, lineHeight: 18, fontWeight: '600' },
+  postActions:       { flexDirection: 'row', alignItems: 'center', gap: 22, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 },
+  postAction:        { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  postActionText:    { color: C.muted, fontSize: 13, fontWeight: '700' },
+  alertNeighborsBtn: { marginTop: 12, backgroundColor: C.red, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  alertNeighborsBtnText: { color: '#fff', fontWeight: '900' },
+  composeInput:      { flex: 1, color: C.text, fontSize: 18, padding: 16, textAlignVertical: 'top' },
+  composeTips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  composeTip:        { backgroundColor: C.card, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
 
-    // Health Hub local vet finder
-    localVetFinderToggle: { marginTop: 12, marginHorizontal: 16, backgroundColor: C.cardHigh, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: C.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
-    localVetFinderToggleTitle: { color: C.text, fontSize: 14, fontWeight: '900' },
-    localVetFinderToggleSub: { color: C.muted, fontSize: 12, marginTop: 3, fontWeight: '600' },
-    localVetFinderChevron: { color: C.accent, fontSize: 18, fontWeight: '900' },
-    localVetFinderModalScreen: { flex: 1, backgroundColor: C.bg },
-    localVetFinderModalHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: '#101c2a' },
-    localVetFinderModalTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
-    localVetFinderModalSubtitle: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 4, fontWeight: '600' },
-    localVetFinderCloseBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: C.cardHigh, borderWidth: 1, borderColor: C.border, marginTop: 2 },
-    localVetFinderCloseBtnText: { color: C.text, fontSize: 18, fontWeight: '900' },
-    localVetFinderModalScroll: { flex: 1 },
-    localVetFinderModalScrollContent: { paddingTop: 14, paddingBottom: 34, paddingHorizontal: 16 },
-    localVetFinderScroll: { maxHeight: Dimensions.get('window').height * 0.78, marginHorizontal: 0 },
-    localVetFinderScrollContent: { paddingBottom: 120 },
-    localVetFinderCard: { padding: 16, marginBottom: 14, borderRadius: 24, backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: 'rgba(255, 153, 0, 0.12)' },
-    localVetFinderHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 },
-    localVetFinderTitle: { color: C.text, fontSize: 17, fontWeight: '900' },
-    localVetFinderSubtitle: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 4, fontWeight: '600' },
-    localVetFinderButtonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
-    localVetFinderMainBtn: { backgroundColor: C.accent, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
-    localVetFinderMainBtnText: { color: '#fff', fontSize: 12, fontWeight: '900' },
-    localVetFinderSecondaryBtn: { backgroundColor: C.cardHigh, borderWidth: 1, borderColor: C.border },
-    localVetFinderSecondaryBtnText: { color: C.text, fontSize: 12, fontWeight: '900' },
-    localVetFinderSaveBtn: { backgroundColor: C.green, borderColor: C.green, borderRadius: 14, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-    localVetFinderSaveBtnText: { color: C.bg, fontSize: 12, fontWeight: '900' },
-    localVetWarning: { backgroundColor: C.red + '18', borderLeftWidth: 3, borderLeftColor: C.red, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 14 },
-    localVetWarningText: { color: C.text, fontSize: 12, lineHeight: 18, fontWeight: '700' },
-    localVetSavedSection: { marginTop: 2 },
-    localVetSavedSectionTitle: { color: C.text, fontSize: 14, fontWeight: '900', marginBottom: 10 },
-    localVetEmptyState: { backgroundColor: C.bg, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
-    localVetEmptyStateText: { color: C.muted, fontSize: 12, lineHeight: 18, fontWeight: '600' },
-    localVetCard: { backgroundColor: C.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 12 },
-    localVetCardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-    localVetAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
-    localVetAvatarText: { fontSize: 18 },
-    localVetName: { color: C.text, fontSize: 15, fontWeight: '900' },
-    localVetType: { color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 2 },
-    localVetStatusPill: { backgroundColor: C.cardHigh, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.border },
-    localVetStatusText: { color: C.text, fontSize: 11, fontWeight: '800' },
-    localVetMetaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
-    localVetMetaItem: { flexBasis: '48%', backgroundColor: C.bg, borderRadius: 14, padding: 10, borderWidth: 1, borderColor: C.border },
-    localVetMetaLabel: { color: C.muted, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.7 },
-    localVetMetaValue: { color: C.text, fontSize: 12, fontWeight: '700', marginTop: 5, lineHeight: 17 },
-    localVetActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    localVetActionBtn: { flexGrow: 1, flexBasis: '31%', backgroundColor: C.cardHigh, borderRadius: 14, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: C.border },
-    localVetActionBtnAccent: { backgroundColor: C.accent, borderColor: C.accent },
-    localVetActionBtnText: { color: C.text, fontSize: 13, fontWeight: '900' },
-    localVetActionBtnTextAccent: { color: '#fff', fontSize: 13, fontWeight: '900' },
-    localVetEditDeleteRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
-    localVetActionBtnAccentSoft: { backgroundColor: C.blue + '20', borderColor: C.blue + '55' },
-    localVetActionBtnTextAccentSoft: { color: C.blue, fontSize: 13, fontWeight: '900' },
-    localVetActionBtnDanger: { backgroundColor: C.red + '18', borderColor: C.red + '40' },
-    localVetActionBtnTextDanger: { color: C.red, fontSize: 13, fontWeight: '900' },
-    vetModalLabel: { color: C.muted, fontSize: 12, fontWeight: '700', marginBottom: 6, marginTop: 10 },
-    
-    // Settings
-    profileCard:       { margin: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // Settings
+  profileCard:       { margin: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   profileAvatarCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   profileName:       { color: C.text, fontSize: 18, fontWeight: '900' },
   profileEmail:      { color: C.muted, fontSize: 12, marginTop: 2 },
