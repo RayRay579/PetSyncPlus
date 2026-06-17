@@ -21,6 +21,7 @@ import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { supabase } from './supabase';
 // ─────────────────────────────────────────────
@@ -3844,12 +3845,19 @@ function DashboardScreen({ navigation }) {
             <View style={s.dashboardTrendChart}>
               {activityTrendCounts.map((count, index) => {
                 const height = Math.max(18, (count / activityTrendMax) * 72);
+                const isToday = activityTrendDays[index].toDateString() === new Date().toDateString();
+                const dotColor = isToday ? '#7B61FF' : (count > 0 ? '#28C7B7' : '#FF5B5B');
                 return (
                   <View key={`trend-bar-${index}`} style={s.dashboardTrendBarWrap}>
-                    <View style={[s.dashboardTrendBar, { height, backgroundColor: '#E8ECF7' }]}>
-                      <View style={[s.dashboardTrendBarFill, { height, backgroundColor: '#ff4be7' }]} />
+                    <View style={[s.dashboardTrendBar, { height, backgroundColor: '#E8ECF7', overflow: 'hidden' }]}>
+                      <LinearGradient
+                        colors={['#7B61FF', '#28C7B7']}
+                        start={{ x: 0.5, y: 1 }}
+                        end={{ x: 0.5, y: 0 }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
                     </View>
-                    <View style={[s.dashboardTrendDot, { backgroundColor: count > 0 ? '#ea0909' : '#0cf18a' }]} />
+                    <View style={[s.dashboardTrendDot, { backgroundColor: dotColor }]} />
                     <Text style={s.dashboardTrendDayLabel}>
                       {activityTrendDays[index].toLocaleDateString([], { weekday: 'short' })}
                     </Text>
@@ -6991,7 +6999,7 @@ function HealthHubScreen({ navigation }) {
     }
   };
   return (
-    <PetSyncBackground opacity={0.16}>
+    <PetSyncBackground opacity={1.16}>
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={[s.pageHeader, { paddingTop: 2, marginTop: 0, marginBottom: 0 }]}>
         <Text style={s.pageTitle}>Health Hub</Text>
@@ -8130,7 +8138,7 @@ function MemoryVaultScreen({ navigation }) {
   });
 
   return (
-    <PetSyncBackground opacity={0.16}>
+    <PetSyncBackground opacity={1.10}>
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.pageHeader}>
         <View>
@@ -9061,7 +9069,7 @@ function CommunityScreen() {
   );
 
   return (
-    <PetSyncBackground opacity={0.08}>
+    <PetSyncBackground opacity={1.10}>
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.pageHeader}>
         <View>
@@ -9596,7 +9604,7 @@ function SettingsScreen({ navigation }) {
   ];
 
   return (
-    <PetSyncBackground opacity={0.08}>
+    <PetSyncBackground opacity={1.08}>
     <SafeAreaView style={s.screen} edges={['top']}>
       <Text style={[s.pageTitle, { paddingHorizontal: 16, paddingTop: 8, marginBottom: 4 }]}>Settings</Text>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
@@ -10891,7 +10899,7 @@ sosButton: {
     backgroundColor: '#F0F4FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 6,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E2E8F3',
@@ -10905,7 +10913,8 @@ sosButton: {
   },
   dashboardHeroInfo: {
     flex: 1,
-    paddingRight: 10,
+    minWidth: 0,
+    paddingRight: 0,
   },
   dashboardPetNameRow: {
     flexDirection: 'row',
@@ -10982,6 +10991,7 @@ sosButton: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    marginLeft: -4,
   },
   dashboardScoreRingSegment: {
     position: 'absolute',
