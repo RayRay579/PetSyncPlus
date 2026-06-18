@@ -496,13 +496,6 @@ const AddPetContext = createContext({
   openAddPetModal: () => {},
 });
 
-const VetFinderContext = createContext({
-  isVetFinderExpanded: false,
-  openVetFinder: () => {},
-  closeVetFinder: () => {},
-  toggleVetFinder: () => {},
-});
-
 const getDefaultPetEmoji = (species) => PET_SPECIES_EMOJIS[species] || '🐾';
 
 const getStarterPetScore = (species) => {
@@ -888,11 +881,10 @@ const saveHealthRecordToSupabase = async (record) => {
 
   if (error) {
     console.log('Supabase health record save error:', error);
-    return false;
+    return;
   }
 
   console.log('Health record saved to Supabase');
-  return true;
 };
 
 const updateHealthRecordInSupabase = async (record) => {
@@ -914,11 +906,10 @@ const updateHealthRecordInSupabase = async (record) => {
 
   if (error) {
     console.log('Supabase health record update error:', error);
-    return false;
+    return;
   }
 
   console.log('Health record updated in Supabase');
-  return true;
 };
 
 const deleteHealthRecordFromSupabase = async (recordId) => {
@@ -2854,7 +2845,6 @@ function DashboardScreen({ navigation }) {
   const { setHealthRecords } = useContext(HealthRecordsContext);
   const { petScores, setPetScores } = useContext(PetScoresContext);
   const { activityLogs, setActivityLogs } = useContext(ActivityLogsContext);
-  const { openVetFinder } = useContext(VetFinderContext);
   const [selectedPetId, setSelectedPetId] = useState('1');
   const [tasks, setTasks] = useState(TASKS);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
@@ -3228,17 +3218,12 @@ function DashboardScreen({ navigation }) {
     );
   }, [markReminderDone, pets, playReminderPetSound, setReminderAlerted, snoozeReminder]);
   const openReminderModal = () => {
-    logQuickActionFire('Add Reminder');
     setEditingReminder(null);
     setReminderTitle('');
     setReminderIcon('🍽️');
     setReminderDate(selectedCalendarDateKey);
     setReminderTime('');
     setShowReminderModal(true);
-  };
-  const openLinkedHealthRecord = (reminder) => {
-    if (!reminder?.sourceRecordId) return;
-    navigation.navigate('Health', { selectedRecordId: reminder.sourceRecordId });
   };
   const saveReminder = () => {
     const trimmedTitle = reminderTitle.trim();
@@ -3555,9 +3540,6 @@ function DashboardScreen({ navigation }) {
 
   const visibleHealthInsights = healthInsights.slice(0, 3);
   const quickActions = buildQuickActionsForSpecies(pet, addActivityLog, navigation);
-  const logQuickActionFire = (actionType) => {
-    console.log('quick action fired:', actionType);
-  };
   const dashboardQuickActions = quickActions
     .filter((item) => item.label !== 'AI Vet')
     .map((item) => {
@@ -3565,7 +3547,6 @@ function DashboardScreen({ navigation }) {
         return {
           ...item,
           action: () => {
-            logQuickActionFire('Log Weight');
             setWeightValue('');
             setWeightNotes('');
             setShowWeightModal(true);
@@ -3576,20 +3557,13 @@ function DashboardScreen({ navigation }) {
         return {
           ...item,
           action: () => {
-            logQuickActionFire('Medication');
             setMedicationName('');
             setMedicationDose('');
             setShowMedicationModal(true);
           },
         };
       }
-      return {
-        ...item,
-        action: () => {
-          logQuickActionFire(item.label);
-          item.action();
-        },
-      };
+      return item;
     });
   const ACTION_ICONS = [
 
@@ -3711,29 +3685,13 @@ function DashboardScreen({ navigation }) {
         {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingTop: 3, paddingBottom: 0 }}>
           <View style={s.dashboardBrandRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <View style={s.dashboardBrandMark}>
-                <Text style={s.dashboardBrandMarkText}>🐾</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.dashboardBrandName}>PetSync+</Text>
-                <Text style={s.dashboardBrandTagline}>Home dashboard</Text>
-              </View>
+            <View style={s.dashboardBrandMark}>
+              <Text style={s.dashboardBrandMarkText}>🐾</Text>
             </View>
-            <TouchableOpacity
-              onPress={openVetFinder}
-              activeOpacity={0.88}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 16,
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,107,107,0.35)',
-              }}
-            >
-              <Text style={{ color: '#ff0000', fontSize: 12, fontWeight: '800' }}>Local & Emergency Vets </Text>
-            </TouchableOpacity>
+            <View>
+              <Text style={s.dashboardBrandName}>PetSync+</Text>
+              <Text style={s.dashboardBrandTagline}>Home dashboard</Text>
+            </View>
           </View>
 
           <View style={s.dashHeader}>
@@ -4071,16 +4029,6 @@ function DashboardScreen({ navigation }) {
                       {formatReminderDate(reminder.date)}
                       {reminder.time ? ` · ${reminder.time}` : ''}
                     </Text>
-                    {reminder.source === 'healthRecord' && reminder.sourceRecordId ? (
-                      <TouchableOpacity
-                        style={{ alignSelf: 'flex-start', marginTop: 6 }}
-                        onPress={() => openLinkedHealthRecord(reminder)}
-                      >
-                        <Text style={{ color: '#6B4BFF', fontSize: 11, fontWeight: '800' }}>
-                          Open Health Record
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
                   </View>
                   <View style={[s.reminderStatusPill, reminder.completed && s.reminderStatusPillDone]}>
                     <Text style={s.reminderStatusText}>
@@ -4100,7 +4048,7 @@ function DashboardScreen({ navigation }) {
             <Card style={[s.recentActivityEmptyCard, { backgroundColor: '#a895d169', borderColor: '#E6EAF5' }]}>
               <Text style={s.recentActivityEmptyText}>No activity yet for {pet.name}</Text>
             </Card>
-        ) : (
+          ) : (
             recentActivity.map(log => (
               <TouchableOpacity
                 key={log.id}
@@ -4128,7 +4076,6 @@ function DashboardScreen({ navigation }) {
             ))
           )}
         </View>
-
       </ScrollView>
 
       <Modal visible={showAddActionModal} transparent animationType="fade" onRequestClose={() => setShowAddActionModal(false)}>
@@ -4907,7 +4854,7 @@ function PetProfileScreen({ navigation, route }) {
 }
 
 // ─────────────────────────────────────────────
-function HealthHubScreen({ navigation, route }) {
+function HealthHubScreen({ navigation }) {
     const { pets } = useContext(PetsContext);
     const { openAddPetModal } = useContext(AddPetContext);
     const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
@@ -4922,6 +4869,19 @@ function HealthHubScreen({ navigation, route }) {
     const [addReminderToCalendar, setAddReminderToCalendar] = useState(false);
     const [reminderDate, setReminderDate] = useState('');
     const [reminderTime, setReminderTime] = useState('');
+    const [savedVets, setSavedVets] = useState([]);
+    const [showVetModal, setShowVetModal] = useState(false);
+    const [isVetFinderExpanded, setIsVetFinderExpanded] = useState(false);
+    const [editingVetId, setEditingVetId] = useState(null);
+    const [vetDraft, setVetDraft] = useState({
+      name: '',
+      type: 'Vet Clinic',
+      distance: '',
+      phone: '',
+      address: '',
+      status: 'Open',
+      websiteUrl: '',
+    });
     const [recordForm, setRecordForm] = useState({
     vaccineName: '',
     dateGiven: '',
@@ -4979,7 +4939,6 @@ function HealthHubScreen({ navigation, route }) {
     const [analysisLoading, setAnalysisLoading] = useState(false);
     const analysisTimeoutRef = useRef(null);
     const analysisRequestIdRef = useRef(0);
-    const openedHealthRecordIdRef = useRef(null);
     const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight', 'procedures', 'conditions', 'labs', 'aquatic'];
     const tabLabels = {
       all: 'All',
@@ -4992,6 +4951,95 @@ function HealthHubScreen({ navigation, route }) {
     labs: 'Labs',
       aquatic: 'Aquatic',
     };
+    const openMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=vet+near+me');
+    const openEmergencyMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=emergency+vet+near+me');
+    const openVetCall = (phone) => Linking.openURL(`tel:${phone}`);
+    const openVetMaps = (clinic) => {
+      const query = encodeURIComponent(`${clinic.name} ${clinic.address}`);
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
+    };
+    const openVetWebsite = (websiteUrl) => {
+      const normalized = String(websiteUrl || '').trim();
+      if (!normalized) return;
+
+      const url = /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
+      Linking.openURL(url);
+    };
+    const openVetAddModal = (defaults = {}) => {
+      setEditingVetId(defaults.id || null);
+      setVetDraft({
+        name: defaults.name || '',
+        type: defaults.type || 'Vet Clinic',
+        distance: defaults.distance || '',
+        phone: defaults.phone || '',
+        address: defaults.address || '',
+        status: defaults.status || 'Open',
+        websiteUrl: defaults.websiteUrl || '',
+      });
+      setShowVetModal(true);
+    };
+    const closeVetModal = () => {
+      setShowVetModal(false);
+      setEditingVetId(null);
+      setVetDraft({
+        name: '',
+        type: 'Vet Clinic',
+        distance: '',
+        phone: '',
+        address: '',
+        status: 'Open',
+        websiteUrl: '',
+      });
+    };
+    const toggleVetFinder = () => {
+      setIsVetFinderExpanded((prev) => !prev);
+    };
+    const saveVetCard = () => {
+      const name = vetDraft.name.trim();
+      const type = vetDraft.type.trim();
+      const distance = vetDraft.distance.trim();
+      const phone = vetDraft.phone.trim();
+      const address = vetDraft.address.trim();
+      const status = vetDraft.status.trim();
+      const websiteUrl = vetDraft.websiteUrl.trim();
+
+      if (!name || !type || !distance || !phone || !address || !status) {
+        Alert.alert('Missing details', 'Please complete all vet fields before saving.');
+        return;
+      }
+
+      const payload = {
+        id: editingVetId || `saved-vet-${Date.now()}`,
+        name,
+        type,
+        distance,
+        phone,
+        address,
+        status,
+        websiteUrl,
+      };
+
+      setSavedVets((prev) => {
+        if (editingVetId) {
+          return prev.map((vet) => (vet.id === editingVetId ? payload : vet));
+        }
+
+        return [payload, ...prev];
+      });
+      closeVetModal();
+    };
+    const editVetCard = (clinic) => openVetAddModal(clinic);
+    const deleteVetCard = (vetId) => {
+      Alert.alert('Delete Vet?', 'This saved vet card will be removed.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => setSavedVets((prev) => prev.filter((vet) => vet.id !== vetId)),
+        },
+      ]);
+    };
+
   const typeMap = {
     vaccination: 'vaccines',
     medication: 'meds',
@@ -5153,110 +5201,18 @@ function HealthHubScreen({ navigation, route }) {
     fish: 'Fish / Tank Reading',
   };
 
-  const reminderEligibleTypes = new Set(['vaccination', 'medication', 'appointment', 'diagnosis', 'weight', 'symptom']);
+  const reminderEligibleTypes = new Set(['vaccination', 'medication', 'appointment', 'weight', 'symptom']);
 
   const getReminderDefaultDate = (type, form) => {
     if (type === 'vaccination') return String(form?.nextDueDate || '').trim();
     if (type === 'medication') return String(form?.endDate || form?.nextDoseDate || '').trim();
     if (type === 'appointment') return String(form?.appointmentDate || '').trim();
-    if (type === 'diagnosis') return String(form?.monitoringDate || form?.nextDue || '').trim();
     if (type === 'weight') return '';
     if (type === 'symptom') return '';
     return '';
   };
 
   const firstText = (...values) => values.map((value) => String(value || '').trim()).find(Boolean) || '';
-
-  const getLocalReminderDateKey = (value) => {
-    const text = String(value || '').trim();
-    if (!text) return '';
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-      return text;
-    }
-
-    const parsed = new Date(text);
-    if (Number.isNaN(parsed.getTime())) {
-      return text;
-    }
-
-    const year = parsed.getFullYear();
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const day = String(parsed.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const getHealthRecordAutoReminderDate = (record) => {
-    if (!record) return '';
-
-    const candidate = (() => {
-      switch (record.type) {
-        case 'vaccination':
-          return firstText(
-            record?.nextDue,
-            record?.details?.expirationDate,
-            record?.details?.renewalDate,
-            record?.details?.dueDate,
-            record?.details?.nextDueDate
-          );
-        case 'medication':
-          return firstText(
-            record?.nextDue,
-            record?.details?.nextRefillDate,
-            record?.details?.nextDoseDate,
-            record?.details?.endDate
-          );
-        case 'appointment':
-          return firstText(
-            record?.nextDue,
-            record?.details?.followUpDate,
-            record?.details?.nextAppointmentDate
-          );
-        case 'diagnosis':
-          return firstText(
-            record?.nextDue,
-            record?.details?.monitoringDate,
-            record?.details?.nextMonitoringDate,
-            record?.details?.followUpDate
-          );
-        default:
-          return '';
-      }
-    })();
-
-    const key = getLocalReminderDateKey(candidate);
-    if (!key) return '';
-
-    const parsedDate = parseStoredDateKey(key) || new Date(`${key}T00:00:00`);
-    if (!parsedDate || Number.isNaN(parsedDate.getTime())) return '';
-
-    const today = new Date();
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const dueDate = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
-    if (dueDate <= todayDate) {
-      return '';
-    }
-
-    return key;
-  };
-
-  useEffect(() => {
-    healthRecords
-      .filter((record) => record.petId === selectedPetId)
-      .forEach((record) => {
-        if (!['vaccination', 'medication', 'appointment', 'diagnosis'].includes(record.type)) {
-          return;
-        }
-
-        const autoReminderDate = getHealthRecordAutoReminderDate(record);
-        if (!autoReminderDate) {
-          return;
-        }
-
-        const linkedReminder = getLinkedReminderForRecord(record.id);
-        upsertHealthRecordReminder(record, false, autoReminderDate, linkedReminder?.time || '', linkedReminder);
-      });
-  }, [healthRecords, selectedPetId]);
 
   const getLinkedReminderForRecord = (recordId) => (
     careReminders.find((reminder) => reminder.source === 'healthRecord' && reminder.sourceRecordId === recordId) || null
@@ -5292,33 +5248,6 @@ function HealthHubScreen({ navigation, route }) {
       setSelectedPetId(pets[0].id);
     }
   }, [pets, selectedPetId]);
-
-  useEffect(() => {
-    const selectedRecordId = route?.params?.selectedRecordId;
-    if (!selectedRecordId) {
-      openedHealthRecordIdRef.current = null;
-      return;
-    }
-
-    if (openedHealthRecordIdRef.current === selectedRecordId) {
-      return;
-    }
-
-    const foundRecord = healthRecords.find((item) => item.id === selectedRecordId);
-    if (!foundRecord) {
-      if (healthRecords.length > 0) {
-        openedHealthRecordIdRef.current = selectedRecordId;
-        Alert.alert('Health Record Not Found', 'This linked record may have been deleted.');
-        navigation.setParams({ selectedRecordId: undefined });
-      }
-      return;
-    }
-
-    openedHealthRecordIdRef.current = selectedRecordId;
-    setSelectedRecord(foundRecord);
-    setShowRecordDetailModal(true);
-    navigation.setParams({ selectedRecordId: undefined });
-  }, [healthRecords, navigation, route?.params?.selectedRecordId]);
 
   const getPetAgeLabel = (petItem) => {
     if (!petItem) return 'Unknown';
@@ -5452,27 +5381,21 @@ function HealthHubScreen({ navigation, route }) {
   };
   const getRecordFormFromRecord = (record) => {
     const base = {
-      nextDue: '',
       vaccineName: '',
       dateGiven: '',
       providerClinic: '',
       nextDueDate: '',
-      expirationDate: '',
-      renewalDate: '',
-      dueDate: '',
       medicationName: '',
       dosage: '',
       frequency: '',
       startDate: '',
       endDate: '',
-      nextRefillDate: '',
       prescribingVet: '',
       medicationNotes: '',
       nextDoseDate: '',
       visitReason: '',
       vetClinic: '',
       appointmentDate: '',
-      nextAppointmentDate: '',
       diagnosisFindings: '',
       followUpDate: '',
       appointmentNotes: '',
@@ -5495,7 +5418,6 @@ function HealthHubScreen({ navigation, route }) {
       diagnosedDate: '',
       diagnosisVet: '',
       treatmentPlan: '',
-      monitoringDate: '',
       diagnosisNotes: '',
       testName: '',
       testDate: '',
@@ -5510,7 +5432,6 @@ function HealthHubScreen({ navigation, route }) {
 
     const parsedTitle = getRecordDetailFromTitle(record);
     const merged = { ...base, ...(record?.details || {}) };
-    merged.nextDue = firstText(record?.nextDue, merged.nextDue, record?.details?.nextDue);
     const mainKey = recordMainFieldKey[record?.type];
     if (mainKey) {
       const mainValue =
@@ -5534,10 +5455,7 @@ function HealthHubScreen({ navigation, route }) {
       merged.vaccineName = firstText(record?.vaccineName, merged.vaccineName, parsedTitle);
       merged.dateGiven = firstText(record?.dateGiven, record?.date, merged.dateGiven);
       merged.providerClinic = firstText(record?.provider, merged.providerClinic);
-      merged.nextDueDate = firstText(record?.nextDue, merged.nextDueDate, record?.nextDueDate, record?.details?.expirationDate, record?.details?.renewalDate, record?.details?.dueDate);
-      merged.expirationDate = firstText(record?.details?.expirationDate, merged.expirationDate, record?.nextDue);
-      merged.renewalDate = firstText(record?.details?.renewalDate, merged.renewalDate);
-      merged.dueDate = firstText(record?.details?.dueDate, merged.dueDate);
+      merged.nextDueDate = firstText(record?.nextDue, merged.nextDueDate, record?.nextDueDate);
       merged.vaccineNotes = firstText(record?.notes, merged.vaccineNotes, record?.details?.vaccineNotes);
     } else if (record?.type === 'medication') {
       merged.medicationName = firstText(record?.medicationName, merged.medicationName, parsedTitle);
@@ -5545,8 +5463,7 @@ function HealthHubScreen({ navigation, route }) {
       merged.frequency = firstText(record?.frequency, merged.frequency);
       merged.startDate = firstText(record?.startDate, record?.date, merged.startDate);
       merged.endDate = firstText(record?.endDate, record?.nextDue, record?.details?.nextDoseDate, merged.endDate);
-      merged.nextDoseDate = firstText(record?.details?.nextDoseDate, record?.details?.nextRefillDate, record?.nextDue, merged.nextDoseDate, merged.endDate);
-      merged.nextRefillDate = firstText(record?.details?.nextRefillDate, merged.nextRefillDate, record?.nextDue);
+      merged.nextDoseDate = merged.endDate;
       merged.prescribingVet = firstText(record?.provider, merged.prescribingVet);
       merged.medicationNotes = firstText(record?.notes, merged.medicationNotes, record?.details?.medicationNotes);
     } else if (record?.type === 'appointment') {
@@ -5554,8 +5471,7 @@ function HealthHubScreen({ navigation, route }) {
       merged.appointmentDate = firstText(record?.appointmentDate, record?.date, merged.appointmentDate);
       merged.vetClinic = firstText(record?.provider, merged.vetClinic, record?.details?.clinicVet);
       merged.diagnosisFindings = firstText(record?.diagnosisFindings, merged.diagnosisFindings);
-      merged.followUpDate = firstText(record?.nextDue, merged.followUpDate, record?.details?.followUpDate, record?.details?.nextAppointmentDate);
-      merged.nextAppointmentDate = firstText(record?.details?.nextAppointmentDate, merged.nextAppointmentDate, record?.nextDue);
+      merged.followUpDate = firstText(record?.nextDue, merged.followUpDate);
       merged.appointmentNotes = firstText(record?.notes, merged.appointmentNotes, record?.details?.appointmentNotes);
     } else if (record?.type === 'weight') {
       merged.weightValue = firstText(
@@ -5588,7 +5504,6 @@ function HealthHubScreen({ navigation, route }) {
       merged.diagnosedDate = firstText(record?.diagnosedDate, record?.date, merged.diagnosedDate);
       merged.diagnosisVet = firstText(record?.provider, merged.diagnosisVet);
       merged.treatmentPlan = firstText(record?.treatmentPlan, merged.treatmentPlan);
-      merged.monitoringDate = firstText(record?.nextDue, merged.monitoringDate, record?.details?.monitoringDate, record?.details?.followUpDate);
       merged.diagnosisNotes = firstText(record?.notes, merged.diagnosisNotes, record?.details?.diagnosisNotes);
     } else if (record?.type === 'lab') {
       merged.testName = firstText(record?.testName, merged.testName, parsedTitle);
@@ -5609,12 +5524,11 @@ function HealthHubScreen({ navigation, route }) {
   const openRecordEditor = (record) => {
     const linkedReminder = getLinkedReminderForRecord(record.id);
     const form = getRecordFormFromRecord(record);
-    const autoReminderDate = getHealthRecordAutoReminderDate(record);
     setEditingRecord(record);
     setPendingRecordType(record.type);
     setRecordForm(form);
-    setAddReminderToCalendar(Boolean(linkedReminder || autoReminderDate));
-    setReminderDate(linkedReminder?.date || autoReminderDate || getReminderDefaultDate(record.type, form));
+    setAddReminderToCalendar(Boolean(linkedReminder));
+    setReminderDate(linkedReminder?.date || getReminderDefaultDate(record.type, form));
     setReminderTime(linkedReminder?.time || '');
     setShowRecordModal(true);
   };
@@ -5633,16 +5547,13 @@ function HealthHubScreen({ navigation, route }) {
         icon: '💉',
         status: 'current',
         date: clean.dateGiven || todayKey,
-        nextDue: clean.nextDueDate || clean.expirationDate || clean.renewalDate || clean.dueDate || '',
+        nextDue: clean.nextDueDate || '',
         provider: clean.providerClinic || '',
         details: {
           vaccineName: mainValue,
           dateGiven: clean.dateGiven || todayKey,
           providerClinic: clean.providerClinic || '',
-          nextDueDate: clean.nextDueDate || clean.expirationDate || clean.renewalDate || clean.dueDate || '',
-          expirationDate: clean.expirationDate || '',
-          renewalDate: clean.renewalDate || '',
-          dueDate: clean.dueDate || '',
+          nextDueDate: clean.nextDueDate || '',
           vaccineNotes: clean.vaccineNotes || '',
         },
       },
@@ -5651,16 +5562,15 @@ function HealthHubScreen({ navigation, route }) {
         icon: '💊',
         status: 'current',
         date: clean.startDate || todayKey,
-        nextDue: clean.endDate || clean.nextDoseDate || clean.nextRefillDate || '',
+        nextDue: clean.endDate || clean.nextDoseDate || '',
         provider: clean.prescribingVet || '',
         details: {
           medicationName: mainValue,
           dosage: clean.dosage || '',
           frequency: clean.frequency || '',
           startDate: clean.startDate || todayKey,
-          endDate: clean.endDate || clean.nextDoseDate || clean.nextRefillDate || '',
-          nextDoseDate: clean.endDate || clean.nextDoseDate || clean.nextRefillDate || '',
-          nextRefillDate: clean.nextRefillDate || '',
+          endDate: clean.endDate || clean.nextDoseDate || '',
+          nextDoseDate: clean.endDate || clean.nextDoseDate || '',
           prescribingVet: clean.prescribingVet || '',
           medicationNotes: clean.medicationNotes || '',
         },
@@ -5670,14 +5580,13 @@ function HealthHubScreen({ navigation, route }) {
         icon: '🏥',
         status: 'upcoming',
         date: clean.appointmentDate || todayKey,
-        nextDue: clean.followUpDate || clean.nextAppointmentDate || '',
+        nextDue: clean.followUpDate || '',
         provider: clean.vetClinic || '',
         details: {
           visitReason: mainValue,
           appointmentDate: clean.appointmentDate || todayKey,
           clinicVet: clean.vetClinic || '',
           diagnosisFindings: clean.diagnosisFindings || '',
-          nextAppointmentDate: clean.nextAppointmentDate || clean.followUpDate || '',
           followUpDate: clean.followUpDate || '',
           appointmentNotes: clean.appointmentNotes || '',
         },
@@ -5740,13 +5649,11 @@ function HealthHubScreen({ navigation, route }) {
         status: 'current',
         date: clean.diagnosedDate || todayKey,
         provider: clean.diagnosisVet || '',
-        nextDue: clean.monitoringDate || clean.nextDue || '',
         details: {
           diagnosisName: mainValue,
           diagnosedDate: clean.diagnosedDate || todayKey,
           diagnosisVet: clean.diagnosisVet || '',
           treatmentPlan: clean.treatmentPlan || '',
-          monitoringDate: clean.monitoringDate || clean.nextDue || '',
           diagnosisNotes: clean.diagnosisNotes || '',
         },
       },
@@ -5808,13 +5715,8 @@ function HealthHubScreen({ navigation, route }) {
 
   const upsertHealthRecordReminder = (record, reminderEnabled, reminderDateValue, reminderTimeValue, existingReminder = null) => {
     const linkedReminder = existingReminder || getLinkedReminderForRecord(record.id);
-    const autoReminderDate = getHealthRecordAutoReminderDate(record);
-    const manualReminderDate = String(reminderDateValue || '').trim();
-    const cleanedDate = autoReminderDate || manualReminderDate;
-    const cleanedTime = String(reminderTimeValue || '').trim();
-    const shouldCreateReminder = Boolean(cleanedDate) && (reminderEnabled || autoReminderDate);
 
-    if (!shouldCreateReminder) {
+    if (!reminderEnabled) {
       if (linkedReminder) {
         setCareReminders((prev) => prev.filter((reminder) => reminder.id !== linkedReminder.id));
         deleteCareReminderFromSupabase(linkedReminder.id);
@@ -5822,19 +5724,13 @@ function HealthHubScreen({ navigation, route }) {
       return;
     }
 
-    if (
-      linkedReminder
-      && linkedReminder.petId === (record.petId || selectedPetId)
-      && linkedReminder.title === `${record.title} due`
-      && String(linkedReminder.date || '').trim() === cleanedDate
-      && String(linkedReminder.time || '').trim() === cleanedTime
-    ) {
-      return;
-    }
+    const cleanedDate = String(reminderDateValue || '').trim();
+    const cleanedTime = String(reminderTimeValue || '').trim();
+    if (!cleanedDate) return;
 
     const reminderPayload = {
       id: linkedReminder?.id || Date.now().toString(),
-      petId: record.petId || selectedPetId,
+      petId: selectedPetId,
       title: `${record.title} due`,
       icon: record.icon,
       date: cleanedDate,
@@ -5867,7 +5763,7 @@ function HealthHubScreen({ navigation, route }) {
     setShowRecordModal(true);
   };
 
-  const saveRecord = async () => {
+  const saveRecord = () => {
     if (!pendingRecordType) {
       Alert.alert('Enter Details', 'Please choose a record type.');
       return;
@@ -5901,27 +5797,23 @@ function HealthHubScreen({ navigation, route }) {
           ? updatedRecord
           : record
       )));
-      const updatedOk = await updateHealthRecordInSupabase(updatedRecord);
-      if (updatedOk) {
+      upsertHealthRecordReminder(
+        updatedRecord,
+        reminderEnabled,
+        effectiveReminderDate,
+        reminderTime
+      );
+      updateHealthRecordInSupabase(updatedRecord);
+    } else {
+      const newRecord = createHealthRecord(pendingRecordType, recordForm);
+      if (newRecord) {
         upsertHealthRecordReminder(
-          updatedRecord,
+          newRecord,
           reminderEnabled,
           effectiveReminderDate,
           reminderTime
         );
-      }
-    } else {
-      const newRecord = createHealthRecord(pendingRecordType, recordForm);
-      if (newRecord) {
-        const savedOk = await saveHealthRecordToSupabase(newRecord);
-        if (savedOk) {
-          upsertHealthRecordReminder(
-            newRecord,
-            reminderEnabled,
-            effectiveReminderDate,
-            reminderTime
-          );
-        }
+        saveHealthRecordToSupabase(newRecord);
       }
     }
 
@@ -6109,50 +6001,6 @@ function HealthHubScreen({ navigation, route }) {
   };
 
   const getRecordDisplayLines = (record) => buildRecordDetailLines(record, true);
-  const getRecordCardLines = (record) => {
-    const details = record.details || {};
-    const lines = [];
-    const add = (value) => {
-      const text = String(value || '').trim();
-      if (text) lines.push(text);
-    };
-
-    const formattedStatus = record.displayStatus && statusInfo[record.displayStatus]
-      ? statusInfo[record.displayStatus].label
-      : record.status || '';
-
-    switch (record.type) {
-      case 'vaccination':
-        add(record.title || details.vaccineName || 'Vaccination');
-        add(formattedStatus || 'Current');
-        add(`Administered: ${formatDate(details.dateGiven || record.date)}`);
-        break;
-      case 'medication':
-        add(record.title || details.medicationName || 'Medication');
-        add(formattedStatus || 'Active');
-        add(`Dosage: ${String(details.dosage || record.dosage || '').trim() || 'Not set'}`);
-        break;
-      case 'weight':
-        add(`⚖️ ${record.title || 'Weight'}`);
-        add(`${String(details.weightValue || record.value || record.weightValue || '').trim() || 'Not set'}${record.unit ? ` ${record.unit}` : ''}`);
-        add(`Recorded: ${formatDate(details.weightDate || record.date)}`);
-        break;
-      case 'appointment':
-        add(record.title || details.visitReason || 'Vet Visit');
-        add(String(details.clinicVet || details.vetClinic || record.provider || '').trim() || 'Vet visit');
-        add(formatDate(details.appointmentDate || record.date));
-        break;
-      case 'imported_file':
-        add('Imported Record');
-        add('Imported from OCR');
-        add(formatDate(record.date));
-        break;
-      default:
-        return buildRecordDetailLines(record, true);
-    }
-
-    return lines;
-  };
 
   const getRecordStatusBadge = (record) => {
     const today = new Date();
@@ -6306,8 +6154,7 @@ function HealthHubScreen({ navigation, route }) {
     insightLines.push(recentActivityText);
   }
 
-  const safeInsightLines = Array.isArray(insightLines) ? insightLines : [];
-  const visibleInsights = safeInsightLines.slice(0, 2);
+  const visibleInsights = insightLines.slice(0, 3);
   const selectedRecordReminder = selectedRecord ? getLinkedReminderForRecord(selectedRecord.id) : null;
   const selectedRecordStatus = selectedRecord ? getRecordStatusBadge(selectedRecord) : null;
   const selectedRecordHeaderLines = selectedRecord ? getRecordHeaderLines(selectedRecord) : [];
@@ -7172,10 +7019,50 @@ function HealthHubScreen({ navigation, route }) {
             <PetAvatarRow
               pets={pets}
               selectedId={selectedPetId}
-              onSelect={setSelectedPetId}
-              onOpenProfile={(petId) => navigation.navigate('PetProfile', { petId })}
-            />
+            onSelect={setSelectedPetId}
+            onOpenProfile={(petId) => navigation.navigate('PetProfile', { petId })}
+          />
+        </View>
+
+        <Card
+          style={{
+            marginHorizontal: 16,
+            marginTop: 10,
+            marginBottom: 12,
+            padding: 16,
+            borderRadius: 24,
+            backgroundColor: '#1a1a1a',
+            borderWidth: 1,
+            borderColor: 'rgba(255, 153, 0, 0.14)',
+            shadowColor: C.accent,
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 3,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.accent, marginRight: 10 }} />
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>Dynamic Health Insights</Text>
           </View>
+
+          {visibleInsights.map((line, index) => (
+            <View key={`${line}-${index}`} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: index === visibleInsights.length - 1 ? 0 : 8 }}>
+              <Text style={{ color: C.accent, marginRight: 8, fontSize: 14 }}>•</Text>
+              <Text style={{ color: C.text, fontSize: 13, lineHeight: 18, flex: 1 }}>{line}</Text>
+            </View>
+            ))}
+
+          <TouchableOpacity style={s.localVetFinderToggle} onPress={toggleVetFinder} activeOpacity={0.9}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.localVetFinderToggleTitle}>Local Vets & Emergency Care</Text>
+              <Text style={s.localVetFinderToggleSub}>
+                {isVetFinderExpanded ? 'Tap to close the vet finder sheet' : 'Tap to open nearby vet tools and saved clinics'}
+              </Text>
+            </View>
+            <Text style={s.localVetFinderChevron}>{isVetFinderExpanded ? '▴' : '▾'}</Text>
+          </TouchableOpacity>
+          </Card>
         </View>
 
         <ScrollView
@@ -7330,50 +7217,6 @@ function HealthHubScreen({ navigation, route }) {
           ))}
         </ScrollView>
 
-        <Card
-          style={{
-            marginHorizontal: 16,
-            marginTop: 6,
-            marginBottom: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderRadius: 18,
-            backgroundColor: 'rgba(248,250,255,0.90)',
-            borderWidth: 1,
-            borderColor: 'rgba(126,87,194,0.14)',
-            shadowColor: '#7B61FF',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.025,
-            shadowRadius: 8,
-            elevation: 1,
-            maxHeight: 122,
-            overflow: 'hidden',
-          }}
-        >
-          <Text style={{ color: '#1D2742', fontSize: 13, fontWeight: '900' }}>Dynamic Health Insights</Text>
-          <Text style={{ color: '#5f6477', fontSize: 11, fontWeight: '700', marginTop: 2 }}>
-            {visibleInsights.length > 0 ? `${visibleInsights.length} insight${visibleInsights.length === 1 ? '' : 's'} ready` : 'No insights yet'}
-          </Text>
-          <View style={{ marginTop: 8, gap: 5 }}>
-            {(visibleInsights.length > 0 ? visibleInsights.slice(0, 3) : ['No overdue care', 'Wellness records are up to date', 'Weight tracking active']).map((insight, index) => (
-              <View key={`health-insight-${index}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                <View
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: 3.5,
-                    backgroundColor: index % 2 === 0 ? '#7B61FF' : '#28C7B7',
-                    marginTop: 5,
-                  }}
-                />
-                <Text style={{ flex: 1, color: '#1D2742', fontSize: 12, lineHeight: 17, fontWeight: '600' }}>
-                  {typeof insight === 'string' ? insight : insight?.text || insight?.label || insight?.title || ''}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </Card>
-
         {records.length === 0 ? (
           <Card style={{ alignItems: 'center', padding: 32, marginHorizontal: 16, borderRadius: 22, backgroundColor: '#1e1e1e', borderWidth: 1, borderColor: C.border }}>
             <Text style={{ fontSize: 40, marginBottom: 8 }}>📋</Text>
@@ -7440,9 +7283,9 @@ function HealthHubScreen({ navigation, route }) {
                         <Text style={s.timelineTitle}>{record.title}</Text>
                         <Text style={s.timelineDate}>{formatDate(record.date)}</Text>
 
-                        {getRecordCardLines(record).length > 0 && (
+                        {getRecordDisplayLines(record).length > 0 && (
                           <Text style={{ color: C.muted, fontSize: 11, lineHeight: 16, marginTop: 6 }}>
-                            {getRecordCardLines(record).join('\n')}
+                            {getRecordDisplayLines(record).join('\n')}
                           </Text>
                         )}
 
@@ -7862,6 +7705,212 @@ function HealthHubScreen({ navigation, route }) {
         </View>
       </Modal>
 
+      <Modal visible={showVetModal} transparent animationType="fade" onRequestClose={closeVetModal}>
+        <KeyboardAvoidingView
+          style={s.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 28 : 0}
+        >
+          <View style={s.customActionModal}>
+            <Text style={s.customActionModalTitle}>{editingVetId ? 'Edit Vet Card' : 'Save Vet Card'}</Text>
+
+            <ScrollView
+              style={{ maxHeight: 360 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
+              <Text style={s.vetModalLabel}>Clinic name</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.name}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, name: text }))}
+                placeholder="Clinic name"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Type</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.type}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, type: text }))}
+                placeholder="Vet Clinic / Emergency Vet / Mobile Vet"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Distance</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.distance}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, distance: text }))}
+                placeholder="2.4 mi"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Phone</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.phone}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, phone: text }))}
+                placeholder="732-555-0142"
+                placeholderTextColor={C.muted}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={s.vetModalLabel}>Address</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.address}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, address: text }))}
+                placeholder="Ocean County, NJ"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Status</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.status}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, status: text }))}
+                placeholder="Open / 24/7 Emergency / By appointment"
+                placeholderTextColor={C.muted}
+              />
+
+              <Text style={s.vetModalLabel}>Website link</Text>
+              <TextInput
+                style={s.customActionInput}
+                value={vetDraft.websiteUrl}
+                onChangeText={(text) => setVetDraft((prev) => ({ ...prev, websiteUrl: text }))}
+                placeholder="https://clinicwebsite.com"
+                placeholderTextColor={C.muted}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </ScrollView>
+
+            <View style={s.customActionModalButtons}>
+              <TouchableOpacity style={s.customActionCancelBtn} onPress={closeVetModal}>
+                <Text style={s.customActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.customActionSaveBtn} onPress={saveVetCard}>
+                <Text style={s.customActionSaveText}>{editingVetId ? 'Update Vet' : 'Save Vet'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={isVetFinderExpanded} animationType="slide" onRequestClose={toggleVetFinder}>
+        <SafeAreaView style={s.localVetFinderModalScreen} edges={['top', 'bottom']}>
+          <View style={s.localVetFinderModalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.localVetFinderModalTitle}>Local Vets & Emergency Care</Text>
+              <Text style={s.localVetFinderModalSubtitle}>
+                Search nearby clinics, then save the ones you want to keep on hand.
+              </Text>
+            </View>
+            <TouchableOpacity style={s.localVetFinderCloseBtn} onPress={toggleVetFinder} activeOpacity={0.85}>
+              <Text style={s.localVetFinderCloseBtnText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={s.localVetFinderModalScroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={s.localVetFinderModalScrollContent}
+          >
+            <View style={s.localVetWarning}>
+              <Text style={s.localVetWarningText}>
+                If your pet is having trouble breathing, bleeding heavily, collapsed, had a seizure, ate something toxic, or may have swallowed glass/sharp objects, contact an emergency vet immediately.
+              </Text>
+            </View>
+
+            <View style={s.localVetFinderButtonRow}>
+              <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1 }]} onPress={openMapsSearch} activeOpacity={0.9}>
+                <Text style={s.localVetFinderMainBtnText}>Find Vets Near Me</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1, backgroundColor: C.red, borderColor: C.red }]} onPress={openEmergencyMapsSearch} activeOpacity={0.9}>
+                <Text style={s.localVetFinderMainBtnText}>Find Emergency Vet Near Me</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={s.localVetFinderSaveBtn} onPress={() => openVetAddModal()} activeOpacity={0.9}>
+              <Text style={s.localVetFinderSaveBtnText}>＋ Add Vet Card</Text>
+            </TouchableOpacity>
+
+            <View style={s.localVetSavedSection}>
+              <Text style={s.localVetSavedSectionTitle}>Saved Vet Cards</Text>
+
+              {savedVets.length === 0 ? (
+                <View style={s.localVetEmptyState}>
+                  <Text style={s.localVetEmptyStateText}>
+                    Search for a clinic, open the website or map, then save the vet here so you can return to it later.
+                  </Text>
+                </View>
+              ) : (
+                savedVets.map((clinic) => (
+                  <View key={clinic.id} style={s.localVetCard}>
+                    <View style={s.localVetCardTopRow}>
+                      <View style={s.localVetAvatar}>
+                        <Text style={s.localVetAvatarText}>🏥</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.localVetName}>{clinic.name}</Text>
+                        <Text style={s.localVetType}>{clinic.type}</Text>
+                      </View>
+                      <View style={s.localVetStatusPill}>
+                        <Text style={s.localVetStatusText}>{clinic.status}</Text>
+                      </View>
+                    </View>
+
+                    <View style={s.localVetMetaGrid}>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Distance</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.distance}</Text>
+                      </View>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Phone</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.phone}</Text>
+                      </View>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Address</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.address}</Text>
+                      </View>
+                      <View style={s.localVetMetaItem}>
+                        <Text style={s.localVetMetaLabel}>Website</Text>
+                        <Text style={s.localVetMetaValue}>{clinic.websiteUrl ? 'Saved' : 'Not added'}</Text>
+                      </View>
+                    </View>
+
+                    <View style={s.localVetActionRow}>
+                      <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetCall(clinic.phone)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnText}>Call</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetMaps(clinic)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnText}>Open Maps</Text>
+                      </TouchableOpacity>
+                      {clinic.websiteUrl ? (
+                        <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetWebsite(clinic.websiteUrl)} activeOpacity={0.85}>
+                          <Text style={s.localVetActionBtnText}>Website</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+
+                    <View style={s.localVetEditDeleteRow}>
+                      <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnAccentSoft]} onPress={() => editVetCard(clinic)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnTextAccentSoft}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnDanger]} onPress={() => deleteVetCard(clinic.id)} activeOpacity={0.85}>
+                        <Text style={s.localVetActionBtnTextDanger}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
     </PetSyncBackground>
   );
@@ -10466,21 +10515,6 @@ export default function App() {
   const [activityLogs, setActivityLogs] = useState([]);
   const [showAddPetModal, setShowAddPetModal] = useState(false);
   const [addPetInitialSpecies, setAddPetInitialSpecies] = useState('dog');
-  const [showEmergencyVetModal, setShowEmergencyVetModal] = useState(false);
-  const [vetActionLoading, setVetActionLoading] = useState(false);
-  const [vetActionLoadingLabel, setVetActionLoadingLabel] = useState('Opening Maps...');
-  const [savedVets, setSavedVets] = useState([]);
-  const [showVetModal, setShowVetModal] = useState(false);
-  const [editingVetId, setEditingVetId] = useState(null);
-  const [vetDraft, setVetDraft] = useState({
-    name: '',
-    type: 'Vet Clinic',
-    distance: '',
-    phone: '',
-    address: '',
-    status: 'Open',
-    websiteUrl: '',
-  });
   const addPetSelectCallbackRef = useRef(null);
   const pushTokenRegistrationStartedRef = useRef(false);
 
@@ -10493,118 +10527,6 @@ export default function App() {
   const closeAddPetModal = () => {
     addPetSelectCallbackRef.current = null;
     setShowAddPetModal(false);
-  };
-
-  const openVetFinder = () => setShowEmergencyVetModal(true);
-  const closeVetFinder = () => setShowEmergencyVetModal(false);
-  const toggleVetFinder = () => setShowEmergencyVetModal((prev) => !prev);
-
-  const openMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=vet+near+me');
-  const openEmergencyMapsSearch = () => Linking.openURL('https://www.google.com/maps/search/?api=1&query=emergency+vet+near+me');
-  const openVetSearch = useCallback(async (url, loadingLabel = 'Opening Maps...') => {
-    if (vetActionLoading) return;
-
-    setVetActionLoading(true);
-    setVetActionLoadingLabel(loadingLabel);
-
-    try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (!canOpen) {
-        Alert.alert('Unable to open Maps', 'Please try again.');
-        return;
-      }
-
-      await Linking.openURL(url);
-    } catch (error) {
-      console.log('Emergency vet map open error:', error);
-      Alert.alert('Unable to open Maps', 'Please try again.');
-    } finally {
-      setVetActionLoading(false);
-      setVetActionLoadingLabel('Opening Maps...');
-    }
-  }, [vetActionLoading]);
-  const openVetCall = (phone) => Linking.openURL(`tel:${phone}`);
-  const openVetMaps = (clinic) => {
-    const query = encodeURIComponent(`${clinic.name} ${clinic.address}`);
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-  };
-  const openVetWebsite = (websiteUrl) => {
-    const normalized = String(websiteUrl || '').trim();
-    if (!normalized) return;
-
-    const url = /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
-    Linking.openURL(url);
-  };
-  const openVetAddModal = (defaults = {}) => {
-    setEditingVetId(defaults.id || null);
-    setVetDraft({
-      name: defaults.name || '',
-      type: defaults.type || 'Vet Clinic',
-      distance: defaults.distance || '',
-      phone: defaults.phone || '',
-      address: defaults.address || '',
-      status: defaults.status || 'Open',
-      websiteUrl: defaults.websiteUrl || '',
-    });
-    setShowVetModal(true);
-  };
-  const closeVetModal = () => {
-    setShowVetModal(false);
-    setEditingVetId(null);
-    setVetDraft({
-      name: '',
-      type: 'Vet Clinic',
-      distance: '',
-      phone: '',
-      address: '',
-      status: 'Open',
-      websiteUrl: '',
-    });
-  };
-  const saveVetCard = () => {
-    const name = vetDraft.name.trim();
-    const type = vetDraft.type.trim();
-    const distance = vetDraft.distance.trim();
-    const phone = vetDraft.phone.trim();
-    const address = vetDraft.address.trim();
-    const status = vetDraft.status.trim();
-    const websiteUrl = vetDraft.websiteUrl.trim();
-
-    if (!name || !type || !distance || !phone || !address || !status) {
-      Alert.alert('Missing details', 'Please complete all vet fields before saving.');
-      return;
-    }
-
-    const payload = {
-      id: editingVetId || `saved-vet-${Date.now()}`,
-      name,
-      type,
-      distance,
-      phone,
-      address,
-      status,
-      websiteUrl,
-    };
-
-    setSavedVets((prev) => {
-      if (editingVetId) {
-        return prev.map((vet) => (vet.id === editingVetId ? payload : vet));
-      }
-
-      return [payload, ...prev];
-    });
-    closeVetModal();
-  };
-  const editVetCard = (clinic) => openVetAddModal(clinic);
-  const deleteVetCard = (vetId) => {
-    Alert.alert('Delete Vet?', 'This saved vet card will be removed.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => setSavedVets((prev) => prev.filter((vet) => vet.id !== vetId)),
-      },
-    ]);
   };
 
   const handleSavePet = (newPet) => {
@@ -10738,229 +10660,22 @@ export default function App() {
                 <HealthRecordsContext.Provider value={{ healthRecords, setHealthRecords }}>
                   <CareRemindersContext.Provider value={{ careReminders, setCareReminders }}>
                     <LostPetAlertsContext.Provider value={{ lostPetAlerts, setLostPetAlerts }}>
-                      <VetFinderContext.Provider value={{ showEmergencyVetModal, openVetFinder, closeVetFinder, toggleVetFinder }}>
-                        <NavigationContainer>
-                          <Stack.Navigator screenOptions={{ headerShown: false }}>
-                          <Stack.Screen name="Main"    component={TabNavigator}  />
-                          <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
-                          <Stack.Screen name="FamilySharing" component={FamilySharingScreen} options={{ presentation: 'modal' }} />
-                          <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={{ presentation: 'modal' }} />
-                          <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
-                          <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
-                        </Stack.Navigator>
-                        </NavigationContainer>
-                        <AddPetModal
-                          visible={showAddPetModal}
-                          initialSpecies={addPetInitialSpecies}
-                          onClose={closeAddPetModal}
-                          onSave={handleSavePet}
-                        />
-                        <Modal visible={showVetModal} transparent animationType="fade" onRequestClose={closeVetModal}>
-                          <KeyboardAvoidingView
-                            style={s.modalOverlay}
-                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                            keyboardVerticalOffset={Platform.OS === 'ios' ? 28 : 0}
-                          >
-                            <View style={s.customActionModal}>
-                              <Text style={s.customActionModalTitle}>{editingVetId ? 'Edit Vet Card' : 'Save Vet Card'}</Text>
-
-                              <ScrollView
-                                style={{ maxHeight: 360 }}
-                                showsVerticalScrollIndicator={false}
-                                keyboardShouldPersistTaps="handled"
-                                contentContainerStyle={{ paddingBottom: 8 }}
-                              >
-                                <Text style={s.vetModalLabel}>Clinic name</Text>
-                                <TextInput
-                                  style={s.customActionInput}
-                                  value={vetDraft.name}
-                                  onChangeText={(text) => setVetDraft((prev) => ({ ...prev, name: text }))}
-                                  placeholder="Clinic name"
-                                  placeholderTextColor={C.muted}
-                                />
-
-                                <Text style={s.vetModalLabel}>Type</Text>
-                                <TextInput
-                                  style={s.customActionInput}
-                                  value={vetDraft.type}
-                                  onChangeText={(text) => setVetDraft((prev) => ({ ...prev, type: text }))}
-                                  placeholder="Vet Clinic / Emergency Vet / Mobile Vet"
-                                  placeholderTextColor={C.muted}
-                                />
-
-                                <Text style={s.vetModalLabel}>Distance</Text>
-                                <TextInput
-                                  style={s.customActionInput}
-                                  value={vetDraft.distance}
-                                  onChangeText={(text) => setVetDraft((prev) => ({ ...prev, distance: text }))}
-                                  placeholder="2.4 mi"
-                                  placeholderTextColor={C.muted}
-                                />
-
-                                <Text style={s.vetModalLabel}>Phone</Text>
-                                <TextInput
-                                  style={s.customActionInput}
-                                  value={vetDraft.phone}
-                                  onChangeText={(text) => setVetDraft((prev) => ({ ...prev, phone: text }))}
-                                  placeholder="732-555-0142"
-                                  placeholderTextColor={C.muted}
-                                  keyboardType="phone-pad"
-                                />
-
-                                <Text style={s.vetModalLabel}>Address</Text>
-                                <TextInput
-                                  style={s.customActionInput}
-                                  value={vetDraft.address}
-                                  onChangeText={(text) => setVetDraft((prev) => ({ ...prev, address: text }))}
-                                  placeholder="Ocean County, NJ"
-                                  placeholderTextColor={C.muted}
-                                />
-
-                                <Text style={s.vetModalLabel}>Status</Text>
-                                <TextInput
-                                  style={s.customActionInput}
-                                  value={vetDraft.status}
-                                  onChangeText={(text) => setVetDraft((prev) => ({ ...prev, status: text }))}
-                                  placeholder="Open / 24/7 Emergency / By appointment"
-                                  placeholderTextColor={C.muted}
-                                />
-
-                                <Text style={s.vetModalLabel}>Website link</Text>
-                                <TextInput
-                                  style={s.customActionInput}
-                                  value={vetDraft.websiteUrl}
-                                  onChangeText={(text) => setVetDraft((prev) => ({ ...prev, websiteUrl: text }))}
-                                  placeholder="https://clinicwebsite.com"
-                                  placeholderTextColor={C.muted}
-                                  autoCapitalize="none"
-                                  autoCorrect={false}
-                                />
-                              </ScrollView>
-
-                              <View style={s.customActionModalButtons}>
-                                <TouchableOpacity style={s.customActionCancelBtn} onPress={closeVetModal}>
-                                  <Text style={s.customActionCancelText}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={s.customActionSaveBtn} onPress={saveVetCard}>
-                                  <Text style={s.customActionSaveText}>{editingVetId ? 'Update Vet' : 'Save Vet'}</Text>
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          </KeyboardAvoidingView>
-                        </Modal>
-                        <Modal visible={showEmergencyVetModal} animationType="slide" onRequestClose={closeVetFinder}>
-                          <SafeAreaView style={s.localVetFinderModalScreen} edges={['top', 'bottom']}>
-                            <View style={s.localVetFinderModalHeader}>
-                              <View style={{ flex: 1 }}>
-                                <Text style={s.localVetFinderModalTitle}>Local Vets & Emergency Care</Text>
-                                <Text style={s.localVetFinderModalSubtitle}>
-                                  Search nearby clinics, then save the ones you want to keep on hand.
-                                </Text>
-                              </View>
-                              <TouchableOpacity style={s.localVetFinderCloseBtn} onPress={closeVetFinder} activeOpacity={0.85}>
-                                <Text style={s.localVetFinderCloseBtnText}>✕</Text>
-                              </TouchableOpacity>
-                            </View>
-
-                            <ScrollView
-                              style={s.localVetFinderModalScroll}
-                              showsVerticalScrollIndicator={false}
-                              keyboardShouldPersistTaps="handled"
-                              contentContainerStyle={s.localVetFinderModalScrollContent}
-                            >
-                              <View style={s.localVetWarning}>
-                                <Text style={s.localVetWarningText}>
-                                  If your pet is having trouble breathing, bleeding heavily, collapsed, had a seizure, ate something toxic, or may have swallowed glass/sharp objects, contact an emergency vet immediately.
-                                </Text>
-                              </View>
-
-                              <View style={s.localVetFinderButtonRow}>
-                                <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1 }]} onPress={openMapsSearch} activeOpacity={0.9}>
-                                  <Text style={s.localVetFinderMainBtnText}>Find Vets Near Me</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[s.localVetFinderMainBtn, { flex: 1, backgroundColor: C.red, borderColor: C.red }]} onPress={openEmergencyMapsSearch} activeOpacity={0.9}>
-                                  <Text style={s.localVetFinderMainBtnText}>Find Emergency Vet Near Me</Text>
-                                </TouchableOpacity>
-                              </View>
-
-                              <TouchableOpacity style={s.localVetFinderSaveBtn} onPress={() => openVetAddModal()} activeOpacity={0.9}>
-                                <Text style={s.localVetFinderSaveBtnText}>＋ Add Vet Card</Text>
-                              </TouchableOpacity>
-
-                              <View style={s.localVetSavedSection}>
-                                <Text style={s.localVetSavedSectionTitle}>Saved Vet Cards</Text>
-
-                                {savedVets.length === 0 ? (
-                                  <View style={s.localVetEmptyState}>
-                                    <Text style={s.localVetEmptyStateText}>
-                                      Search for a clinic, open the website or map, then save the vet here so you can return to it later.
-                                    </Text>
-                                  </View>
-                                ) : (
-                                  savedVets.map((clinic) => (
-                                    <View key={clinic.id} style={s.localVetCard}>
-                                      <View style={s.localVetCardTopRow}>
-                                        <View style={s.localVetAvatar}>
-                                          <Text style={s.localVetAvatarText}>🏥</Text>
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                          <Text style={s.localVetName}>{clinic.name}</Text>
-                                          <Text style={s.localVetType}>{clinic.type}</Text>
-                                        </View>
-                                        <View style={s.localVetStatusPill}>
-                                          <Text style={s.localVetStatusText}>{clinic.status}</Text>
-                                        </View>
-                                      </View>
-
-                                      <View style={s.localVetMetaGrid}>
-                                        <View style={s.localVetMetaItem}>
-                                          <Text style={s.localVetMetaLabel}>Distance</Text>
-                                          <Text style={s.localVetMetaValue}>{clinic.distance}</Text>
-                                        </View>
-                                        <View style={s.localVetMetaItem}>
-                                          <Text style={s.localVetMetaLabel}>Phone</Text>
-                                          <Text style={s.localVetMetaValue}>{clinic.phone}</Text>
-                                        </View>
-                                        <View style={s.localVetMetaItem}>
-                                          <Text style={s.localVetMetaLabel}>Address</Text>
-                                          <Text style={s.localVetMetaValue}>{clinic.address}</Text>
-                                        </View>
-                                        <View style={s.localVetMetaItem}>
-                                          <Text style={s.localVetMetaLabel}>Website</Text>
-                                          <Text style={s.localVetMetaValue}>{clinic.websiteUrl ? 'Saved' : 'Not added'}</Text>
-                                        </View>
-                                      </View>
-
-                                      <View style={s.localVetActionRow}>
-                                        <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetCall(clinic.phone)} activeOpacity={0.85}>
-                                          <Text style={s.localVetActionBtnText}>Call</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetMaps(clinic)} activeOpacity={0.85}>
-                                          <Text style={s.localVetActionBtnText}>Open Maps</Text>
-                                        </TouchableOpacity>
-                                        {clinic.websiteUrl ? (
-                                          <TouchableOpacity style={s.localVetActionBtn} onPress={() => openVetWebsite(clinic.websiteUrl)} activeOpacity={0.85}>
-                                            <Text style={s.localVetActionBtnText}>Website</Text>
-                                          </TouchableOpacity>
-                                        ) : null}
-                                      </View>
-
-                                      <View style={s.localVetEditDeleteRow}>
-                                        <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnAccentSoft]} onPress={() => editVetCard(clinic)} activeOpacity={0.85}>
-                                          <Text style={s.localVetActionBtnTextAccentSoft}>Edit</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={[s.localVetActionBtn, s.localVetActionBtnDanger]} onPress={() => deleteVetCard(clinic.id)} activeOpacity={0.85}>
-                                          <Text style={s.localVetActionBtnTextDanger}>Delete</Text>
-                                        </TouchableOpacity>
-                                      </View>
-                                    </View>
-                                  ))
-                                )}
-                              </View>
-                            </ScrollView>
-                          </SafeAreaView>
-                        </Modal>
-                      </VetFinderContext.Provider>
+                      <NavigationContainer>
+                        <Stack.Navigator screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="Main"    component={TabNavigator}  />
+                        <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="FamilySharing" component={FamilySharingScreen} options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
+                      </Stack.Navigator>
+                      </NavigationContainer>
+                      <AddPetModal
+                        visible={showAddPetModal}
+                        initialSpecies={addPetInitialSpecies}
+                        onClose={closeAddPetModal}
+                        onSave={handleSavePet}
+                      />
                     </LostPetAlertsContext.Provider>
                   </CareRemindersContext.Provider>
                 </HealthRecordsContext.Provider>
@@ -11097,7 +10812,7 @@ greeting: {
   letterSpacing: -0.8,
 },
 subGreeting: {
-  color: '#7b2bea',
+  color: '#6D7787',
   fontSize: 15,
   marginTop: 4,
   fontWeight: '600',
@@ -11118,8 +10833,8 @@ sosButton: {
   pageHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   pageTitle:         { color: C.text, fontSize: 26, fontWeight: '800' },
   pageSub:           { color: C.muted, fontSize: 13, marginTop: 2 },
-  exportBtn:         { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 6, paddingVertical: 5 },
-  exportBtnText:     { color: '#000000', fontSize: 12 },
+  exportBtn:         { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+  exportBtnText:     { color: C.muted, fontSize: 12 },
   iconBtn:           { width: 42, height: 42, justifyContent: 'center', alignItems: 'center' },
   accentBtn:         { backgroundColor: C.accent, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
   accentBtnText:     { color: '#fff', fontWeight: '700', fontSize: 13 },
@@ -11129,7 +10844,7 @@ sosButton: {
   petAvatar:         { width: 64, height: 64, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E6EAF5', shadowColor: '#7B61FF', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   petAvatarActive:   { backgroundColor: '#F3EEFF', borderWidth: 2, borderColor: '#6B4BFF' },
   petAvatarEmoji:    { fontSize: 26 },
-  petAvatarName:     { color: '#727e8d', fontSize: 11, marginTop: 3, fontWeight: '700' },
+  petAvatarName:     { color: '#617084', fontSize: 11, marginTop: 3, fontWeight: '700' },
 
   // Generic badges/tabs/buttons
   badge:             { borderWidth: 1, borderRadius: 16, paddingHorizontal: 9, paddingVertical: 3 },
@@ -11489,7 +11204,7 @@ sosButton: {
     borderWidth: 1,
     backgroundColor: 'rgba(248,250,255,0.92)',
     borderColor: 'rgba(126,87,194,0.14)',
-    padding: 8,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#7B61FF',
@@ -11511,7 +11226,7 @@ sosButton: {
     lineHeight: 17,
   },
   dashboardAIBtn: {
-    backgroundColor: '#4a3b8ea3',
+    backgroundColor: '#6B4BFF',
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -11550,14 +11265,14 @@ sosButton: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#fc0404',
+    backgroundColor: '#6B4BFF',
   },
   healthScoreCard: {
   marginHorizontal: 16,
   marginTop: 14,
   marginBottom: 8,
   borderRadius: 28,
-  padding: 15,
+  padding: 18,
   borderWidth: 1,
   backgroundColor: 'rgba(248,250,255,0.94)',
   borderColor: 'rgba(126,87,194,0.14)',
@@ -11776,7 +11491,7 @@ sosButton: {
   taskTitleDone:     { textDecorationLine: 'line-through', color: C.muted },
   taskTime:          { color: C.muted, fontSize: 12, marginTop: 3 },
   quickAction: {
-  backgroundColor: 'rgba(248, 250, 255, 0.36)',
+  backgroundColor: 'rgba(248,250,255,0.88)',
 
   width: 78,
   height: 78,
@@ -12257,7 +11972,7 @@ sosButton: {
     localVetFinderToggleSub: { color: C.muted, fontSize: 12, marginTop: 3, fontWeight: '600' },
     localVetFinderChevron: { color: C.accent, fontSize: 18, fontWeight: '900' },
     localVetFinderModalScreen: { flex: 1, backgroundColor: C.bg },
-    localVetFinderModalHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingTop: 54, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: '#101c2a' },
+    localVetFinderModalHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: '#101c2a' },
     localVetFinderModalTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
     localVetFinderModalSubtitle: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 4, fontWeight: '600' },
     localVetFinderCloseBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: C.cardHigh, borderWidth: 1, borderColor: C.border, marginTop: 2 },
