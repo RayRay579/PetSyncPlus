@@ -18,6 +18,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -1834,8 +1835,11 @@ const addDaysLocal = (date, days) => {
 const formatMonthYear = (date) => date.toLocaleDateString([], { month: 'short', year: 'numeric' });
 
 const getStreakDaysForPet = (activityLogs, petId) => {
-  const petLogs = activityLogs.filter((log) => log.petId === petId);
-  if (petLogs.length === 0) return 1;
+  const careActivityTypes = new Set(['meal', 'walk', 'medication', 'weight', 'grooming', 'reminder_completed', 'custom']);
+  const petLogs = Array.isArray(activityLogs)
+    ? activityLogs.filter((log) => log.petId === petId && careActivityTypes.has(log.type))
+    : [];
+  if (petLogs.length === 0) return 0;
 
   const uniqueDays = [...new Set(petLogs.map((log) => log.dateKey || new Date().toDateString()))]
     .sort((a, b) => new Date(b) - new Date(a));
@@ -1852,7 +1856,7 @@ const getStreakDaysForPet = (activityLogs, petId) => {
     }
   }
 
-  return Math.max(1, streakDays);
+  return streakDays;
 };
 
 const calculateAgeLabelFromBirthday = (birthdayKey) => {
@@ -2037,7 +2041,7 @@ const buildStarterHealthRecords = (pet) => {
 };
 
 const buildQuickActionsForSpecies = (pet, addActivityLog, navigation) => {
-  const baseVetAction = { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') };
+  const baseVetAction = { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet', { selectedPetId: pet?.id || '' }) };
   const species = pet.species?.toLowerCase();
 
   switch (species) {
@@ -2091,21 +2095,21 @@ const buildQuickActionsForSpecies = (pet, addActivityLog, navigation) => {
         { icon: '🍽️', label: 'Feed Rabbit', action: () => addActivityLog('feeding', 'Rabbit fed', '🍽️') },
         { icon: '🧹', label: 'Hutch Cleaned', action: () => addActivityLog('cage_cleaned', 'Hutch cleaned', '🧹') },
         { icon: '🎾', label: 'Play Time', action: () => addActivityLog('play', 'Play time logged', '🎾') },
-        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet', { selectedPetId: pet?.id || '' }) },
       ];
     case 'hamster':
       return [
         { icon: '🍽️', label: 'Feed Hamster', action: () => addActivityLog('feeding', 'Hamster fed', '🍽️') },
         { icon: '🧼', label: 'Cage Tidy', action: () => addActivityLog('cage_cleaned', 'Cage tidied', '🧼') },
         { icon: '🎾', label: 'Wheel Time', action: () => addActivityLog('play', 'Wheel time logged', '🎾') },
-        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet', { selectedPetId: pet?.id || '' }) },
       ];
     case 'horse':
       return [
         { icon: '🍽️', label: 'Feed Horse', action: () => addActivityLog('feeding', 'Horse fed', '🍽️') },
         { icon: '🧼', label: 'Grooming', action: () => addActivityLog('grooming', 'Grooming logged', '🧼') },
         { icon: '🐎', label: 'Trail Ride', action: () => addActivityLog('walk', 'Trail ride logged', '🐎') },
-        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet') },
+        { icon: '🩺', label: 'AI Vet', action: () => navigation.navigate('AIVet', { selectedPetId: pet?.id || '' }) },
       ];
     default:
       return [
@@ -3168,9 +3172,13 @@ function DashboardScreen({ navigation }) {
   });
   const activityTrendCounts = activityTrendDays.map((date) => {
     const key = formatLocalDateKey(date);
-    return activityLogs.filter((log) => log.petId === pet.id && (log.dateKey === date.toDateString() || log.dateKey === key)).length;
+    return activityLogs.filter((log) => (
+      log.petId === pet.id
+      && careActivityTypes.has(log.type)
+      && (log.dateKey === date.toDateString() || log.dateKey === key)
+    )).length;
   });
-  const activityTrendMax = Math.max(1, ...activityTrendCounts);
+  const activityTrendMax = Math.max(0, ...activityTrendCounts);
   const weeklyActivityTotal = activityTrendCounts.reduce((sum, count) => sum + count, 0);
   const scoreProgressSegments = Array.from({ length: 12 }, (_, index) => index < Math.round((currentScore / 100) * 12));
   const formatReminderDate = (value) => {
@@ -3516,8 +3524,9 @@ function DashboardScreen({ navigation }) {
       </SafeAreaView>
     );
   }
+  const careActivityTypes = new Set(['meal', 'walk', 'medication', 'weight', 'grooming', 'reminder_completed', 'custom']);
   const scoreColor = currentScore >= 85 ? C.green : currentScore >= 65 ? C.yellow : C.red;
-  const recentActivity = activityLogs.filter(log => log.petId === pet.id);
+  const recentActivity = activityLogs.filter((log) => log.petId === pet.id && careActivityTypes.has(log.type));
   const petActivityDays = [...new Set(recentActivity.map(log => log.dateKey || new Date().toDateString()))].sort((a, b) => new Date(b) - new Date(a));
   let streakDays = 0;
   for (let i = 0; i < petActivityDays.length; i += 1) {
@@ -3530,7 +3539,6 @@ function DashboardScreen({ navigation }) {
       break;
     }
   }
-  streakDays = Math.max(1, streakDays);
   const healthInsights = [];
 
   if (streakDays >= 3) {
@@ -3844,11 +3852,11 @@ function DashboardScreen({ navigation }) {
             </View>
 
             <View style={s.dashboardHeroMetricsRow}>
-              <View style={s.dashboardMiniCard}>
-                <Text style={s.dashboardMiniCardLabel}>Care Streak</Text>
-                <Text style={s.dashboardMiniCardValue}>{streakDays}</Text>
-                <Text style={s.dashboardMiniCardSub}>days</Text>
-              </View>
+                <View style={s.dashboardMiniCard}>
+                  <Text style={s.dashboardMiniCardLabel}>Care Streak</Text>
+                  <Text style={s.dashboardMiniCardValue}>{streakDays}</Text>
+                  <Text style={s.dashboardMiniCardSub}>{streakDays === 1 ? 'day' : 'days'}</Text>
+                </View>
 
               <View style={s.dashboardMiniCard}>
                 <Text style={s.dashboardMiniCardLabel}>Next Reminder</Text>
@@ -3947,7 +3955,7 @@ function DashboardScreen({ navigation }) {
               Ask about symptoms, medications, food safety, or care concerns.
             </Text>
           </View>
-          <TouchableOpacity style={s.dashboardAIBtn} onPress={() => navigation.navigate('AIVet')}>
+          <TouchableOpacity style={s.dashboardAIBtn} onPress={() => navigation.navigate('AIVet', { selectedPetId: pet.id })}>
             <Text style={s.dashboardAIBtnText}>Ask AI Vet</Text>
           </TouchableOpacity>
         </Card>
@@ -4973,36 +4981,37 @@ function HealthHubScreen({ navigation, route }) {
     });
     const [showExportPreview, setShowExportPreview] = useState(false);
     const [exportFileUri, setExportFileUri] = useState('');
-    const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-    const [analysisRecord, setAnalysisRecord] = useState(null);
-    const [analysisResults, setAnalysisResults] = useState(null);
-    const [analysisLoading, setAnalysisLoading] = useState(false);
-    const analysisTimeoutRef = useRef(null);
-    const analysisRequestIdRef = useRef(0);
-    const openedHealthRecordIdRef = useRef(null);
-    const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight', 'procedures', 'conditions', 'labs', 'aquatic'];
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [analysisRecord, setAnalysisRecord] = useState(null);
+  const [analysisResults, setAnalysisResults] = useState(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [showOcrTextModal, setShowOcrTextModal] = useState(false);
+  const [ocrTextRecord, setOcrTextRecord] = useState(null);
+  const [ocrTextDraft, setOcrTextDraft] = useState('');
+  const [ocrTextEditMode, setOcrTextEditMode] = useState(false);
+  const [ocrAnalysisByRecordId, setOcrAnalysisByRecordId] = useState({});
+  const [ocrCreateContext, setOcrCreateContext] = useState(null);
+  const analysisTimeoutRef = useRef(null);
+  const analysisRequestIdRef = useRef(0);
+  const openedHealthRecordIdRef = useRef(null);
+    const tabs = ['all', 'vaccines', 'meds', 'appointments', 'weight', 'symptoms'];
     const tabLabels = {
       all: 'All',
       vaccines: 'Vaccines',
-    meds: 'Meds',
-    appointments: 'Visits',
-    weight: 'Weight',
-    procedures: 'Procedures',
-    conditions: 'Conditions',
-    labs: 'Labs',
-      aquatic: 'Aquatic',
+      meds: 'Meds',
+      appointments: 'Visits',
+      weight: 'Weight',
+      symptoms: 'Symptoms',
     };
   const typeMap = {
     vaccination: 'vaccines',
     medication: 'meds',
     appointment: 'appointments',
     weight: 'weight',
-    symptom: 'conditions',
-    surgery: 'procedures',
-    allergy: 'conditions',
-    diagnosis: 'conditions',
-    lab: 'labs',
-    fish: 'aquatic',
+      symptom: 'symptoms',
+      surgery: 'symptoms',
+      allergy: 'symptoms',
+      diagnosis: 'symptoms',
   };
 
   const createEmptyRecordForm = () => ({
@@ -5219,6 +5228,18 @@ function HealthHubScreen({ navigation, route }) {
             record?.details?.nextMonitoringDate,
             record?.details?.followUpDate
           );
+        case 'weight':
+          return firstText(
+            record?.nextDue,
+            record?.details?.weightFollowUpDate,
+            record?.details?.nextWeightDate
+          );
+        case 'symptom':
+          return firstText(
+            record?.nextDue,
+            record?.details?.symptomFollowUpDate,
+            record?.details?.followUpDate
+          );
         default:
           return '';
       }
@@ -5244,7 +5265,7 @@ function HealthHubScreen({ navigation, route }) {
     healthRecords
       .filter((record) => record.petId === selectedPetId)
       .forEach((record) => {
-        if (!['vaccination', 'medication', 'appointment', 'diagnosis'].includes(record.type)) {
+        if (!['vaccination', 'medication', 'appointment', 'diagnosis', 'weight', 'symptom'].includes(record.type)) {
           return;
         }
 
@@ -5617,6 +5638,7 @@ function HealthHubScreen({ navigation, route }) {
     setReminderDate(linkedReminder?.date || autoReminderDate || getReminderDefaultDate(record.type, form));
     setReminderTime(linkedReminder?.time || '');
     setShowRecordModal(true);
+    setOcrCreateContext(null);
   };
 
   const buildRecordMeta = (type, form) => {
@@ -5865,6 +5887,7 @@ function HealthHubScreen({ navigation, route }) {
     setReminderDate('');
     setReminderTime('');
     setShowRecordModal(true);
+    setOcrCreateContext(null);
   };
 
   const saveRecord = async () => {
@@ -5889,11 +5912,27 @@ function HealthHubScreen({ navigation, route }) {
 
     if (editingRecord) {
       const { detailLines, mainValue, ...recordMeta } = meta;
+      const existingOcrDetails = editingRecord?.details?.importedViaOcr ? {
+        importedViaOcr: true,
+        ocrSourceRecordId: editingRecord?.details?.ocrSourceRecordId || '',
+        ocrText: editingRecord?.details?.ocrText || '',
+        ocrImportedAt: editingRecord?.details?.ocrImportedAt || '',
+      } : {};
+      const ocrContextDetails = ocrCreateContext?.rawText ? {
+        importedViaOcr: true,
+        ocrSourceRecordId: ocrCreateContext.sourceRecordId || '',
+        ocrText: ocrCreateContext.rawText || '',
+        ocrImportedAt: ocrCreateContext.createdAt || new Date().toISOString(),
+      } : {};
       const updatedRecord = {
         ...editingRecord,
         type: pendingRecordType,
         ...recordMeta,
-        details: meta.details,
+        details: {
+          ...meta.details,
+          ...existingOcrDetails,
+          ...ocrContextDetails,
+        },
         notes: getHealthRecordNotes(pendingRecordType, meta.details, editingRecord?.notes || ''),
       };
       setHealthRecords(prev => prev.map(record => (
@@ -5913,10 +5952,28 @@ function HealthHubScreen({ navigation, route }) {
     } else {
       const newRecord = createHealthRecord(pendingRecordType, recordForm);
       if (newRecord) {
-        const savedOk = await saveHealthRecordToSupabase(newRecord);
+        const ocrMetadata = ocrCreateContext?.rawText ? {
+          importedViaOcr: true,
+          ocrSourceRecordId: ocrCreateContext.sourceRecordId || '',
+          ocrText: ocrCreateContext.rawText || '',
+          ocrImportedAt: ocrCreateContext.createdAt || new Date().toISOString(),
+        } : {};
+        const recordToSave = Object.keys(ocrMetadata).length > 0
+          ? {
+            ...newRecord,
+            details: {
+              ...(newRecord.details || {}),
+              ...ocrMetadata,
+            },
+          }
+          : newRecord;
+        if (Object.keys(ocrMetadata).length > 0) {
+          setHealthRecords((prev) => prev.map((item) => (item.id === newRecord.id ? recordToSave : item)));
+        }
+        const savedOk = await saveHealthRecordToSupabase(recordToSave);
         if (savedOk) {
           upsertHealthRecordReminder(
-            newRecord,
+            recordToSave,
             reminderEnabled,
             effectiveReminderDate,
             reminderTime
@@ -5932,6 +5989,7 @@ function HealthHubScreen({ navigation, route }) {
     setAddReminderToCalendar(false);
     setReminderDate('');
     setReminderTime('');
+    setOcrCreateContext(null);
   };
 
   const closeRecordModal = () => {
@@ -5942,6 +6000,7 @@ function HealthHubScreen({ navigation, route }) {
     setAddReminderToCalendar(false);
     setReminderDate('');
     setReminderTime('');
+    setOcrCreateContext(null);
   };
 
   const deleteRecord = (recordId) => {
@@ -6096,13 +6155,22 @@ function HealthHubScreen({ navigation, route }) {
         break;
       case 'imported_file':
         add('File name', record.fileName || record.title);
+        add('Import date', record.date);
+        add('OCR status', getImportedFileOcrStatusLabel(record));
         add('File type', record.mimeType || details.mimeType || 'Unknown');
         add('Size', formatImportedFileSize(record.size));
-        add('Uploaded date', record.date);
         add('Note', 'AI extraction coming soon');
         break;
       default:
         break;
+    }
+
+    if (record?.details?.importedViaOcr) {
+      if (lines.length > 1) {
+        lines.splice(1, 0, 'Imported via OCR');
+      } else {
+        lines.push('Imported via OCR');
+      }
     }
 
     return compact ? lines.slice(0, 3) : lines;
@@ -6221,7 +6289,7 @@ function HealthHubScreen({ navigation, route }) {
     if (record.type === 'imported_file') {
       return ['Imported File', record.fileName || record.title, `Uploaded ${formatDate(record.date)}`].filter(Boolean);
     }
-    return [record.title, dateLabel].filter(Boolean);
+    return [record.title, dateLabel, record?.details?.importedViaOcr ? 'Imported via OCR' : null].filter(Boolean);
   };
 
   const getRecordFullDetails = (record) => {
@@ -6272,42 +6340,114 @@ function HealthHubScreen({ navigation, route }) {
     .sort((a, b) => getRecordDate(b) - getRecordDate(a))
     .slice(0, 5);
 
-  const overdueRecords = recordsWithDisplayStatus.filter((record) => record.displayStatus === 'overdue');
-  const medicationRecords = records.filter((record) => record.type === 'medication');
-  const weightRecords = records.filter((record) => record.type === 'weight');
-  const recordCount = records.length;
+  const safeRecords = Array.isArray(recordsWithDisplayStatus) ? recordsWithDisplayStatus : [];
+  const safeCareReminders = Array.isArray(careReminders) ? careReminders : [];
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const parseInsightDate = (value) => {
+    const text = String(value || '').trim();
+    if (!text) return null;
+    const parsed = new Date(text.length === 10 ? `${text}T00:00:00` : text);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const daysUntilInsight = (value) => {
+    const parsed = parseInsightDate(value);
+    if (!parsed) return null;
+    return Math.floor((parsed.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const overdueRecords = safeRecords.filter((record) => record.displayStatus === 'overdue');
+  const dueSoonRecords = safeRecords.filter((record) => record.displayStatus === 'due_soon');
+  const vaccineRecords = safeRecords.filter((record) => record.type === 'vaccination');
+  const medicationRecords = safeRecords.filter((record) => record.type === 'medication');
+  const weightRecords = safeRecords.filter((record) => record.type === 'weight');
+  const appointmentRecords = safeRecords.filter((record) => record.type === 'appointment');
+  const importedFileRecords = safeRecords.filter((record) => record.type === 'imported_file');
+  const selectedPetReminders = safeCareReminders.filter((reminder) => reminder.petId === pet.id);
+  const overdueReminders = selectedPetReminders.filter((reminder) => {
+    if (reminder.completed) return false;
+    const days = daysUntilInsight(reminder.date);
+    return days != null && days < 0;
+  });
+  const dueSoonReminders = selectedPetReminders.filter((reminder) => {
+    if (reminder.completed) return false;
+    const days = daysUntilInsight(reminder.date);
+    return days != null && days >= 0 && days <= 30;
+  });
+
+  const overdueCount = overdueRecords.length + overdueReminders.length;
+  const dueSoonCount = dueSoonRecords.length + dueSoonReminders.length;
+  const recordCount = safeRecords.length;
   const recentActivityText = recordCount > 0 ? 'Care streak active' : 'No recent health records';
 
   const insightLines = [];
+  const pushInsight = (text) => {
+    if (text && insightLines.length < 3) {
+      insightLines.push(text);
+    }
+  };
 
-  if (recordCount >= 5) {
-    insightLines.push(`✨ ${pet.name} has had excellent care this week`);
+  if (overdueCount > 0) {
+    pushInsight(`⚠️ ${overdueCount} overdue care item${overdueCount === 1 ? '' : 's'} need attention`);
   }
 
-  if (overdueRecords.length === 0) {
-    insightLines.push('Wellness records are up to date');
-  } else {
-    insightLines.push('Overdue care detected');
+  if (dueSoonCount > 0) {
+    pushInsight(`⏳ ${dueSoonCount} item${dueSoonCount === 1 ? '' : 's'} due soon`);
   }
 
-  if (weightRecords.length > 0) {
-    insightLines.push('Weight tracking active');
-  } else {
-    insightLines.push('No recent weight records');
+  if (insightLines.length < 3 && medicationRecords.length > 0) {
+    pushInsight(`💊 ${medicationRecords.length} medication record${medicationRecords.length === 1 ? '' : 's'} active`);
   }
 
-  if (medicationRecords.length === 0) {
-    insightLines.push('No medication records logged');
-  } else {
-    insightLines.push('All medications logged');
+  if (insightLines.length < 3) {
+    const latestWeightRecord = [...weightRecords].sort((a, b) => getRecordDate(b) - getRecordDate(a))[0];
+    if (latestWeightRecord) {
+      const latestWeightDate = getRecordDate(latestWeightRecord);
+      const ageInDays = Math.floor((todayStart.getTime() - latestWeightDate.getTime()) / (1000 * 60 * 60 * 24));
+      const latestWeightValue = latestWeightRecord.value
+        ?? latestWeightRecord.details?.weightValue
+        ?? latestWeightRecord.weightValue
+        ?? latestWeightRecord.title
+        ?? '';
+      const latestWeightText = String(latestWeightValue).trim();
+
+      if (latestWeightText && ageInDays <= 30) {
+        pushInsight(`⚖️ Latest weight: ${latestWeightText}`);
+      } else {
+        pushInsight('⚖️ No recent weight record');
+      }
+    } else {
+      pushInsight('⚖️ No recent weight record');
+    }
   }
 
-  if (recentActivityText) {
-    insightLines.push(recentActivityText);
+  if (insightLines.length < 3) {
+    if (vaccineRecords.length > 0 && vaccineRecords.every((record) => record.displayStatus === 'current')) {
+      pushInsight('💉 Vaccines are up to date');
+    } else if (vaccineRecords.length === 0) {
+      pushInsight('💉 No vaccine records yet');
+    }
+  }
+
+  if (insightLines.length < 3 && importedFileRecords.length > 0) {
+    pushInsight(`📄 ${importedFileRecords.length} imported file${importedFileRecords.length === 1 ? '' : 's'} stored`);
+  }
+
+  if (insightLines.length < 3) {
+    const upcomingAppointmentCount = appointmentRecords.filter((record) => record.displayStatus === 'upcoming').length;
+    if (upcomingAppointmentCount > 0) {
+      pushInsight(`📅 ${upcomingAppointmentCount} upcoming appointment${upcomingAppointmentCount === 1 ? '' : 's'}`);
+    }
+  }
+
+  if (insightLines.length === 0 && (recordCount > 0 || selectedPetReminders.length > 0)) {
+    pushInsight('✨ Wellness records are up to date');
   }
 
   const safeInsightLines = Array.isArray(insightLines) ? insightLines : [];
-  const visibleInsights = safeInsightLines.slice(0, 2);
+  const visibleInsights = safeInsightLines.slice(0, 3);
   const selectedRecordReminder = selectedRecord ? getLinkedReminderForRecord(selectedRecord.id) : null;
   const selectedRecordStatus = selectedRecord ? getRecordStatusBadge(selectedRecord) : null;
   const selectedRecordHeaderLines = selectedRecord ? getRecordHeaderLines(selectedRecord) : [];
@@ -6725,6 +6865,417 @@ function HealthHubScreen({ navigation, route }) {
     message,
   });
 
+  const normalizeOcrDateText = (value) => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+
+    const match = text.match(/\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b/);
+    const candidate = match ? match[0] : text;
+    const parsed = new Date(candidate);
+    if (Number.isNaN(parsed.getTime())) {
+      return text;
+    }
+
+    return toLocalDateKey(parsed);
+  };
+
+  const getOcrLines = (rawText) => String(rawText || '')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const getOcrPrimaryLine = (rawText, fallback = '') => {
+    const lines = getOcrLines(rawText);
+    const meaningful = lines.find((line) => !/^(date|due|next due|expires?|expiration|renewal|provider|clinic|vet|hospital|phone|address)\b/i.test(line)) || lines[0] || '';
+    return meaningful || fallback || '';
+  };
+
+  const getOcrFirstDate = (rawText) => {
+    const text = String(rawText || '');
+    const matches = [
+      ...text.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g),
+      ...text.matchAll(/\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b/g),
+    ];
+    const first = matches[0]?.[0] || '';
+    return normalizeOcrDateText(first);
+  };
+
+  const getOcrDateByKeyword = (rawText, keywordPatterns = []) => {
+    const lines = getOcrLines(rawText);
+    const keywords = keywordPatterns.map((pattern) => String(pattern).toLowerCase());
+
+    const matchingLine = lines.find((line) => {
+      const lower = line.toLowerCase();
+      return keywords.some((keyword) => lower.includes(keyword));
+    });
+
+    if (matchingLine) {
+      const lineDate = normalizeOcrDateText(matchingLine);
+      if (lineDate && lineDate !== matchingLine) {
+        return lineDate;
+      }
+      const inlineDate = matchingLine.match(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b/);
+      if (inlineDate?.[0]) {
+        return normalizeOcrDateText(inlineDate[0]);
+      }
+    }
+
+    return '';
+  };
+
+  const parseOcrSuggestions = (rawText, sourceRecord = null) => {
+    const text = String(rawText || '').trim();
+    const lines = getOcrLines(text);
+    const lower = text.toLowerCase();
+    const primaryLine = getOcrPrimaryLine(text, sourceRecord?.title || sourceRecord?.fileName || 'OCR Record');
+    const providerLine = lines.find((line) => /(clinic|hospital|vet|veterinary)/i.test(line)) || String(sourceRecord?.provider || '').trim();
+    const firstDate = getOcrFirstDate(text);
+    const weightMatch = text.match(/\b(\d{1,3}(?:\.\d+)?)\s?(lbs?|pounds?|kg)\b/i);
+    const weightValue = weightMatch ? `${weightMatch[1]} ${weightMatch[2].toLowerCase().startsWith('kg') ? 'kg' : 'lbs'}` : '';
+    const severity = /severe/i.test(lower) ? 'Severe' : /moderate/i.test(lower) ? 'Moderate' : /mild/i.test(lower) ? 'Mild' : '';
+    const isVaccine = /vaccine|vaccination|rabies|distemper|parvo|bordetella|dhpp|da2pp|fvrcp/i.test(text);
+    const isMedication = /medication|dose|tablet|capsule|rx|apoquel|prednisone|carprofen|gabapentin|amoxicillin|antibiotic/i.test(text);
+    const isVisit = /appointment|visit|exam|wellness|check[- ]?up|follow[- ]?up|recheck/i.test(text);
+    const isSymptom = /symptom|vomit|vomiting|diarrhea|cough|itch|itching|limp|pain|seizure|lethargy/i.test(text);
+    const isDiagnosis = /diagnosis|allergy|condition|monitoring/i.test(text);
+
+    const vaccines = [];
+    const medications = [];
+    const visits = [];
+    const weights = [];
+    const diagnoses = [];
+    const symptoms = [];
+
+    if (isVaccine || /rabies/i.test(text)) {
+      vaccines.push({
+        vaccineName: primaryLine || 'Vaccine',
+        dateGiven: getOcrDateByKeyword(text, ['given', 'administered', 'received', 'date']) || firstDate || '',
+        nextDueDate: getOcrDateByKeyword(text, ['due', 'next due', 'expires', 'expiration', 'renewal']) || '',
+        providerClinic: providerLine || '',
+        vaccineNotes: text,
+      });
+    }
+
+    if (isMedication) {
+      medications.push({
+        medicationName: primaryLine || 'Medication',
+        dosage: (lines.find((line) => /(dose|dosage|mg|tablet|capsule)/i.test(line)) || '').replace(/^.*?:\s*/, '') || '',
+        frequency: (lines.find((line) => /(daily|twice|once|every|q\d|bid|tid|qid)/i.test(line)) || '').replace(/^.*?:\s*/, '') || '',
+        startDate: getOcrDateByKeyword(text, ['start', 'started', 'begin', 'date']) || firstDate || '',
+        endDate: getOcrDateByKeyword(text, ['end', 'ends', 'next due', 'refill', 'dose']) || '',
+        nextDoseDate: getOcrDateByKeyword(text, ['next dose', 'refill', 'dose']) || '',
+        prescribingVet: providerLine || '',
+        medicationNotes: text,
+      });
+    }
+
+    if (isVisit) {
+      visits.push({
+        visitReason: primaryLine || 'Vet Visit',
+        appointmentDate: getOcrDateByKeyword(text, ['appointment', 'visit', 'exam', 'date']) || firstDate || '',
+        clinicVet: providerLine || '',
+        diagnosisFindings: (lines.find((line) => /(findings|diagnosis|assessment|exam|healthy|stable)/i.test(line)) || '').replace(/^.*?:\s*/, '') || '',
+        followUpDate: getOcrDateByKeyword(text, ['follow up', 'follow-up', 'next appointment', 'recheck']) || '',
+        appointmentNotes: text,
+      });
+    }
+
+    if (weightMatch) {
+      weights.push({
+        weightValue,
+        weightDate: getOcrDateByKeyword(text, ['weight', 'weighed', 'recorded', 'date']) || firstDate || '',
+        weightNotes: text,
+      });
+    }
+
+    if (isSymptom) {
+      symptoms.push({
+        symptomName: primaryLine || 'Symptom',
+        severity,
+        symptomDate: firstDate || '',
+        symptomFollowUpDate: getOcrDateByKeyword(text, ['follow up', 'follow-up', 'recheck']) || '',
+        symptomNotes: text,
+      });
+    }
+
+    if (isDiagnosis) {
+      diagnoses.push({
+        diagnosisName: primaryLine || 'Diagnosis',
+        diagnosedDate: getOcrDateByKeyword(text, ['diagnosed', 'date']) || firstDate || '',
+        diagnosisVet: providerLine || '',
+        treatmentPlan: lines.find((line) => /(treatment|plan|monitor|continue|medication)/i.test(line)) || '',
+        diagnosisNotes: text,
+      });
+    }
+
+    let suggestedType = 'vaccination';
+    if (weights.length > 0) suggestedType = 'weight';
+    else if (medications.length > 0) suggestedType = 'medication';
+    else if (visits.length > 0) suggestedType = 'appointment';
+    else if (symptoms.length > 0) suggestedType = 'symptom';
+    else if (vaccines.length > 0) suggestedType = 'vaccination';
+    else if (diagnoses.length > 0) suggestedType = 'diagnosis';
+
+    return {
+      suggestedType,
+      vaccines,
+      medications,
+      visits,
+      weights,
+      diagnoses,
+      labResults: [],
+      symptoms,
+      allergies: [],
+      procedures: [],
+      rawText: text,
+      summary: text ? 'Suggested results extracted from OCR text. Please review before saving.' : 'No OCR text detected. Please review before saving.',
+      warnings: [],
+      message: text ? 'Suggested results extracted from OCR text. Please review before saving.' : 'No OCR text detected. Please review before saving.',
+    };
+  };
+
+  const getImportedFileOcrState = (record) => {
+    const details = record?.details || {};
+    const cached = ocrAnalysisByRecordId[record?.id] || {};
+    const liveAnalysisText = analysisRecord?.id === record?.id ? String(analysisResults?.rawText || '').trim() : '';
+    const rawText = String(details.ocrText || cached.rawText || liveAnalysisText || '').trim();
+    const liveStatus = analysisRecord?.id === record?.id && analysisLoading ? 'analyzing' : '';
+    const status = String(details.ocrStatus || cached.status || liveStatus || '').trim() || (rawText ? 'ready' : 'not analyzed');
+    const analyzedAt = String(details.ocrAnalyzedAt || cached.updatedAt || '').trim();
+    return {
+      rawText,
+      status,
+      analyzedAt,
+      summary: String(details.ocrSummary || cached.summary || '').trim(),
+      sourceRecordId: String(details.ocrSourceRecordId || cached.sourceRecordId || record?.id || '').trim(),
+      suggestedType: String(details.ocrSuggestedType || cached.suggestedType || '').trim(),
+      suggestedResults: cached.suggestedResults || null,
+    };
+  };
+
+  const getImportedFileOcrStatusLabel = (record) => {
+    const state = getImportedFileOcrState(record);
+    if (state.status === 'ready') return 'Ready';
+    if (state.status === 'review_ready') return 'Ready for review';
+    if (state.status === 'analyzed') return 'Analyzed';
+    if (state.status === 'unsupported') return 'Unsupported file type';
+    return 'Not analyzed';
+  };
+
+  const persistImportedFileOcrState = async (record, nextState) => {
+    if (!record?.id) return;
+
+    const updatedRecord = {
+      ...record,
+      details: {
+        ...(record.details || {}),
+        ocrText: String(nextState.rawText || ''),
+        ocrStatus: String(nextState.status || 'ready'),
+        ocrAnalyzedAt: nextState.analyzedAt || new Date().toISOString(),
+        ocrSummary: String(nextState.summary || ''),
+        ocrSourceRecordId: String(nextState.sourceRecordId || record.id),
+        ocrSuggestedType: String(nextState.suggestedType || ''),
+      },
+      fileUrl: record.fileUrl || record.fileUri,
+      fileUri: record.fileUri || record.fileUrl,
+    };
+
+    setHealthRecords((prev) => prev.map((item) => (item.id === record.id ? updatedRecord : item)));
+    try {
+      await updateHealthRecordInSupabase(updatedRecord);
+    } catch (error) {
+      console.log('Imported OCR metadata save error:', error);
+    }
+
+    return updatedRecord;
+  };
+
+  const openOcrTextModal = (record) => {
+    const state = getImportedFileOcrState(record);
+    closeRecordDetail();
+    setTimeout(() => {
+      setOcrTextRecord(record);
+      setOcrTextDraft(state.rawText || '');
+      setOcrTextEditMode(false);
+      setShowOcrTextModal(true);
+    }, 150);
+  };
+
+  const closeOcrTextModal = () => {
+    setShowOcrTextModal(false);
+    setOcrTextRecord(null);
+    setOcrTextDraft('');
+    setOcrTextEditMode(false);
+  };
+
+  const saveEditedOcrText = async () => {
+    if (!ocrTextRecord) return;
+
+    const cleanedText = String(ocrTextDraft || '').trim();
+    if (!cleanedText) {
+      Alert.alert('OCR text required', 'Please enter or keep some extracted text before saving.');
+      return;
+    }
+
+    const nextState = {
+      rawText: cleanedText,
+      status: 'ready',
+      analyzedAt: new Date().toISOString(),
+      summary: 'Raw text extracted from image. Please review before saving.',
+      sourceRecordId: ocrTextRecord.id,
+      suggestedType: getImportedFileOcrState(ocrTextRecord).suggestedType,
+    };
+
+    setOcrAnalysisByRecordId((prev) => ({
+      ...prev,
+      [ocrTextRecord.id]: {
+        ...(prev[ocrTextRecord.id] || {}),
+        ...nextState,
+        suggestedResults: parseOcrSuggestions(cleanedText, ocrTextRecord),
+      },
+    }));
+
+    await persistImportedFileOcrState(ocrTextRecord, nextState);
+    setOcrTextDraft(cleanedText);
+    setOcrTextEditMode(false);
+  };
+
+  const openOcrCreateRecordPrompt = (record) => {
+    const state = getImportedFileOcrState(record);
+    const rawText = String(ocrTextDraft || state.rawText || '').trim();
+    const hasSuggestedResults = hasOcrCreateSuggestions(state.suggestedResults);
+
+    if (!rawText && !hasSuggestedResults) {
+      Alert.alert('No OCR text', 'Please analyze the imported file first or keep extracted OCR text before creating a record.');
+      return;
+    }
+
+    Alert.alert('Create Health Record', 'Choose a record type to create from this OCR text.', [
+      { text: 'Vaccine', onPress: () => startOcrCreateFlow('vaccination') },
+      { text: 'Medication', onPress: () => startOcrCreateFlow('medication') },
+      { text: 'Visit', onPress: () => startOcrCreateFlow('appointment') },
+      { text: 'Weight', onPress: () => startOcrCreateFlow('weight') },
+      { text: 'Symptom', onPress: () => startOcrCreateFlow('symptom') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const buildOcrPrefillForm = (type, rawText, sourceRecord = null) => {
+    const cachedOcr = sourceRecord?.id ? ocrAnalysisByRecordId[sourceRecord.id] : null;
+    const parsed = String(rawText || '').trim()
+      ? parseOcrSuggestions(rawText, sourceRecord)
+      : (cachedOcr?.suggestedResults || parseOcrSuggestions(rawText, sourceRecord));
+    const fallbackTitle = getOcrPrimaryLine(rawText, sourceRecord?.title || sourceRecord?.fileName || '');
+    const baseDate = parsed.rawText ? (getOcrFirstDate(rawText) || toLocalDateKey(new Date())) : toLocalDateKey(new Date());
+    const firstValue = (value, fallback = '') => String(value || '').trim() || fallback;
+
+    const form = createEmptyRecordForm();
+    const typeToAnalysis = {
+      vaccination: parsed.vaccines?.[0] || {},
+      medication: parsed.medications?.[0] || {},
+      appointment: parsed.visits?.[0] || {},
+      weight: parsed.weights?.[0] || {},
+      symptom: parsed.symptoms?.[0] || {},
+    };
+
+    if (type === 'vaccination') {
+      const item = typeToAnalysis.vaccination;
+      form.vaccineName = firstValue(item.vaccineName, fallbackTitle || 'Vaccination');
+      form.dateGiven = firstValue(item.dateGiven, baseDate);
+      form.providerClinic = firstValue(item.providerClinic, '');
+      form.nextDueDate = firstValue(item.nextDueDate, '');
+      form.expirationDate = firstValue(item.nextDueDate, '');
+      form.renewalDate = firstValue(item.nextDueDate, '');
+      form.dueDate = firstValue(item.nextDueDate, '');
+      form.vaccineNotes = rawText || '';
+    } else if (type === 'medication') {
+      const item = typeToAnalysis.medication;
+      form.medicationName = firstValue(item.medicationName, fallbackTitle || 'Medication');
+      form.dosage = firstValue(item.dosage, '');
+      form.frequency = firstValue(item.frequency, '');
+      form.startDate = firstValue(item.startDate, baseDate);
+      form.endDate = firstValue(item.endDate, item.nextDoseDate || '');
+      form.nextDoseDate = firstValue(item.nextDoseDate, item.endDate || '');
+      form.nextRefillDate = firstValue(item.nextDoseDate, '');
+      form.prescribingVet = firstValue(item.prescribingVet, '');
+      form.medicationNotes = rawText || '';
+    } else if (type === 'appointment') {
+      const item = typeToAnalysis.appointment;
+      form.visitReason = firstValue(item.visitReason, fallbackTitle || 'Vet Visit');
+      form.vetClinic = firstValue(item.clinicVet, '');
+      form.appointmentDate = firstValue(item.appointmentDate, baseDate);
+      form.diagnosisFindings = firstValue(item.diagnosisFindings, '');
+      form.followUpDate = firstValue(item.followUpDate, '');
+      form.nextAppointmentDate = firstValue(item.followUpDate, '');
+      form.appointmentNotes = rawText || '';
+    } else if (type === 'weight') {
+      const item = typeToAnalysis.weight;
+      form.weightValue = firstValue(item.weightValue, fallbackTitle || '');
+      form.weightDate = firstValue(item.weightDate, baseDate);
+      form.weightNotes = rawText || '';
+    } else if (type === 'symptom') {
+      const item = typeToAnalysis.symptom;
+      form.symptomName = firstValue(item.symptomName, fallbackTitle || 'Symptom');
+      form.severity = firstValue(item.severity, '');
+      form.symptomDate = firstValue(item.symptomDate, baseDate);
+      form.symptomFollowUpDate = firstValue(item.symptomFollowUpDate, '');
+      form.symptomNotes = rawText || '';
+    }
+
+    return form;
+  };
+
+  const startOcrCreateFlow = (type) => {
+    const currentOcrState = getImportedFileOcrState(ocrTextRecord);
+    const rawText = String(ocrTextDraft || currentOcrState.rawText || '').trim();
+    const hasSuggestedResults = hasOcrCreateSuggestions(currentOcrState.suggestedResults);
+    if (!rawText && !hasSuggestedResults) {
+      Alert.alert('No OCR text', 'Please analyze the imported file first or keep extracted text before creating a record.');
+      return;
+    }
+
+    const prefills = buildOcrPrefillForm(type, rawText || currentOcrState.rawText || '', ocrTextRecord);
+    const titleMap = {
+      vaccination: 'Vaccination',
+      medication: 'Medication',
+      appointment: 'Vet Visit',
+      weight: 'Weight',
+      symptom: 'Symptom',
+    };
+
+    setPendingRecordType(type);
+    setEditingRecord(null);
+    setRecordForm(prefills);
+    setAddReminderToCalendar(Boolean(getReminderDefaultDate(type, prefills) || getHealthRecordAutoReminderDate({ type, details: prefills })));
+    setReminderDate(getReminderDefaultDate(type, prefills) || getHealthRecordAutoReminderDate({ type, details: prefills }) || '');
+    setReminderTime('');
+    setOcrCreateContext({
+      sourceRecordId: ocrTextRecord?.id || '',
+      rawText: rawText || currentOcrState.rawText || '',
+      createdAt: new Date().toISOString(),
+      suggestedType: type,
+    });
+    setShowRecordModal(true);
+
+    setOcrAnalysisByRecordId((prev) => ({
+      ...prev,
+        [ocrTextRecord?.id || 'pending']: {
+          ...(prev[ocrTextRecord?.id || 'pending'] || {}),
+        rawText: rawText || currentOcrState.rawText || '',
+        suggestedType: type,
+        suggestedResults: currentOcrState.suggestedResults || parseOcrSuggestions(rawText || currentOcrState.rawText || '', ocrTextRecord),
+        status: 'review_ready',
+        analyzedAt: new Date().toISOString(),
+        summary: `${titleMap[type] || 'Record'} prefilled from OCR text.`,
+        sourceRecordId: ocrTextRecord?.id || '',
+      },
+    }));
+
+    closeOcrTextModal();
+  };
+
   const analyzeImportedRecord = async (record) => {
     if (analysisTimeoutRef.current) {
       clearTimeout(analysisTimeoutRef.current);
@@ -6755,9 +7306,41 @@ function HealthHubScreen({ navigation, route }) {
 
           const rawText = String(ocrResult?.text || '').trim();
           if (rawText) {
-            setAnalysisResults(buildRawTextAnalysisResults(rawText));
+            const parsedResults = parseOcrSuggestions(rawText, record);
+            const analysisPayload = {
+              ...parsedResults,
+              rawText,
+            };
+            setAnalysisResults(analysisPayload);
+            setOcrAnalysisByRecordId((prev) => ({
+              ...prev,
+              [record.id]: {
+                ...analysisPayload,
+                status: 'ready',
+                updatedAt: new Date().toISOString(),
+                sourceRecordId: record.id,
+              },
+            }));
+            await persistImportedFileOcrState(record, {
+              rawText,
+              status: 'ready',
+              analyzedAt: new Date().toISOString(),
+              summary: parsedResults.summary,
+              sourceRecordId: record.id,
+              suggestedType: parsedResults.suggestedType,
+            });
           } else {
-            setAnalysisResults(buildFallbackAnalysisResults(record));
+            const fallbackResults = buildFallbackAnalysisResults(record);
+            setAnalysisResults(fallbackResults);
+            setOcrAnalysisByRecordId((prev) => ({
+              ...prev,
+              [record.id]: {
+                ...fallbackResults,
+                status: 'review_ready',
+                updatedAt: new Date().toISOString(),
+                sourceRecordId: record.id,
+              },
+            }));
           }
         } else if (mimeType.includes('pdf')) {
           setAnalysisResults(buildUnsupportedAnalysisResults('PDF text extraction is coming soon. For now, take a photo or screenshot of the document for analysis.'));
@@ -6813,10 +7396,15 @@ function HealthHubScreen({ navigation, route }) {
     setShowRecordDetailModal(false);
     setShowExportPreview(false);
     setShowAnalysisModal(false);
+    setShowOcrTextModal(false);
     setSelectedRecord(null);
     setAnalysisRecord(null);
     setAnalysisResults(null);
     setAnalysisLoading(false);
+    setOcrTextRecord(null);
+    setOcrTextDraft('');
+    setOcrTextEditMode(false);
+    setOcrCreateContext(null);
     if (analysisTimeoutRef.current) {
       clearTimeout(analysisTimeoutRef.current);
       analysisTimeoutRef.current = null;
@@ -6877,8 +7465,17 @@ function HealthHubScreen({ navigation, route }) {
   );
 
   const hasAnalysisResults = (results) => Boolean(
+    (Array.isArray(results?.warnings) && results.warnings.length > 0)
+    || (Array.isArray(results?.vaccines) && results.vaccines.length > 0)
+    || (Array.isArray(results?.medications) && results.medications.length > 0)
+    || (Array.isArray(results?.visits) && results.visits.length > 0)
+    || (Array.isArray(results?.weights) && results.weights.length > 0)
+    || (Array.isArray(results?.diagnoses) && results.diagnoses.length > 0)
+    || (Array.isArray(results?.labResults) && results.labResults.length > 0)
+  );
+
+  const hasOcrCreateSuggestions = (results) => Boolean(
     results?.rawText
-    || results?.summary
     || (Array.isArray(results?.warnings) && results.warnings.length > 0)
     || (Array.isArray(results?.vaccines) && results.vaccines.length > 0)
     || (Array.isArray(results?.medications) && results.medications.length > 0)
@@ -6886,6 +7483,9 @@ function HealthHubScreen({ navigation, route }) {
     || (Array.isArray(results?.weights) && results.weights.length > 0)
     || (Array.isArray(results?.diagnoses) && results.diagnoses.length > 0)
     || (Array.isArray(results?.labResults) && results.labResults.length > 0)
+    || (Array.isArray(results?.symptoms) && results.symptoms.length > 0)
+    || (Array.isArray(results?.allergies) && results.allergies.length > 0)
+    || (Array.isArray(results?.procedures) && results.procedures.length > 0)
   );
 
   const exportHealthPdf = async () => {
@@ -7167,8 +7767,8 @@ function HealthHubScreen({ navigation, route }) {
         </View>
       </View>
 
-        <View style={{ marginTop: 0 }}>
-          <View style={{ marginTop: -10, marginBottom: -8 }}>
+        <View style={{ marginTop: 0, marginBottom: -10 }}>
+          <View style={{ marginTop: -10, marginBottom: 10 }}>
             <PetAvatarRow
               pets={pets}
               selectedId={selectedPetId}
@@ -7355,7 +7955,7 @@ function HealthHubScreen({ navigation, route }) {
             {visibleInsights.length > 0 ? `${visibleInsights.length} insight${visibleInsights.length === 1 ? '' : 's'} ready` : 'No insights yet'}
           </Text>
           <View style={{ marginTop: 8, gap: 5 }}>
-            {(visibleInsights.length > 0 ? visibleInsights.slice(0, 3) : ['No overdue care', 'Wellness records are up to date', 'Weight tracking active']).map((insight, index) => (
+            {(visibleInsights.length > 0 ? visibleInsights : ['No insights yet']).map((insight, index) => (
               <View key={`health-insight-${index}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                 <View
                   style={{
@@ -7666,9 +8266,21 @@ function HealthHubScreen({ navigation, route }) {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[s.petProfileButton, { backgroundColor: C.cardHigh }]}
+                    onPress={() => openOcrTextModal(selectedRecord)}
+                  >
+                    <Text style={s.petProfileButtonText}>View OCR Text</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.petProfileButton, { backgroundColor: C.cardHigh }]}
                     onPress={() => openImportedRecordAnalysis(selectedRecord)}
                   >
-                    <Text style={s.petProfileButtonText}>Analyze Record</Text>
+                    <Text style={s.petProfileButtonText}>Analyze Again</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.petProfileButton, { backgroundColor: C.cardHigh }]}
+                    onPress={() => openOcrCreateRecordPrompt(selectedRecord)}
+                  >
+                    <Text style={s.petProfileButtonText}>Create Health Record</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -7806,12 +8418,11 @@ function HealthHubScreen({ navigation, route }) {
                       {analysisResults.summary}
                     </Text>
                   ) : null}
-                  <Text style={{ color: C.text, fontSize: 13, lineHeight: 19, marginBottom: 8 }}>
-                    {analysisResults?.message || 'These are suggested results. Please review before saving.'}
-                  </Text>
-                  <Text style={{ color: C.muted, fontSize: 12, lineHeight: 18, marginBottom: 14 }}>
-                    These are suggested results. Please review before saving.
-                  </Text>
+                  {analysisResults?.message && analysisResults.message !== analysisResults?.summary ? (
+                    <Text style={{ color: C.text, fontSize: 13, lineHeight: 19, marginBottom: 8 }}>
+                      {analysisResults.message}
+                    </Text>
+                  ) : null}
                   {analysisResults?.rawText ? (
                     <View style={s.analysisSection}>
                       <Text style={[s.analysisSectionTitle, { color: C.text }]}>Raw Extracted Text</Text>
@@ -7856,6 +8467,93 @@ function HealthHubScreen({ navigation, route }) {
               </TouchableOpacity>
               <TouchableOpacity style={s.customActionSaveBtn} onPress={closeAnalysisModal}>
                 <Text style={s.customActionSaveText}>Discard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showOcrTextModal} transparent animationType="fade" onRequestClose={closeOcrTextModal}>
+        <View style={s.modalOverlay}>
+          <View style={[s.customActionModal, { width: '100%', maxHeight: '85%', padding: 0, overflow: 'hidden' }]}>
+            <View style={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
+              <Text style={s.customActionModalTitle}>Extracted Text</Text>
+              <Text style={{ color: C.muted, fontSize: 12, lineHeight: 18, marginTop: 4 }}>
+                {ocrTextRecord?.fileName || ocrTextRecord?.title || 'Imported OCR file'}
+              </Text>
+            </View>
+
+            <ScrollView
+              style={{ maxHeight: 360 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 12 }}
+            >
+              {ocrTextEditMode ? (
+                <TextInput
+                  multiline
+                  value={ocrTextDraft}
+                  onChangeText={setOcrTextDraft}
+                  placeholder="No OCR text extracted yet."
+                  placeholderTextColor={C.muted}
+                  style={{
+                    minHeight: 220,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: C.border,
+                    backgroundColor: C.cardHigh,
+                    color: C.text,
+                    fontSize: 13,
+                    lineHeight: 20,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    textAlignVertical: 'top',
+                  }}
+                />
+              ) : (
+                <Text selectable style={{ color: C.text, fontSize: 13, lineHeight: 20 }}>
+                  {ocrTextDraft || 'No OCR text extracted yet. Tap Analyze Again to extract text from the uploaded file.'}
+                </Text>
+              )}
+            </ScrollView>
+
+            <View style={s.customActionModalButtons}>
+              <TouchableOpacity style={s.customActionCancelBtn} onPress={closeOcrTextModal}>
+                <Text style={s.customActionCancelText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.customActionCancelBtn}
+                onPress={async () => {
+                  const text = String(ocrTextDraft || '').trim();
+                  if (!text) {
+                    Alert.alert('Nothing to copy', 'There is no OCR text to copy yet.');
+                    return;
+                  }
+                  await Clipboard.setStringAsync(text);
+                  Alert.alert('Copied', 'OCR text copied to clipboard.');
+                }}
+              >
+                <Text style={s.customActionCancelText}>Copy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.customActionCancelBtn}
+                onPress={async () => {
+                  if (ocrTextEditMode) {
+                    await saveEditedOcrText();
+                  } else {
+                    setOcrTextEditMode(true);
+                  }
+                }}
+              >
+                <Text style={s.customActionCancelText}>{ocrTextEditMode ? 'Save' : 'Edit'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}>
+              <TouchableOpacity
+                style={s.customActionSaveBtn}
+                onPress={() => openOcrCreateRecordPrompt(ocrTextRecord || analysisRecord)}
+              >
+                <Text style={s.customActionSaveText}>Create Health Record</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -9865,74 +10563,272 @@ function CommunityProfileScreen({ navigation, route }) {
   );
 }
 
-function AIVetScreen({ navigation }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      text: "Hi! I'm your AI Vet Assistant 🩺 I have Max's profile loaded — 3 years old, 68 lbs. What's going on with him today?",
-      time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-    },
-  ]);
+function AIVetScreen({ navigation, route }) {
+  const { pets } = useContext(PetsContext);
+  const { healthRecords } = useContext(HealthRecordsContext);
+  const { careReminders } = useContext(CareRemindersContext);
+  const routeParams = route?.params || {};
+  const activePetId = routeParams.selectedPetId || pets[0]?.id || '';
+  const activePet = pets.find((pet) => pet.id === activePetId) || pets[0] || null;
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
 
+  const petHealthRecords = Array.isArray(healthRecords)
+    ? healthRecords.filter((record) => record.petId === activePet?.id)
+    : [];
+  const petCareReminders = Array.isArray(careReminders)
+    ? careReminders.filter((reminder) => reminder.petId === activePet?.id)
+    : [];
+
   const EMERGENCY_KEYWORDS = [
-    'glass',
-    'swallowed glass',
-    'ate glass',
-    'choking',
-    'seizure',
-    'poison',
-    'chocolate',
-    'grapes',
-    'xylitol',
-    'antifreeze',
-    'bleeding',
-    'unconscious',
+    'trouble breathing',
+    'breathing',
     "can't breathe",
     'cant breathe',
-    'collapse',
+    'seizure',
     'collapsed',
+    'collapse',
+    'unable to walk',
+    'bleeding',
+    'poison',
+    'poisoning',
+    'toxin',
+    'glass',
+    'sharp object',
+    'hit by car',
+    'bloat',
+    'antifreeze',
+    'xylitol',
+    'grapes',
+    'chocolate',
+    'choking',
   ];
 
   const detectEmergency = (message) => {
-    const lower = message.toLowerCase();
-    return EMERGENCY_KEYWORDS.some(word =>
-      lower.includes(word)
-    );
+    const lower = String(message || '').toLowerCase();
+    return EMERGENCY_KEYWORDS.some((word) => lower.includes(word));
   };
+
+  const formatVetAge = () => {
+    if (!activePet) return 'Age not set';
+    if (activePet.birthday) {
+      return calculateAgeLabelFromBirthday(activePet.birthday) || formatDate(activePet.birthday);
+    }
+    return activePet.age || 'Age not set';
+  };
+
+  const latestWeightRecord = [...petHealthRecords]
+    .filter((record) => record.type === 'weight')
+    .sort((a, b) => {
+      const dateA = new Date(a?.date || a?.details?.weightDate || a?.details?.dateRecorded || 0).getTime();
+      const dateB = new Date(b?.date || b?.details?.weightDate || b?.details?.dateRecorded || 0).getTime();
+      return dateB - dateA;
+    })[0] || null;
+
+  const latestWeightValue = (() => {
+    if (latestWeightRecord) {
+      const rawValue = latestWeightRecord.value
+        ?? latestWeightRecord.details?.weightValue
+        ?? latestWeightRecord.weightValue
+        ?? latestWeightRecord.title;
+      const text = String(rawValue || '').trim();
+      if (text) {
+        return `${text}${latestWeightRecord.unit ? ` ${latestWeightRecord.unit}` : ''}`.trim();
+      }
+    }
+
+    const fallbackWeight = String(activePet?.weight || '').trim();
+    return fallbackWeight || 'Weight not set';
+  })();
+
+  const allergies = petHealthRecords
+    .filter((record) => record.type === 'allergy')
+    .map((record) => String(record.title || record.details?.allergyName || '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const diagnoses = petHealthRecords
+    .filter((record) => record.type === 'diagnosis')
+    .map((record) => String(record.title || record.details?.diagnosisName || '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const medications = petHealthRecords
+    .filter((record) => record.type === 'medication')
+    .map((record) => String(record.title || record.details?.medicationName || '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const symptoms = petHealthRecords
+    .filter((record) => record.type === 'symptom')
+    .map((record) => String(record.title || record.details?.symptomName || '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const recentVetVisits = petHealthRecords
+    .filter((record) => record.type === 'appointment')
+    .slice(0, 3)
+    .map((record) => `${record.title || 'Vet visit'} · ${formatDate(record.date)}`);
+
+  const vaccineDueDates = petHealthRecords
+    .filter((record) => record.type === 'vaccination')
+    .slice(0, 3)
+    .map((record) => {
+      const dueDate = record.nextDue
+        || record.details?.expirationDate
+        || record.details?.renewalDate
+        || record.details?.dueDate
+        || record.details?.nextDueDate;
+      return dueDate
+        ? `${record.title || 'Vaccine'} due ${formatDate(dueDate)}`
+        : String(record.title || 'Vaccine');
+    });
+
+  const careReminderLines = petCareReminders
+    .filter((reminder) => !reminder.completed)
+    .slice(0, 3)
+    .map((reminder) => `${reminder.title || 'Reminder'} · ${formatDate(reminder.date)}`);
+
+  const petContextSummaryParts = [
+    activePet ? `Answering for ${activePet.name}` : 'Answering for your pet',
+    activePet?.species || 'Species not set',
+    activePet?.breed || 'Breed not set',
+    `Age: ${formatVetAge()}`,
+    `Weight: ${latestWeightValue}`,
+    `Gender: ${activePet?.gender || 'Gender not set'}`,
+    `Health score: ${typeof activePet?.score === 'number' ? `${activePet.score}/100` : 'Not available'}`,
+  ];
+
+  const petContextSummary = petContextSummaryParts.filter(Boolean).join(' · ');
+  const petContextPrompt = [
+    `Pet name: ${activePet?.name || 'Unknown'}`,
+    `Species: ${activePet?.species || 'Unknown'}`,
+    `Breed: ${activePet?.breed || 'Unknown'}`,
+    `Age/Birthday: ${activePet?.birthday ? formatDate(activePet.birthday) : formatVetAge()}`,
+    `Weight: ${latestWeightValue}`,
+    `Gender: ${activePet?.gender || 'Unknown'}`,
+    `Health score: ${typeof activePet?.score === 'number' ? `${activePet.score}/100` : 'Not available'}`,
+    `Allergies: ${allergies.length ? allergies.join(', ') : 'None recorded'}`,
+    `Diagnoses: ${diagnoses.length ? diagnoses.join(', ') : 'None recorded'}`,
+    `Medications: ${medications.length ? medications.join(', ') : 'None recorded'}`,
+    `Recent symptoms: ${symptoms.length ? symptoms.join(', ') : 'None recorded'}`,
+    `Recent vet visits: ${recentVetVisits.length ? recentVetVisits.join(' | ') : 'None recorded'}`,
+    `Vaccine due dates: ${vaccineDueDates.length ? vaccineDueDates.join(' | ') : 'None recorded'}`,
+    `Care reminders: ${careReminderLines.length ? careReminderLines.join(' | ') : 'None recorded'}`,
+    `Latest weight record: ${latestWeightRecord ? `${latestWeightValue} on ${formatDate(latestWeightRecord.date)}` : 'None recorded'}`,
+  ].join('\n');
 
   const AI_RESPONSES = [
     "Based on what you've described, this is something many pet parents run into. I'd recommend monitoring for 24 hours.\n\n🔍 Most likely causes:\n• Dietary indiscretion\n• Minor infection\n• Environmental allergies\n\n⚡ Triage Level: WATCH AT HOME\n\nIf symptoms persist over 48 hours or worsen, schedule a vet visit.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet for diagnosis.",
     "Great question! This is something many pet parents deal with.\n\n✅ Safe steps:\n1. Check for visible irritation\n2. Keep the area clean and dry\n3. Prevent excessive licking\n\n📅 Triage Level: SCHEDULE A VET\n\nI'd recommend booking an appointment within 2-3 days for a proper examination.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care.",
-    "I understand your concern! Here's what I know about Max's situation:\n\n🌡️ Temperature, appetite, and energy levels are key indicators to watch.\n\n⚡ Triage Level: WATCH AT HOME\n\nThis pet is resilient — this is likely nothing serious. Keep an eye on him for the next 24 hours.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet.",
+    "I understand your concern! Here's what I know about this pet's situation:\n\n🌡️ Temperature, appetite, and energy levels are key indicators to watch.\n\n⚡ Triage Level: WATCH AT HOME\n\nKeep an eye on the pet for the next 24 hours.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care. Always consult your vet.",
   ];
 
-  const EMERGENCY_RESPONSE = "EMERGENCY CARE ADVISED\n\nContact a veterinarian or emergency vet immediately. This should NOT be monitored at home.\n\nDo NOT induce vomiting unless directed by a veterinarian.\n\n⚕️ This is an AI assistant — not a substitute for professional veterinary care.";
+  const EMERGENCY_RESPONSE = "Please contact an emergency vet immediately.\n\nEmergency care advised:\n• Do NOT delay if symptoms are severe\n• Do NOT induce vomiting unless directed by a veterinarian\n\n⚕️ AI Vet can help with general guidance, but it is not a replacement for a licensed veterinarian.";
+
   const formatTime = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  const buildPlaceholderReply = (promptText, questionText) => {
+    const combinedText = `${promptText}\n${questionText}`.toLowerCase();
+    if (detectEmergency(combinedText)) {
+      return EMERGENCY_RESPONSE;
+    }
+
+    const baseReply = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
+    const contextHighlights = [];
+
+    if (activePet) {
+      contextHighlights.push(`${activePet.name} (${activePet.species || 'species not set'}${activePet.breed ? ` · ${activePet.breed}` : ''})`);
+    }
+    if (allergies.length) contextHighlights.push(`Allergies: ${allergies.join(', ')}`);
+    if (diagnoses.length) contextHighlights.push(`Diagnoses: ${diagnoses.join(', ')}`);
+    if (medications.length) contextHighlights.push(`Medications: ${medications.join(', ')}`);
+    if (symptoms.length) contextHighlights.push(`Recent symptoms: ${symptoms.join(', ')}`);
+    if (recentVetVisits.length) contextHighlights.push(`Recent vet visits: ${recentVetVisits.join(', ')}`);
+    if (vaccineDueDates.length) contextHighlights.push(`Vaccine due dates: ${vaccineDueDates.join(', ')}`);
+    if (careReminderLines.length) contextHighlights.push(`Care reminders: ${careReminderLines.join(', ')}`);
+    if (latestWeightRecord) contextHighlights.push(`Latest weight: ${latestWeightValue}`);
+
+    return [
+      `For ${activePet?.name || 'your pet'}, here's a pet-specific general guidance response based on the profile I have loaded.`,
+      contextHighlights.length ? `Profile context: ${contextHighlights.join(' • ')}` : `Profile context: ${petContextSummary}`,
+      baseReply,
+    ].join('\n\n');
+  };
+
+  useEffect(() => {
+    const greeting = activePet
+      ? `Hi! I'm your AI Vet Assistant 🩺 I have ${activePet.name}'s profile loaded — ${petContextSummary}. What's going on with ${activePet.name} today?`
+      : "Hi! I'm your AI Vet Assistant 🩺 I can help with general pet care questions. Which pet are we talking about today?";
+
+    setMessages((prev) => {
+      if (prev.length > 1) {
+        return prev;
+      }
+
+      if (prev.length === 1 && prev[0]?.role === 'assistant' && prev[0]?.text === greeting) {
+        return prev;
+      }
+
+      return [
+        {
+          role: 'assistant',
+          text: greeting,
+          time: formatTime(),
+        },
+      ];
+    });
+  }, [activePet, activePetId, petContextSummary]);
+
+  const AI_SUGGESTIONS = [
+    'My pet is scratching a lot',
+    'Is chocolate really toxic to pets?',
+    'My cat is not eating today',
+    'Signs my pet is overweight?',
+  ];
 
   const send = async (text) => {
     const msg = text || input;
     if (!msg.trim()) return;
-    setMessages(prev => [...prev, { role: 'user', text: msg, time: formatTime() }]);
+    setMessages((prev) => [...prev, { role: 'user', text: msg, time: formatTime() }]);
     setInput('');
-    if (detectEmergency(msg)) {
-      setMessages(prev => [...prev, { role: 'assistant', text: EMERGENCY_RESPONSE, time: formatTime(), emergency: true }]);
-      setIsTyping(false);
-      return;
-    }
     setIsTyping(true);
     setTimeout(() => {
-      const reply = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
-      setMessages(prev => [...prev, { role: 'assistant', text: reply, time: formatTime() }]);
+      const promptText = `${petContextPrompt}\nUser question: ${msg}`;
+      const reply = buildPlaceholderReply(promptText, msg);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: reply,
+          time: formatTime(),
+          emergency: reply === EMERGENCY_RESPONSE,
+        },
+      ]);
       setIsTyping(false);
     }, 1200);
   };
 
+  const helpfulResources = [
+    { label: 'ASPCA Animal Poison Control', url: 'https://www.aspca.org/pet-care/animal-poison-control' },
+    { label: 'AVMA pet care', url: 'https://www.avma.org/resources/pet-owners/petcare' },
+    { label: 'American Kennel Club health', url: 'https://www.akc.org/expert-advice/health/' },
+    { label: 'Cornell Feline Health Center', url: 'https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center' },
+  ];
+
+  const openHelpfulResource = async (url) => {
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.log('Helpful resource open error:', error);
+      Alert.alert('Unable to open link', 'Please try again.');
+    }
+  };
+
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      {/* Header */}
       <View style={s.modalHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ color: C.accent, fontSize: 16 }}>← Back</Text>
@@ -9940,16 +10836,23 @@ function AIVetScreen({ navigation }) {
         <Text style={s.modalTitle}>AI Vet Assistant</Text>
         <View style={{ width: 60 }} />
       </View>
-      {/* Disclaimer */}
+
       <View style={s.disclaimer}>
-        <Text style={s.disclaimerText}>⚕️ AI assistant only — not a substitute for professional veterinary care</Text>
+        <Text style={s.disclaimerText}>
+          AI Vet can help with general guidance, but it is not a replacement for a licensed veterinarian.
+        </Text>
       </View>
-      {/* Pet Context */}
+
       <View style={s.petContextBar}>
-        <Text style={s.petContextText}>🐕 Max · 3 yrs · 68 lbs · Premium Member</Text>
+        <Text style={s.petContextTitle}>Answering for {activePet?.name || 'your pet'}</Text>
+        <Text style={s.petContextText}>
+          {[activePet?.species || 'Species not set', activePet?.breed || 'Breed not set', `Weight: ${latestWeightValue}`, `Health score: ${typeof activePet?.score === 'number' ? `${activePet.score}/100` : 'Not available'}`]
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
       </View>
-      {/* Messages */}
-      <ScrollView ref={scrollRef} style={s.flex} contentContainerStyle={{ padding: 16 }} onContentSizeChange={() => scrollRef.current?.scrollToEnd()}>
+
+      <ScrollView ref={scrollRef} style={s.flex} contentContainerStyle={{ padding: 16, paddingBottom: 18 }} onContentSizeChange={() => scrollRef.current?.scrollToEnd()}>
         {messages.map((msg, i) => (
           <View
             key={i}
@@ -9971,13 +10874,22 @@ function AIVetScreen({ navigation }) {
                     : s.chatBubbleAIBg,
               ]}
             >
-              <Text style={[s.chatText, msg.role === 'user' && { color: '#fff' }, msg.emergency && { color: '#ffd7d7', fontWeight: '600' }]}>{msg.text}</Text>
+              <Text
+                style={[
+                  s.chatText,
+                  msg.role === 'user' && { color: '#fff' },
+                  msg.emergency && { color: '#ffd7d7', fontWeight: '600' },
+                ]}
+              >
+                {msg.text}
+              </Text>
             </View>
             <Text style={[s.chatTimestamp, { textAlign: msg.role === 'user' ? 'right' : 'left' }]}>
               {msg.time}
             </Text>
           </View>
         ))}
+
         {isTyping && (
           <View style={[s.chatBubbleWrap, { alignSelf: 'flex-start', marginRight: 36 }]}>
             <Text style={{ fontSize: 24 }}>🩺</Text>
@@ -9986,21 +10898,37 @@ function AIVetScreen({ navigation }) {
             </View>
           </View>
         )}
-      </ScrollView>
-      {/* Suggestions */}
-      {messages.length < 2 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 12, gap: 8 }}>
-          {AI_SUGGESTIONS.map(s_ => (
-            <TouchableOpacity key={s_} style={s.suggestion} onPress={() => send(s_)}>
-              <Text style={s.suggestionText}>{s_}</Text>
+
+        {messages.length < 2 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 12, gap: 8 }}>
+            {AI_SUGGESTIONS.map((suggestion) => (
+              <TouchableOpacity key={suggestion} style={s.suggestion} onPress={() => send(suggestion)}>
+                <Text style={s.suggestionText}>{suggestion}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        <View style={s.aiVetResourcesCard}>
+          <Text style={s.aiVetResourcesTitle}>Helpful resources</Text>
+          {helpfulResources.map((resource) => (
+            <TouchableOpacity key={resource.label} style={s.aiVetResourceLink} onPress={() => openHelpfulResource(resource.url)} activeOpacity={0.85}>
+              <Text style={s.aiVetResourceText}>{resource.label}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
-      )}
-      {/* Input */}
+        </View>
+      </ScrollView>
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={s.chatInputRow}>
-          <TextInput style={s.chatInput} value={input} onChangeText={setInput} placeholder="Ask about Max..." placeholderTextColor={C.muted} multiline />
+          <TextInput
+            style={s.chatInput}
+            value={input}
+            onChangeText={setInput}
+            placeholder={`Ask about ${activePet?.name || 'your pet'}...`}
+            placeholderTextColor={C.muted}
+            multiline
+          />
           <TouchableOpacity style={[s.sendBtn, !input.trim() && { backgroundColor: C.faint }]} onPress={() => send()} disabled={!input.trim() || isTyping}>
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>➤</Text>
           </TouchableOpacity>
@@ -12331,7 +13259,8 @@ sosButton: {
   disclaimer:        { marginHorizontal: 12, marginTop: 12, marginBottom: 8, backgroundColor: C.blue + '22', borderLeftWidth: 3, borderLeftColor: C.blue, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 },
   disclaimerText:    { color: C.blue, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   petContextBar:     { marginHorizontal: 12, marginBottom: 4, backgroundColor: C.card, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.border },
-  petContextText:    { color: C.muted, fontSize: 12, textAlign: 'center', fontWeight: '700' },
+  petContextTitle:   { color: C.text, fontSize: 13, textAlign: 'center', fontWeight: '900', marginBottom: 3 },
+  petContextText:    { color: C.muted, fontSize: 12, textAlign: 'center', fontWeight: '700', lineHeight: 17 },
   chatBubbleWrap:    { marginBottom: 14, maxWidth: '86%' },
   chatBubbleAI:      { alignSelf: 'flex-start' },
   chatBubbleUser:    { alignSelf: 'flex-end' },
@@ -12343,6 +13272,10 @@ sosButton: {
   typingText:        { color: C.muted, fontSize: 14, lineHeight: 20, fontStyle: 'italic' },
   suggestion:        { backgroundColor: C.card, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border },
   suggestionText:    { color: C.muted, fontSize: 12, fontWeight: '700' },
+  aiVetResourcesCard: { marginTop: 8, backgroundColor: C.card, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: C.border },
+  aiVetResourcesTitle:{ color: C.text, fontSize: 13, fontWeight: '900', marginBottom: 8 },
+  aiVetResourceLink:  { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 14, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
+  aiVetResourceText:  { color: C.accent, fontSize: 12, fontWeight: '800', lineHeight: 17 },
   chatInputRow:      { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: C.border },
   chatInput:         { flex: 1, minHeight: 46, maxHeight: 110, backgroundColor: C.card, borderRadius: 18, color: C.text, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15 },
   sendBtn:           { width: 46, height: 46, borderRadius: 23, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
