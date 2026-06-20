@@ -25,16 +25,6 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { supabase } from './supabase';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 // ─────────────────────────────────────────────
 // COLORS & THEME
 // ─────────────────────────────────────────────
@@ -108,10 +98,6 @@ const PET_SOUNDS = {
 };
 
 const SOS_SOUND = require('./assets/sounds/sos.mp3');
-
-const getExpoProjectId = () => Constants?.expoConfig?.extra?.eas?.projectId
-  ?? Constants?.easConfig?.projectId
-  ?? '';
 
 const HEALTH_RECORDS = [
   { id: '1', petId: '1', type: 'vaccination', title: 'Rabies Vaccine',        date: 'Jan 15, 2026', provider: 'Dr. Smith',   status: 'current',   icon: '💉', nextDue: 'Jan 2027' },
@@ -918,12 +904,6 @@ const registerForPushNotificationsAsync = async () => {
       return null;
     }
 
-    const projectId = getExpoProjectId();
-    if (!projectId) {
-      console.log('Push notifications require a development build with an Expo projectId.');
-      return null;
-    }
-
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -934,6 +914,14 @@ const registerForPushNotificationsAsync = async () => {
 
     if (finalStatus !== 'granted') {
       console.log('Push notification permission denied');
+      return null;
+    }
+
+    const projectId = Constants?.expoConfig?.extra?.eas?.projectId
+      ?? Constants?.easConfig?.projectId;
+
+    if (!projectId) {
+      console.log('Push notification projectId not found');
       return null;
     }
 
@@ -3078,6 +3066,9 @@ function DashboardScreen({ navigation }) {
     });
   }, [pets]);
   const pet = pets.find(p => p.id === selectedPetId) || pets[0];
+  const selectedCalendarDateKey = toLocalDateKey(selectedCalendarDate);
+  const careActivityTypes = new Set(['meal', 'walk', 'medication', 'weight', 'grooming', 'reminder_completed', 'custom']);
+  const currentScore = Math.max(0, Math.min(100, petScores[selectedPetId] ?? pet?.score ?? 80));
   useEffect(() => {
     if (pets.length > 0 && !pets.some((item) => item.id === selectedPetId)) {
       setSelectedPetId(pets[0].id);
@@ -3320,7 +3311,6 @@ function DashboardScreen({ navigation }) {
     date.setDate(date.getDate() + index);
     return date;
   });
-  const selectedCalendarDateKey = formatLocalDateKey(selectedCalendarDate);
   const calendarReminders = careReminders.filter(reminder => {
     return (
       reminder.petId === selectedPetId
@@ -3413,26 +3403,6 @@ function DashboardScreen({ navigation }) {
       ],
       { cancelable: true }
     );
-
-    if (Platform.OS !== 'web') {
-      try {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `${petName} Reminder`,
-            body: `${reminder.title} is due now.`,
-            data: {
-              type: 'care_reminder_due',
-              reminderId: reminder.id,
-              petId: reminder.petId || null,
-            },
-          },
-          channelId: Platform.OS === 'android' ? 'care-reminders' : undefined,
-          trigger: null,
-        });
-      } catch (error) {
-        console.log('Local reminder notification failed:', error);
-      }
-    }
   }, [markReminderDone, pets, playReminderPetSound, setReminderAlerted, snoozeReminder]);
   const openReminderModal = () => {
     logQuickActionFire('Add Reminder');
@@ -3695,7 +3665,6 @@ function DashboardScreen({ navigation }) {
     }
   };
 
-  const currentScore = Math.max(0, Math.min(100, petScores[selectedPetId] ?? pet?.score ?? 80));
   if (!pet) {
     return (
       <SafeAreaView style={s.screen} edges={['top']}>
@@ -3723,7 +3692,6 @@ function DashboardScreen({ navigation }) {
       </SafeAreaView>
     );
   }
-  const careActivityTypes = new Set(['meal', 'walk', 'medication', 'weight', 'grooming', 'reminder_completed', 'custom']);
   const scoreColor = currentScore >= 85 ? C.green : currentScore >= 65 ? C.yellow : C.red;
   const recentActivity = activityLogs.filter((log) => log.petId === pet.id && careActivityTypes.has(log.type));
   const petActivityDays = [...new Set(recentActivity.map(log => log.dateKey || new Date().toDateString()))].sort((a, b) => new Date(b) - new Date(a));
@@ -10785,12 +10753,10 @@ function SettingsScreen({ navigation }) {
   const healthRecordCount = safeHealthRecords.length;
   const reminderCount = safeCareReminders.length;
   const reminderNotificationsStatus = reminderAlertsEnabled ? 'Reminder notifications on' : 'Reminder notifications off';
-  const expoProjectId = getExpoProjectId();
-  const pushNotificationStatus = !Device.isDevice
-    ? 'Expo Go fallback: local notifications only.'
-    : !expoProjectId
-      ? 'Push notifications require a development build.'
-      : 'Push notifications ready';
+  const pushNotificationStatus = (!Device.isDevice
+    || !(Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId))
+    ? 'Push notifications require a development build'
+    : 'Push notifications ready';
   const supabaseConnectedStatus = supabase ? 'Connected' : 'Unavailable';
   const resolvedProfileName = authProfile?.display_name
     || authUser?.user_metadata?.display_name
@@ -10965,11 +10931,12 @@ function SettingsScreen({ navigation }) {
   };
 
   const storageBucketsText = 'memory-vault, health-record-files';
+  const expoProjectId = Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId || '';
   const appEnvironment = !Device.isDevice
     ? 'Simulator / Emulator'
-      : expoProjectId
-        ? 'Development Build'
-        : 'Expo Go';
+    : expoProjectId
+      ? 'Development Build'
+      : 'Expo Go';
 
   const toggleReminderAlerts = () => {
     setReminderAlertsEnabled((prev) => !prev);
@@ -11271,13 +11238,8 @@ function SettingsScreen({ navigation }) {
           <View style={s.modalOverlay}>
             <View style={s.customActionModal}>
               <Text style={s.customActionModalTitle}>Push Notifications</Text>
-              <Text style={{ color: C.text, marginBottom: 10 }}>
-                Push notifications require a development build.
-              </Text>
-              <Text style={{ color: C.muted, marginBottom: 18 }}>
-                {Device.isDevice && expoProjectId
-                  ? 'This build is ready to register an Expo push token.'
-                  : 'Expo Go keeps local notifications available, but remote push registration is skipped until you use a development build with a projectId.'}
+              <Text style={{ color: C.text, marginBottom: 18 }}>
+                Push notifications require a development build. Expo Go does not fully support remote notifications.
               </Text>
               <View style={s.customActionModalButtons}>
                 <TouchableOpacity style={s.customActionSaveBtn} onPress={() => setShowPushInfoModal(false)}>
@@ -12766,25 +12728,7 @@ export default function App() {
     }
 
     pushTokenRegistrationStartedRef.current = true;
-
-    const initializeNotifications = async () => {
-      try {
-        if (Platform.OS === 'android') {
-          await Notifications.setNotificationChannelAsync('care-reminders', {
-            name: 'Care reminders',
-            importance: Notifications.AndroidImportance.HIGH,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#FF231F7C',
-          });
-        }
-      } catch (error) {
-        console.log('Notification channel setup failed:', error);
-      }
-
-      await registerForPushNotificationsAsync();
-    };
-
-    void initializeNotifications();
+    registerForPushNotificationsAsync();
   }, []);
 
   return (
