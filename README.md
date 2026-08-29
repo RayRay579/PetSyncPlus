@@ -1,50 +1,58 @@
-# Welcome to your Expo app 👋
+# PetSync+
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+PetSync+ is an Expo / React Native pet-care application backed by Supabase. The recovered main application uses the classic Expo `App.js` entry point and runs on iOS/Expo Go and web.
 
-## Get started
+## Current recovered baseline
 
-1. Install dependencies
+- Recovery branch: `petsync-recovery-2026-08-29`
+- Resume development branch: `petsync-resume-build-1`
+- Entry point: `node_modules/expo/AppEntry.js` -> `App.js`
+- Backend: Supabase
+- Subscriptions: RevenueCat integration
+- Platforms: Expo / React Native, iOS, Android development builds, web
 
-   ```bash
-   npm install
-   ```
+## Major features already present
 
-2. Start the app
+- Authentication and profiles
+- Multi-pet support
+- Pet profiles and species-aware care actions
+- Health Hub and health records
+- OCR-assisted health record import
+- Weight and vet-visit analytics
+- Care reminders and push-notification foundation
+- Memory Vault
+- Family Sharing
+- Lost Pet SOS and community alerts
+- Community
+- Discover directory
+- Businesses, shelters/rescues, adoptable pets, events, promotions, favorites
+- Partner applications and moderation
+- PetSync+ Control Center
+- RevenueCat premium/subscription plumbing
 
-   ```bash
-   npx expo start
-   ```
+## Development rule
 
-In the output, you'll find options to open the app in a
+The recovered branch is a safety checkpoint. New work should happen on a dedicated development branch and should not reset or overwrite the recovery branch.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run locally
 
 ```bash
-npm run reset-project
+npm install
+npx expo start --clear
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Use Expo Go for supported mobile testing. Push notifications and some native subscription behavior require a development build.
 
-## Learn more
+For web, press `w` after Expo starts or run:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm run web
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Architecture note
 
-## Join the community
+The active recovered app is the classic `App.js` application. Old Expo Router starter-template files were removed from the resume branch because they were not the active application and caused confusion in web startup/SSR behavior.
 
-Join our community of developers creating universal apps.
+## Next product direction
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+A separate PetSyncPlusV3 experiment contains the newer PetSync intelligence architecture (Coach, Knowledge, Memory, Observation, Health Intelligence, Daily Care, Care Profile, and Voice). That work should be migrated deliberately into the recovered main app rather than copied wholesale.
