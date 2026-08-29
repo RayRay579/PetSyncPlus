@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
@@ -8,11 +8,7 @@ import {
 import { NavigationContainer, createNavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import {
-  SafeAreaView,
-  SafeAreaProvider,
-  initialWindowMetrics,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -240,135 +236,6 @@ const C = {
 const PETSYNC_BACKGROUND_IMAGE = require('./assets/images/petsync-background.png');
 const PETSYNC_STARTUP_BACKGROUND = '#f6f8ff';
 const KEYBOARD_AVOIDING_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : 'height';
-
-const resolveUiIconName = (label = '') => {
-  const normalized = String(label || '').trim().toLowerCase();
-  if (normalized.includes('profile')) return 'account-circle-outline';
-  if (normalized.includes('family')) return 'account-group-outline';
-  if (normalized.includes('my pets')) return 'paw';
-  if (normalized.includes('reminder notifications')) return 'bell-outline';
-  if (normalized.includes('reminder alerts')) return 'bell-outline';
-  if (normalized.includes('pet sound alerts')) return 'volume-high';
-  if (normalized.includes('push notifications')) return 'bell-ring-outline';
-  if (normalized === 'pets') return 'paw';
-  if (normalized.includes('health')) return 'heart-pulse';
-  if (normalized.includes('care reminders')) return 'calendar-clock';
-  if (normalized.includes('memories')) return 'camera-outline';
-  if (normalized.includes('community posts')) return 'forum-outline';
-  if (normalized.includes('recipes')) return 'book-open-variant';
-  if (normalized.includes('comments')) return 'comment-outline';
-  if (normalized.includes('lost pet alerts')) return 'alarm-light-outline';
-  if (normalized.includes('export')) return 'backup-restore';
-  if (normalized.includes('records')) return 'file-document-outline';
-  if (normalized.includes('petsync+ premium')) return 'diamond-stone';
-  if (normalized.includes('app name')) return 'information-outline';
-  if (normalized.includes('version')) return 'information-outline';
-  if (normalized.includes('supabase')) return 'database-outline';
-  if (normalized.includes('help center')) return 'help-circle-outline';
-  if (normalized.includes('rate petsync+')) return 'star-outline';
-  if (normalized.includes('add pet')) return 'plus-circle-outline';
-  if (normalized.includes('settings')) return 'cog-outline';
-  if (normalized.includes('notifications')) return 'bell-outline';
-  if (normalized.includes('log meal')) return 'silverware-fork-knife';
-  if (normalized.includes('feed')) return 'silverware-fork-knife';
-  if (normalized.includes('walk')) return 'walk';
-  if (normalized.includes('trail ride')) return 'horse-human';
-  if (normalized.includes('weight')) return 'scale-bathroom';
-  if (normalized.includes('medication')) return 'pill';
-  if (normalized.includes('groom')) return 'content-cut';
-  if (normalized.includes('play')) return 'paw';
-  if (normalized.includes('bath')) return 'shower';
-  if (normalized.includes('photo')) return 'camera-outline';
-  if (normalized.includes('cuddle')) return 'heart-outline';
-  if (normalized.includes('nap')) return 'sleep';
-  if (normalized.includes('fish')) return 'fish';
-  if (normalized.includes('bird')) return 'bird';
-  if (normalized.includes('rabbit')) return 'rabbit';
-  if (normalized.includes('hamster')) return 'rodent';
-  if (normalized.includes('reptile')) return 'snake';
-  if (normalized.includes('ai vet')) return 'stethoscope';
-  if (normalized.includes('lost pet')) return 'alarm-light';
-  if (normalized.includes('contact owner')) return 'phone-outline';
-  if (normalized.includes('share alert') || normalized.includes('share')) return 'share-variant-outline';
-  if (normalized.includes('lost pet sos')) return 'alarm-light';
-  return 'paw-outline';
-};
-
-const resolveUiIconColor = (label = '', accent = false) => {
-  const normalized = String(label || '').trim().toLowerCase();
-  if (accent) return C.settingsAccent;
-  if (normalized.includes('profile')) return '#7E57C2';
-  if (normalized.includes('family')) return '#22C7B7';
-  if (normalized.includes('reminder notifications') || normalized.includes('reminder alerts')) return '#FFB020';
-  if (normalized.includes('push notifications') || normalized.includes('notifications')) return '#4C9AFF';
-  if (normalized === 'pets' || normalized.includes('my pets')) return '#22C55E';
-  if (normalized.includes('health')) return '#FF8A3D';
-  if (normalized.includes('care reminders')) return '#8E5BFF';
-  if (normalized.includes('memories')) return '#FF6B9A';
-  if (normalized.includes('community posts')) return '#5B7CFA';
-  if (normalized.includes('recipes')) return '#22C55E';
-  if (normalized.includes('comments')) return '#4C9AFF';
-  if (normalized.includes('lost pet alerts')) return '#FF5B5B';
-  if (normalized.includes('export')) return '#FF8A3D';
-  if (normalized.includes('premium')) return '#8E5BFF';
-  if (normalized.includes('help')) return '#22C7B7';
-  if (normalized.includes('rate')) return '#F5A524';
-  if (normalized.includes('app name') || normalized.includes('version') || normalized.includes('supabase')) return '#8F97A6';
-  if (normalized.includes('add pet')) return '#FF8A3D';
-  if (normalized.includes('settings')) return '#8E5BFF';
-  if (normalized.includes('logout')) return '#FF5B5B';
-  return C.settingsMutedText;
-};
-
-const resolvePetSpeciesIconName = (species = '') => {
-  const normalized = String(species || '').trim().toLowerCase();
-  if (normalized.includes('dog')) return 'dog';
-  if (normalized.includes('cat')) return 'cat';
-  if (normalized.includes('fish')) return 'fish';
-  if (normalized.includes('bird')) return 'twitter';
-  if (normalized.includes('reptile') || normalized.includes('snake') || normalized.includes('lizard') || normalized.includes('turtle')) return 'snake';
-  if (normalized.includes('rabbit') || normalized.includes('bunny')) return 'rabbit';
-  if (normalized.includes('hamster') || normalized.includes('guinea') || normalized.includes('gerbil')) return 'paw';
-  if (normalized.includes('horse') || normalized.includes('pony')) return 'horse';
-  return 'paw';
-};
-
-const resolvePetSpeciesAccentColor = (species = '') => {
-  const normalized = String(species || '').trim().toLowerCase();
-  if (normalized.includes('dog')) return '#FF8A3D';
-  if (normalized.includes('cat')) return '#8E5BFF';
-  if (normalized.includes('fish')) return '#2F80ED';
-  if (normalized.includes('bird')) return '#22C7B7';
-  if (normalized.includes('reptile') || normalized.includes('snake') || normalized.includes('lizard') || normalized.includes('turtle')) return '#57B65B';
-  if (normalized.includes('rabbit') || normalized.includes('bunny')) return '#FF5B9F';
-  if (normalized.includes('hamster') || normalized.includes('guinea') || normalized.includes('gerbil')) return '#F5A524';
-  if (normalized.includes('horse') || normalized.includes('pony')) return '#A66B3D';
-  return C.primaryActionBg;
-};
-
-const PetSpeciesIcon = ({ species, size = 18, color }) => {
-  const iconName = resolvePetSpeciesIconName(species);
-  return (
-    <MaterialCommunityIcons
-      name={iconName || 'paw'}
-      size={size}
-      color={color || C.primaryActionBg}
-    />
-  );
-};
-const resolveMemoryIconName = (memory = {}) => {
-  const title = String(memory?.title || memory?.caption || memory?.type || '').trim().toLowerCase();
-  const mediaType = String(memory?.mediaType || memory?.mimeType || '').toLowerCase();
-  if (mediaType.startsWith('video/')) return 'video-outline';
-  if (memory?.milestone) return 'star-outline';
-  if (title.includes('birthday')) return 'cake-variant-outline';
-  if (title.includes('adoption')) return 'home-heart-outline';
-  if (title.includes('groom')) return 'content-cut';
-  if (title.includes('bath')) return 'shower';
-  if (title.includes('walk') || title.includes('park') || title.includes('run')) return 'walk';
-  if (title.includes('play')) return 'gamepad-variant-outline';
-  return 'image-outline';
-};
 
 const PetSyncBackground = ({ children, opacity = 0.12, style }) => (
   <View style={[{ flex: 1, backgroundColor: PETSYNC_STARTUP_BACKGROUND }, style]}>
@@ -1188,7 +1055,7 @@ function FeatureLockedModal({ visible, feature, onClose }) {
             <View style={s.featureLockedBenefitList}>
               {featureBenefits.map((benefit) => (
                 <View key={benefit} style={s.featureLockedBenefitRow}>
-                  <MaterialCommunityIcons name="check-circle-outline" size={16} color={C.modalBodyText} style={s.featureLockedBullet} />
+                  <Text style={s.featureLockedBullet}>�</Text>
                   <Text style={s.featureLockedBenefitText}>{benefit}</Text>
                 </View>
               ))}
@@ -1730,20 +1597,20 @@ const registerForPushNotificationsAsync = async () => {
 
 const getHealthRecordIcon = (type) => {
   const iconMap = {
-    vaccination: 'needle',
-    medication: 'pill',
-    appointment: 'calendar-clock',
-    weight: 'scale-bathroom',
-    symptom: 'alert-circle-outline',
-    surgery: 'scalpel',
-    allergy: 'allergy',
-    diagnosis: 'file-document-outline',
-    lab: 'test-tube',
-    fish: 'fish',
-    imported_file: 'file-import-outline',
+    vaccination: '??',
+    medication: '??',
+    appointment: '??',
+    weight: '??',
+    symptom: '??',
+    surgery: '??',
+    allergy: '??',
+    diagnosis: '??',
+    lab: '??',
+    fish: '??',
+    imported_file: '??',
   };
 
-  return iconMap[type] || 'file-document-outline';
+  return iconMap[type] || '??';
 };
 
 const getHealthRecordNotes = (type, details = {}, fallback = '') => {
@@ -3719,58 +3586,58 @@ const buildStarterReminders = (pet) => {
   switch (species) {
     case 'dog':
       return [
-        makeReminder('Morning Feeding', 'silverware-fork-knife', 0, '7:00 AM'),
-        makeReminder('Evening Feeding', 'silverware-fork-knife', 0, '6:00 PM'),
-        makeReminder('Daily Walk', 'walk', 1, '8:00 AM'),
-        makeReminder('Grooming Reminder', 'content-cut', 2, '4:00 PM'),
+        makeReminder('Morning Feeding', '???', 0, '7:00 AM'),
+        makeReminder('Evening Feeding', '???', 0, '6:00 PM'),
+        makeReminder('Daily Walk', '??', 1, '8:00 AM'),
+        makeReminder('Grooming Reminder', '??', 2, '4:00 PM'),
       ];
     case 'cat':
       return [
-        makeReminder('Feeding', 'silverware-fork-knife', 0, '8:00 AM'),
-        makeReminder('Litter Cleaning', 'broom', 0, '5:00 PM'),
-        makeReminder('Play Session', 'paw', 1, '6:00 PM'),
+        makeReminder('Feeding', '???', 0, '8:00 AM'),
+        makeReminder('Litter Cleaning', '??', 0, '5:00 PM'),
+        makeReminder('Play Session', '??', 1, '6:00 PM'),
       ];
     case 'fish':
       return [
-        makeReminder('Feed Fish', 'fish', 0, '9:00 AM'),
-        makeReminder('Water Change', 'water', 1, '4:00 PM'),
-        makeReminder('Tank Check', 'fish', 2, '10:00 AM'),
+        makeReminder('Feed Fish', '???', 0, '9:00 AM'),
+        makeReminder('Water Change', '??', 1, '4:00 PM'),
+        makeReminder('Tank Check', '???', 2, '10:00 AM'),
       ];
     case 'bird':
       return [
-        makeReminder('Feed Bird', 'bird', 0, '8:00 AM'),
-        makeReminder('Cage Cleaning', 'broom', 1, '5:00 PM'),
-        makeReminder('Enrichment Time', 'dots-horizontal', 2, '3:00 PM'),
+        makeReminder('Feed Bird', '???', 0, '8:00 AM'),
+        makeReminder('Cage Cleaning', '??', 1, '5:00 PM'),
+        makeReminder('Enrichment Time', '??', 2, '3:00 PM'),
       ];
     case 'reptile':
       return [
-        makeReminder('Heat Lamp Check', 'lightbulb-on-outline', 0, '8:00 AM'),
-        makeReminder('Feeding', 'silverware-fork-knife', 0, '6:00 PM'),
-        makeReminder('Habitat Cleaning', 'broom', 1, '4:00 PM'),
+        makeReminder('Heat Lamp Check', '??', 0, '8:00 AM'),
+        makeReminder('Feeding', '???', 0, '6:00 PM'),
+        makeReminder('Habitat Cleaning', '??', 1, '4:00 PM'),
       ];
     case 'rabbit':
       return [
-        makeReminder('Morning Feeding', 'silverware-fork-knife', 0, '8:00 AM'),
-        makeReminder('Hutch Cleaning', 'broom', 1, '5:00 PM'),
-        makeReminder('Play Time', 'paw', 2, '4:00 PM'),
+        makeReminder('Morning Feeding', '???', 0, '8:00 AM'),
+        makeReminder('Hutch Cleaning', '??', 1, '5:00 PM'),
+        makeReminder('Play Time', '??', 2, '4:00 PM'),
       ];
     case 'hamster':
       return [
-        makeReminder('Feed Hamster', 'silverware-fork-knife', 0, '8:00 AM'),
-        makeReminder('Cage Tidy', 'broom', 1, '5:00 PM'),
-        makeReminder('Wheel Time', 'rotate-right', 2, '4:00 PM'),
+        makeReminder('Feed Hamster', '???', 0, '8:00 AM'),
+        makeReminder('Cage Tidy', '??', 1, '5:00 PM'),
+        makeReminder('Wheel Time', '??', 2, '4:00 PM'),
       ];
     case 'horse':
       return [
-        makeReminder('Morning Feed', 'silverware-fork-knife', 0, '7:00 AM'),
-        makeReminder('Grooming', 'content-cut', 1, '4:00 PM'),
-        makeReminder('Trail Ride', 'horse-human', 2, '3:00 PM'),
+        makeReminder('Morning Feed', '???', 0, '7:00 AM'),
+        makeReminder('Grooming', '??', 1, '4:00 PM'),
+        makeReminder('Trail Ride', '??', 2, '3:00 PM'),
       ];
     default:
       return [
-        makeReminder('Daily Care Check', 'check-circle-outline', 0, '9:00 AM'),
-        makeReminder('Feed Time', 'silverware-fork-knife', 1, '9:00 AM'),
-        makeReminder('Habitat Cleaning', 'broom', 2, '4:00 PM'),
+        makeReminder('Daily Care Check', '?', 0, '9:00 AM'),
+        makeReminder('Feed Time', '???', 1, '9:00 AM'),
+        makeReminder('Habitat Cleaning', '??', 2, '4:00 PM'),
       ];
   }
 };
@@ -3790,7 +3657,7 @@ const buildStarterHealthRecords = (pet) => {
       date: todayLabel,
       provider: null,
       status: 'current',
-      icon: 'scale-bathroom',
+      icon: '??',
       nextDue: null,
       value: parsedWeightValue,
       unit: 'lbs',
@@ -3810,7 +3677,7 @@ const buildStarterHealthRecords = (pet) => {
       date: todayLabel,
       provider: 'Onboarding',
       status: 'current',
-      icon: 'calendar-check-outline',
+      icon: '??',
       nextDue: null,
       details: {
         vetClinic: 'Onboarding',
@@ -3826,7 +3693,7 @@ const buildStarterHealthRecords = (pet) => {
       date: todayLabel,
       provider: 'To be scheduled',
       status: 'upcoming',
-      icon: 'calendar-check-outline',
+      icon: '??',
       nextDue: nextYearLabel,
       details: {
         vetClinic: 'To be scheduled',
@@ -3842,81 +3709,81 @@ const buildQuickActionsForSpecies = (pet, handleQuickAction, navigation, onAIVet
   const openAIVet = typeof onAIVetPress === 'function'
     ? onAIVetPress
     : () => navigation.navigate('AIVet', { selectedPetId: pet?.id || '' });
-  const baseVetAction = { icon: 'stethoscope', label: 'AI Vet', action: openAIVet };
+  const baseVetAction = { icon: '??', label: 'AI Vet', action: openAIVet };
   const species = pet.species?.toLowerCase();
 
   switch (species) {
     case 'dog':
       return [
-        { icon: 'silverware-fork-knife', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, 'silverware-fork-knife') },
-        { icon: 'walk', label: 'Log Walk', action: () => handleQuickAction('walk', 'Walk logged', pet, 'walk') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
-        { icon: 'pill', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, 'pill') },
-        { icon: 'paw', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, 'paw') },
-        { icon: 'content-cut', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, 'content-cut') },
+        { icon: '???', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, '???') },
+        { icon: '??', label: 'Log Walk', action: () => handleQuickAction('walk', 'Walk logged', pet, '??') },
+        { icon: '??', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '??') },
+        { icon: '??', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, '??') },
+        { icon: '??', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, '??') },
+        { icon: '??', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, '??') },
         baseVetAction,
       ];
     case 'cat':
       return [
-        { icon: 'silverware-fork-knife', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, 'silverware-fork-knife') },
-        { icon: 'paw', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, 'paw') },
-        { icon: 'content-cut', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, 'content-cut') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
-        { icon: 'pill', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, 'pill') },
-        { icon: 'broom', label: 'Litter Cleaned', action: () => handleQuickAction('custom', 'Litter cleaned', pet, 'broom') },
+        { icon: '???', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, '???') },
+        { icon: '??', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, '??') },
+        { icon: '??', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, '??') },
+        { icon: '??', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '??') },
+        { icon: '??', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, '??') },
+        { icon: '??', label: 'Litter Cleaned', action: () => handleQuickAction('custom', 'Litter cleaned', pet, '??') },
         baseVetAction,
       ];
     case 'fish':
       return [
-        { icon: 'fish', label: 'Feed Fish', action: () => handleQuickAction('meal', 'Fish fed', pet, 'fish') },
-        { icon: 'water', label: 'Water Change', action: () => handleQuickAction('custom', 'Water changed', pet, 'water') },
-        { icon: 'thermometer', label: 'Tank Temp', action: () => handleQuickAction('custom', 'Tank temperature checked', pet, 'thermometer') },
-        { icon: 'flask-outline', label: 'Check pH', action: () => handleQuickAction('custom', 'Water pH checked', pet, 'flask-outline') },
-        { icon: 'air-filter', label: 'Filter Cleaned', action: () => handleQuickAction('custom', 'Filter cleaned', pet, 'air-filter') },
+        { icon: '???', label: 'Feed Fish', action: () => handleQuickAction('meal', 'Fish fed', pet, '???') },
+        { icon: '??', label: 'Water Change', action: () => handleQuickAction('custom', 'Water changed', pet, '??') },
+        { icon: '???', label: 'Tank Temp', action: () => handleQuickAction('custom', 'Tank temperature checked', pet, '???') },
+        { icon: '??', label: 'Check pH', action: () => handleQuickAction('custom', 'Water pH checked', pet, '??') },
+        { icon: '??', label: 'Filter Cleaned', action: () => handleQuickAction('custom', 'Filter cleaned', pet, '??') },
         baseVetAction,
       ];
     case 'bird':
       return [
-        { icon: 'twitter', label: 'Feed Bird', action: () => handleQuickAction('meal', 'Bird fed', pet, 'twitter') },
-        { icon: 'broom', label: 'Cage Cleaned', action: () => handleQuickAction('custom', 'Cage cleaned', pet, 'broom') },
-        { icon: 'account-group-outline', label: 'Social Time', action: () => handleQuickAction('custom', 'Social time logged', pet, 'account-group-outline') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
+        { icon: '???', label: 'Feed Bird', action: () => handleQuickAction('meal', 'Bird fed', pet, '???') },
+        { icon: '??', label: 'Cage Cleaned', action: () => handleQuickAction('custom', 'Cage cleaned', pet, '??') },
+        { icon: '??', label: 'Social Time', action: () => handleQuickAction('custom', 'Social time logged', pet, '??') },
+        { icon: '??', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '??') },
         baseVetAction,
       ];
     case 'reptile':
       return [
-        { icon: 'snake', label: 'Feed Reptile', action: () => handleQuickAction('meal', 'Reptile fed', pet, 'snake') },
-        { icon: 'thermometer', label: 'Heat Check', action: () => handleQuickAction('custom', 'Heat checked', pet, 'thermometer') },
-        { icon: 'water', label: 'Humidity Check', action: () => handleQuickAction('custom', 'Humidity checked', pet, 'water') },
-        { icon: 'broom', label: 'Habitat Cleaned', action: () => handleQuickAction('custom', 'Habitat cleaned', pet, 'broom') },
+        { icon: '???', label: 'Feed Reptile', action: () => handleQuickAction('meal', 'Reptile fed', pet, '???') },
+        { icon: '??', label: 'Heat Check', action: () => handleQuickAction('custom', 'Heat checked', pet, '??') },
+        { icon: '??', label: 'Humidity Check', action: () => handleQuickAction('custom', 'Humidity checked', pet, '??') },
+        { icon: '??', label: 'Habitat Cleaned', action: () => handleQuickAction('custom', 'Habitat cleaned', pet, '??') },
         baseVetAction,
       ];
     case 'rabbit':
       return [
-        { icon: 'paw', label: 'Feed Rabbit', action: () => handleQuickAction('meal', 'Rabbit fed', pet, 'paw') },
-        { icon: 'broom', label: 'Hutch Cleaned', action: () => handleQuickAction('custom', 'Hutch cleaned', pet, 'broom') },
-        { icon: 'paw', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, 'paw') },
+        { icon: '???', label: 'Feed Rabbit', action: () => handleQuickAction('meal', 'Rabbit fed', pet, '???') },
+        { icon: '??', label: 'Hutch Cleaned', action: () => handleQuickAction('custom', 'Hutch cleaned', pet, '??') },
+        { icon: '??', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, '??') },
         baseVetAction,
       ];
     case 'hamster':
       return [
-        { icon: 'paw', label: 'Feed Hamster', action: () => handleQuickAction('meal', 'Hamster fed', pet, 'paw') },
-        { icon: 'broom', label: 'Cage Tidy', action: () => handleQuickAction('custom', 'Cage tidied', pet, 'broom') },
-        { icon: 'rotate-right', label: 'Wheel Time', action: () => handleQuickAction('custom', 'Wheel time logged', pet, 'rotate-right') },
+        { icon: '???', label: 'Feed Hamster', action: () => handleQuickAction('meal', 'Hamster fed', pet, '???') },
+        { icon: '??', label: 'Cage Tidy', action: () => handleQuickAction('custom', 'Cage tidied', pet, '??') },
+        { icon: '??', label: 'Wheel Time', action: () => handleQuickAction('custom', 'Wheel time logged', pet, '??') },
         baseVetAction,
       ];
     case 'horse':
       return [
-        { icon: 'horse', label: 'Feed Horse', action: () => handleQuickAction('meal', 'Horse fed', pet, 'horse') },
-        { icon: 'content-cut', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, 'content-cut') },
-        { icon: 'walk', label: 'Trail Ride', action: () => handleQuickAction('walk', 'Trail ride logged', pet, 'walk') },
+        { icon: '???', label: 'Feed Horse', action: () => handleQuickAction('meal', 'Horse fed', pet, '???') },
+        { icon: '??', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, '??') },
+        { icon: '??', label: 'Trail Ride', action: () => handleQuickAction('walk', 'Trail ride logged', pet, '??') },
         baseVetAction,
       ];
     default:
       return [
-        { icon: 'silverware-fork-knife', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, 'silverware-fork-knife') },
-        { icon: 'heart-pulse', label: 'Care Check', action: () => handleQuickAction('custom', 'Care check logged', pet, 'heart-pulse') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
+        { icon: '???', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, '???') },
+        { icon: '??', label: 'Care Check', action: () => handleQuickAction('custom', 'Care check logged', pet, '??') },
+        { icon: '??', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '??') },
         baseVetAction,
       ];
   }
@@ -3930,29 +3797,29 @@ const AI_SUGGESTIONS = [
 ];
 
 const PRESET_ACTIONS = [
-  { label: 'Treat Time', icon: 'candy-outline' },
-  { label: 'Couch Cuddles', icon: 'heart-outline' },
-  { label: 'Bath Time', icon: 'shower' },
-  { label: 'Grooming', icon: 'content-cut' },
-  { label: 'Nap Time', icon: 'sleep' },
-  { label: 'Photo Time', icon: 'camera-outline' },
-  { label: 'Park Time', icon: 'pine-tree' },
-  { label: 'Beach Day', icon: 'beach' },
-  { label: 'Fetch Session', icon: 'circle-outline' },
-  { label: 'Run Together', icon: 'run-fast' },
-  { label: 'Yarn Play', icon: 'cat' },
-  { label: 'Bird Watching', icon: 'binoculars' },
-  { label: 'Cat Nap', icon: 'cat' },
-  { label: 'Bird Bath', icon: 'shower' },
-  { label: 'Singing Time', icon: 'music-note-outline' },
-  { label: 'Tank Cleaning', icon: 'water' },
-  { label: 'Aquarium Time', icon: 'fish' },
-  { label: 'Heat Lamp Check', icon: 'lightbulb-on-outline' },
-  { label: 'Clean Enclosure', icon: 'broom' },
-  { label: 'Bunny Cuddles', icon: 'paw' },
-  { label: 'Snack Time', icon: 'silverware-fork-knife' },
-  { label: 'Trail Ride', icon: 'horse' },
-  { label: 'Horse Grooming', icon: 'content-cut' },
+  { label: 'Treat Time', icon: '??' },
+  { label: 'Couch Cuddles', icon: '??' },
+  { label: 'Bath Time', icon: '??' },
+  { label: 'Grooming', icon: '??' },
+  { label: 'Nap Time', icon: '??' },
+  { label: 'Photo Time', icon: '??' },
+  { label: 'Park Time', icon: '???' },
+  { label: 'Beach Day', icon: '???' },
+  { label: 'Fetch Session', icon: '??' },
+  { label: 'Run Together', icon: '??' },
+  { label: 'Yarn Play', icon: '??' },
+  { label: 'Bird Watching', icon: '??' },
+  { label: 'Cat Nap', icon: '??' },
+  { label: 'Bird Bath', icon: '??' },
+  { label: 'Singing Time', icon: '??' },
+  { label: 'Tank Cleaning', icon: '??' },
+  { label: 'Aquarium Time', icon: '?' },
+  { label: 'Heat Lamp Check', icon: '??' },
+  { label: 'Clean Enclosure', icon: '??' },
+  { label: 'Bunny Cuddles', icon: '??' },
+  { label: 'Snack Time', icon: '??' },
+  { label: 'Trail Ride', icon: '??' },
+  { label: 'Horse Grooming', icon: '??' },
 ];
 
 const CARE_ACTIVITY_TYPES = new Set([
@@ -4084,7 +3951,13 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }
                     }}
                   />
                 ) : (
-                  <PetSpeciesIcon species={pet.species} size={34} color="#fff" />
+                  <Text
+                    style={{
+                      fontSize: 38,
+                    }}
+                  >
+                    {pet.emoji || getDefaultPetEmoji(pet.species)}
+                  </Text>
                 )}
               </Animated.View>
             ) : (
@@ -4125,7 +3998,13 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }
                     }}
                   />
                 ) : (
-                  <PetSpeciesIcon species={pet.species} size={28} color="#7E57C2" />
+                  <Text
+                    style={{
+                      fontSize: 32,
+                    }}
+                  >
+                    {pet.emoji || getDefaultPetEmoji(pet.species)}
+                  </Text>
                 )}
               </View>
             )}
@@ -4192,12 +4071,10 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }
 
 function AnimatedQuickAction({ icon, label, onPress, isAddAction }) {
   const pressScale = useRef(new Animated.Value(1)).current;
-  const safeIcon = typeof icon === 'string' || typeof icon === 'number' ? String(icon) : resolveUiIconName(label);
+  const safeIcon = typeof icon === 'string' || typeof icon === 'number' ? icon : '?';
   const safeLabel = typeof label === 'string' || typeof label === 'number'
     ? String(label)
     : String(label?.label || label?.name || label?.title || '');
-  const iconName = isAddAction ? 'plus-circle-outline' : safeIcon;
-  const iconColor = isAddAction ? C.primaryActionBg : resolveUiIconColor(safeLabel);
 
   const animateTo = (toValue, callback) => {
     Animated.timing(pressScale, {
@@ -4222,7 +4099,7 @@ function AnimatedQuickAction({ icon, label, onPress, isAddAction }) {
           { transform: [{ scale: pressScale }] },
         ]}
       >
-        <MaterialCommunityIcons name={iconName} size={26} color={iconColor} style={s.quickActionIcon} />
+        <Text style={s.quickActionIcon}>{safeIcon}</Text>
         <Text style={s.quickActionLabel}>{safeLabel}</Text>
       </Animated.View>
     </TouchableOpacity>
@@ -4321,7 +4198,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
   const goNext = () => {
     if (step === 1) {
       if (!petName.trim()) {
-        Alert.alert('Pet name required', "Please enter your pet's name.");
+        Alert.alert('Pet name required', 'Please enter your pet�s name.');
         return;
       }
       setStep(2);
@@ -4343,7 +4220,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
 
   const savePet = () => {
     if (!petName.trim()) {
-      Alert.alert('Pet name required', "Please enter your pet's name.");
+      Alert.alert('Pet name required', 'Please enter your pet�s name.');
       return;
     }
 
@@ -4693,14 +4570,14 @@ function DashboardScreen({ navigation }) {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
   const [reminderTitle, setReminderTitle] = useState('');
-  const [reminderIcon, setReminderIcon] = useState('bell-outline');
+  const [reminderIcon, setReminderIcon] = useState('???');
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('');
   const [showReminderTimePicker, setShowReminderTimePicker] = useState(false);
   const [customActions, setCustomActions] = useState([]);
   const [showAddActionModal, setShowAddActionModal] = useState(false);
   const [customActionName, setCustomActionName] = useState('');
-  const [customActionIcon, setCustomActionIcon] = useState('paw');
+  const [customActionIcon, setCustomActionIcon] = useState('?');
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [weightValue, setWeightValue] = useState('');
   const [weightNotes, setWeightNotes] = useState('');
@@ -4902,20 +4779,7 @@ function DashboardScreen({ navigation }) {
       }),
     ]).start();
   }, [selectedCalendarDateKey]);
-  const reminderIconOptions = [
-    'bell-outline',
-    'silverware-fork-knife',
-    'walk',
-    'scale-bathroom',
-    'pill',
-    'content-cut',
-    'paw',
-    'fish',
-    'water',
-    'thermometer',
-    'broom',
-    'sleep',
-  ];
+  const reminderIconOptions = ['???', '??', '??', '??', '??', '??', '??', '???', '??', '??', '??', '??'];
   const formatLocalDateKey = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -5048,7 +4912,7 @@ function DashboardScreen({ navigation }) {
     logQuickActionFire('Add Reminder');
     setEditingReminder(null);
     setReminderTitle('');
-    setReminderIcon('bell-outline');
+    setReminderIcon('???');
     setReminderDate(selectedCalendarDateKey);
     setReminderTime('');
     setShowReminderModal(true);
@@ -5111,7 +4975,7 @@ function DashboardScreen({ navigation }) {
     setShowReminderModal(false);
     setEditingReminder(null);
     setReminderTitle('');
-    setReminderIcon('bell-outline');
+    setReminderIcon('???');
     setReminderDate(selectedCalendarDateKey);
     setReminderTime('');
     setShowReminderTimePicker(false);
@@ -5259,7 +5123,7 @@ function DashboardScreen({ navigation }) {
   const openEditReminder = (reminder) => {
     setEditingReminder(reminder);
     setReminderTitle(reminder.title || '');
-    setReminderIcon(reminder.icon || 'bell-outline');
+    setReminderIcon(reminder.icon || '???');
     setReminderDate(normalizeReminderDateKey(reminder.date) || selectedCalendarDateKey);
     setReminderTime(normalizeReminderTimeLabel(reminder.time) || '');
     setShowReminderModal(true);
@@ -5308,7 +5172,7 @@ function DashboardScreen({ navigation }) {
   };
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = hour < 12 ? '?? Good morning' : hour < 17 ? '??? Good afternoon' : '?? Good evening';
   const displayName = authProfile?.display_name
     || authUser?.user_metadata?.display_name
     || authUser?.email?.split('@')?.[0]
@@ -5404,9 +5268,7 @@ function DashboardScreen({ navigation }) {
     const safeDescription = typeof extra.description === 'string' && extra.description.trim()
       ? extra.description.trim()
       : safeTitle;
-    const safeIcon = typeof icon === 'string' && icon.trim() && icon !== '?' && icon !== '??' && icon !== '???'
-      ? icon
-      : resolveUiIconName(safeTitle);
+    const safeIcon = typeof icon === 'string' || typeof icon === 'number' ? icon : '?';
     const newLog = {
       id: Date.now().toString(),
       user_id: currentUserId,
@@ -5462,7 +5324,7 @@ function DashboardScreen({ navigation }) {
     }
   };
 
-  const handleQuickAction = (actionType, label, targetPet = pet, icon = resolveUiIconName(label), extra = {}) => {
+  const handleQuickAction = (actionType, label, targetPet = pet, icon = '?', extra = {}) => {
     console.log('Quick action pressed:', actionType);
 
     if (!targetPet || targetPet?.isReadOnly || isSharedPetForCurrentUser(targetPet, CURRENT_USER_OWNER_ID)) {
@@ -5530,23 +5392,23 @@ function DashboardScreen({ navigation }) {
   const healthInsights = [];
 
   if (streakDays >= 3) {
-    healthInsights.push('Daily care streak active');
+    healthInsights.push('?? Daily care streak active');
   }
 
   if (selectedPetActivity.length >= 3) {
-    healthInsights.push('Active care logging');
+    healthInsights.push('?? Active care logging');
   } else if (selectedPetActivity.length === 0) {
-    healthInsights.push('No recent pet care logged');
+    healthInsights.push('?? No recent pet care logged');
   }
 
   if (currentScore >= 90) {
-    healthInsights.push('Excellent wellness status');
+    healthInsights.push('?? Excellent wellness status');
   } else if (currentScore < 70) {
-    healthInsights.push('Wellness needs attention');
+    healthInsights.push('?? Wellness needs attention');
   }
 
   if (healthInsights.length === 0) {
-    healthInsights.push('Wellness status looks stable');
+    healthInsights.push('?? Wellness status looks stable');
   }
 
   const visibleHealthInsights = healthInsights.slice(0, 3);
@@ -5601,24 +5463,13 @@ function DashboardScreen({ navigation }) {
       };
     });
   const ACTION_ICONS = [
-    'silverware-fork-knife',
-    'walk',
-    'scale-bathroom',
-    'pill',
-    'paw',
-    'content-cut',
-    'fish',
-    'water',
-    'thermometer',
-    'broom',
-    'stethoscope',
-    'camera-outline',
+
   ];
   const displayedQuickActions = [
     ...dashboardQuickActions,
     ...customActions,
     {
-      icon: 'plus-circle-outline',
+      icon: '?',
       label: 'Add Action',
       action: () => setShowAddActionModal(true),
       isAddAction: true,
@@ -5643,7 +5494,7 @@ function DashboardScreen({ navigation }) {
       },
     ]);
     setCustomActionName('');
-    setCustomActionIcon('paw');
+    setCustomActionIcon('?');
     setShowAddActionModal(false);
   };
 
@@ -5677,7 +5528,7 @@ function DashboardScreen({ navigation }) {
         weightNotes: weightNotes.trim(),
         source: 'dashboard_quick_action',
       },
-      icon: 'scale-bathroom',
+      icon: '??',
       status: 'current',
     };
 
@@ -5685,7 +5536,7 @@ function DashboardScreen({ navigation }) {
     if (typeof saveHealthRecordToSupabase === 'function') {
       void saveHealthRecordToSupabase(nextRecord);
     }
-    handleQuickAction('weight', 'Weight logged', pet, 'scale-bathroom', {
+    handleQuickAction('weight', 'Weight logged', pet, '??', {
       origin: 'weight_modal',
     });
     setWeightValue('');
@@ -5722,7 +5573,7 @@ function DashboardScreen({ navigation }) {
         medicationNotes: trimmedDose,
         source: 'dashboard_quick_action',
       },
-      icon: 'pill',
+      icon: '??',
       status: 'current',
     };
 
@@ -5730,7 +5581,7 @@ function DashboardScreen({ navigation }) {
     if (typeof saveHealthRecordToSupabase === 'function') {
       void saveHealthRecordToSupabase(nextRecord);
     }
-    handleQuickAction('medication', `${trimmedName} logged`, pet, 'pill', {
+    handleQuickAction('medication', `${trimmedName} logged`, pet, '??', {
       origin: 'medication_modal',
     });
     setMedicationName('');
@@ -5748,10 +5599,10 @@ function DashboardScreen({ navigation }) {
       >
         {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingTop: 3, paddingBottom: 0 }}>
-            <View style={s.dashboardBrandRow}>
+          <View style={s.dashboardBrandRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <View style={s.dashboardBrandMark}>
-                <MaterialCommunityIcons name="paw" size={20} color={C.primaryActionBg} />
+                <Text style={s.dashboardBrandMarkText}>??</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.dashboardBrandName}>PetSync+</Text>
@@ -5782,11 +5633,11 @@ function DashboardScreen({ navigation }) {
                 adjustsFontSizeToFit
                 minimumFontScale={0.7}
               >
-                {greeting}, {displayName}!
+                {greeting}, {displayName}! ??
               </Text>
 
               <Text style={s.subGreeting} numberOfLines={1}>
-                {formatDate(new Date())} · {pets.length} pets
+                {formatDate(new Date())} � {pets.length} pets
               </Text>
             </View>
 
@@ -5811,10 +5662,7 @@ function DashboardScreen({ navigation }) {
                 activeOpacity={0.95}
                 disabled={isSosAnimating}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <MaterialCommunityIcons name="alarm-light" size={15} color="#fff" />
-                  <Text style={s.sosText}>SOS</Text>
-                </View>
+                <Text style={s.sosText}>?? SOS</Text>
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -5836,19 +5684,17 @@ function DashboardScreen({ navigation }) {
                 {pet.photoUri ? (
                   <Image source={{ uri: pet.photoUri }} style={s.dashboardAvatarImage} />
                 ) : (
-                  <MaterialCommunityIcons name="paw" size={28} color={C.primaryActionBg} />
+                  <Text style={s.dashboardAvatarEmoji}>{pet.emoji || '??'}</Text>
                 )}
               </View>
 
               <View style={s.dashboardHeroInfo}>
                 <View style={s.dashboardPetNameRow}>
                   <Text style={s.dashboardPetName}>{pet.name}</Text>
-                  <View style={s.dashboardPetBadge}>
-                    <MaterialCommunityIcons name="paw" size={12} color="#fff" />
-                  </View>
+                  <Text style={s.dashboardPetBadge}>??</Text>
                 </View>
                 <Text style={s.dashboardPetMeta}>
-                {pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet'} · {pet.breed || 'Breed'}
+                {pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet'} � {pet.breed || 'Breed'}
                 </Text>
                 <Text style={s.dashboardPetAge}>{pet.age || 'Age unknown'}</Text>
                 <View style={{ marginTop: 8 }}>
@@ -6104,11 +5950,7 @@ function DashboardScreen({ navigation }) {
               >
                 <Card style={[s.reminderCard, { backgroundColor: '#ffffffa6', borderColor: '#E6EAF5' }, reminder.completed && s.reminderCardDone]}>
                   <View style={s.reminderIconWrap}>
-                    <MaterialCommunityIcons
-                      name={resolveUiIconName(reminder.title)}
-                      size={18}
-                      color={C.primaryActionBg}
-                    />
+                    <Text style={s.reminderIcon}>{reminder.icon || '??'}</Text>
                   </View>
                   <View style={s.reminderContent}>
                     <Text style={[s.reminderTitle, reminder.completed && s.reminderTitleDone]}>
@@ -6199,7 +6041,7 @@ function DashboardScreen({ navigation }) {
                     setCustomActionIcon(preset.icon);
                   }}
                 >
-                  <MaterialCommunityIcons name={preset.icon} size={24} color={C.primaryActionBg} style={s.presetActionIcon} />
+                  <Text style={s.presetActionIcon}>{preset.icon}</Text>
                   <Text style={s.presetActionLabel}>{preset.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -6211,12 +6053,7 @@ function DashboardScreen({ navigation }) {
                   style={[s.iconPickChip, customActionIcon === icon && s.iconPickChipActive]}
                   onPress={() => setCustomActionIcon(icon)}
                 >
-                  <MaterialCommunityIcons
-                    name={icon}
-                    size={24}
-                    color={customActionIcon === icon ? C.primaryActionBg : C.muted}
-                    style={s.iconPickChipText}
-                  />
+                  <Text style={[s.iconPickChipText, customActionIcon === icon && s.iconPickChipTextActive]}>{icon}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -6348,12 +6185,7 @@ function DashboardScreen({ navigation }) {
                         style={[s.iconPickChip, reminderIcon === icon && s.iconPickChipActive]}
                         onPress={() => setReminderIcon(icon)}
                       >
-                        <MaterialCommunityIcons
-                          name={icon}
-                          size={24}
-                          color={reminderIcon === icon ? C.primaryActionBg : C.muted}
-                          style={s.iconPickChipText}
-                        />
+                        <Text style={[s.iconPickChipText, reminderIcon === icon && s.iconPickChipTextActive]}>{icon}</Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -6573,7 +6405,7 @@ function PetProfileScreen({ navigation, route }) {
             <Text style={s.pageSub}>No pets available yet</Text>
           </View>
           <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color={C.text} />
+            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>?</Text>
           </TouchableOpacity>
         </View>
 
@@ -6718,13 +6550,13 @@ function PetProfileScreen({ navigation, route }) {
               {pet.photoUri ? (
                 <Image source={{ uri: pet.photoUri }} style={s.petProfileAvatarImage} />
               ) : (
-                <PetSpeciesIcon species={pet.species} size={24} color={C.primaryActionBg} />
+                <Text style={s.petProfileAvatarEmoji}>{pet.emoji || getDefaultPetEmoji(pet.species)}</Text>
               )}
             </View>
           </View>
 
             <Text style={s.petProfileName}>{pet.name}</Text>
-            <Text style={s.petProfileSubtitle}>{speciesLabel} · {pet.breed || 'Breed not set'}</Text>
+            <Text style={s.petProfileSubtitle}>{speciesLabel} � {pet.breed || 'Breed not set'}</Text>
             {(
               pet.isShared === true
               || String(pet.userId || pet.user_id || '') !== String(CURRENT_USER_OWNER_ID || '')
@@ -6810,7 +6642,7 @@ function PetProfileScreen({ navigation, route }) {
             upcomingReminders.map((reminder) => (
               <View key={reminder.id} style={s.petProfileCareRow}>
                 <View style={s.petProfileCareIcon}>
-                <MaterialCommunityIcons name={resolveUiIconName(reminder.title)} size={18} color={C.primaryActionBg} />
+                  <Text style={{ fontSize: 18 }}>{reminder.icon || '??'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.petProfileActivityTitle}>{reminder.title}</Text>
@@ -8091,7 +7923,7 @@ function HealthHubScreen({ navigation, route }) {
     const typeConfig = {
       vaccination: {
         title: `Vaccination: ${mainValue}`,
-        icon: 'needle',
+        icon: '??',
         status: 'current',
         date: clean.dateGiven || todayKey,
         nextDue: clean.nextDueDate || clean.expirationDate || clean.renewalDate || clean.dueDate || '',
@@ -8109,7 +7941,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       medication: {
         title: `Medication: ${mainValue}`,
-        icon: 'pill',
+        icon: '??',
         status: 'current',
         date: clean.startDate || todayKey,
         nextDue: clean.endDate || clean.nextDoseDate || clean.nextRefillDate || '',
@@ -8128,7 +7960,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       appointment: {
         title: `Appointment: ${mainValue}`,
-        icon: 'calendar-clock',
+        icon: '??',
         status: 'upcoming',
         date: clean.appointmentDate || todayKey,
         nextDue: clean.followUpDate || clean.nextAppointmentDate || '',
@@ -8145,7 +7977,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       weight: {
         title: `Weight: ${mainValue}`,
-        icon: 'scale-bathroom',
+        icon: '??',
         status: 'current',
         date: clean.weightDate || todayKey,
         details: {
@@ -8156,7 +7988,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       symptom: {
         title: `Symptom: ${mainValue}`,
-        icon: 'alert-circle-outline',
+        icon: '??',
         status: 'due_soon',
         date: clean.symptomDate || todayKey,
         nextDue: clean.symptomFollowUpDate || '',
@@ -8170,7 +8002,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       surgery: {
         title: `Surgery: ${mainValue}`,
-        icon: 'scalpel',
+        icon: '??',
         status: 'current',
         date: clean.surgeryDate || todayKey,
         nextDue: clean.surgeryFollowUpDate || '',
@@ -8185,7 +8017,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       allergy: {
         title: `Allergy: ${mainValue}`,
-        icon: 'allergy',
+        icon: '??',
         status: 'current',
         date: todayKey,
         details: {
@@ -8197,7 +8029,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       diagnosis: {
         title: `Diagnosis: ${mainValue}`,
-        icon: 'file-document-outline',
+        icon: '??',
         status: 'current',
         date: clean.diagnosedDate || todayKey,
         provider: clean.diagnosisVet || '',
@@ -8213,7 +8045,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       lab: {
         title: `Lab Result: ${mainValue}`,
-        icon: 'test-tube',
+        icon: '??',
         status: 'current',
         date: clean.testDate || todayKey,
         provider: clean.labVet || '',
@@ -8227,7 +8059,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       fish: {
         title: `Tank Reading: ${mainValue}`,
-        icon: 'fish',
+        icon: '??',
         status: 'current',
         date: clean.readingDate || todayKey,
         details: {
@@ -8682,7 +8514,7 @@ function HealthHubScreen({ navigation, route }) {
         add(`Dosage: ${String(details.dosage || record.dosage || '').trim() || 'Not set'}`);
         break;
       case 'weight':
-        add(`${record.title || 'Weight'}`);
+        add(`?? ${record.title || 'Weight'}`);
         add(`${String(details.weightValue || record.value || record.weightValue || '').trim() || 'Not set'}${record.unit ? ` ${record.unit}` : ''}`);
         add(`Recorded: ${formatDate(details.weightDate || record.date)}`);
         break;
@@ -8871,15 +8703,15 @@ function HealthHubScreen({ navigation, route }) {
   };
 
   if (overdueCount > 0) {
-    pushInsight(`${overdueCount} overdue care item${overdueCount === 1 ? '' : 's'} need attention`);
+    pushInsight(`?? ${overdueCount} overdue care item${overdueCount === 1 ? '' : 's'} need attention`);
   }
 
   if (dueSoonCount > 0) {
-    pushInsight(`${dueSoonCount} item${dueSoonCount === 1 ? '' : 's'} due soon`);
+    pushInsight(`? ${dueSoonCount} item${dueSoonCount === 1 ? '' : 's'} due soon`);
   }
 
   if (insightLines.length < 3 && medicationRecords.length > 0) {
-    pushInsight(`${medicationRecords.length} medication record${medicationRecords.length === 1 ? '' : 's'} active`);
+    pushInsight(`?? ${medicationRecords.length} medication record${medicationRecords.length === 1 ? '' : 's'} active`);
   }
 
   if (insightLines.length < 3) {
@@ -8895,20 +8727,20 @@ function HealthHubScreen({ navigation, route }) {
       const latestWeightText = String(latestWeightValue).trim();
 
       if (latestWeightText && ageInDays <= 30) {
-        pushInsight(`Latest weight: ${latestWeightText}`);
+        pushInsight(`?? Latest weight: ${latestWeightText}`);
       } else {
-        pushInsight('No recent weight record');
+        pushInsight('?? No recent weight record');
       }
     } else {
-      pushInsight('No recent weight record');
+      pushInsight('?? No recent weight record');
     }
   }
 
   if (insightLines.length < 3) {
     if (vaccineRecords.length > 0 && vaccineRecords.every((record) => record.displayStatus === 'current')) {
-      pushInsight('Vaccines are up to date');
+      pushInsight('?? Vaccines are up to date');
     } else if (vaccineRecords.length === 0) {
-      pushInsight('No vaccine records yet');
+      pushInsight('?? No vaccine records yet');
     }
   }
 
@@ -9943,7 +9775,7 @@ function HealthHubScreen({ navigation, route }) {
       {items && items.length > 0 ? (
         items.map((item, index) => (
           <View key={`${fallbackKey}-${index}`} style={s.analysisItemRow}>
-            <MaterialCommunityIcons name="check-circle-outline" size={14} color={C.healthTitleText} style={s.analysisItemBullet} />
+            <Text style={[s.analysisItemBullet, { color: C.healthTitleText }]}>�</Text>
             <Text style={[s.analysisItemText, { color: C.healthBodyText }]}>{formatAnalysisItem(item)}</Text>
           </View>
         ))
@@ -10314,14 +10146,14 @@ function HealthHubScreen({ navigation, route }) {
                   borderColor: C.healthCardBorder,
                 }}
               >
-                <PetSpeciesIcon species={pet?.species} size={24} color={C.primaryActionBg} />
+                <Text style={{ fontSize: 28 }}>{pet?.emoji || '??'}</Text>
               </View>
             )}
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: C.healthTitleText, fontSize: 20, fontWeight: '900' }}>{pet.name}</Text>
               <Text style={{ color: C.healthMutedText, fontSize: 12, marginTop: 2, textTransform: 'capitalize' }}>
-                {pet.species || 'Pet'} · {getPetAgeLabel(pet)} · {pet.gender || 'Gender not set'}
+                {pet.species || 'Pet'} � {getPetAgeLabel(pet)} � {pet.gender || 'Gender not set'}
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                 <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: `${C.infoBg}18`, borderWidth: 1, borderColor: `${C.infoBg}40` }}>
@@ -10493,7 +10325,7 @@ function HealthHubScreen({ navigation, route }) {
 
         {records.length === 0 ? (
           <Card style={{ alignItems: 'center', padding: 32, marginHorizontal: 16, borderRadius: 22, backgroundColor: C.healthRecordCard, borderWidth: 1, borderColor: C.healthCardBorder }}>
-            <MaterialCommunityIcons name="image-outline" size={38} color={C.healthAccent} style={{ marginBottom: 8 }} />
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>??</Text>
 
             <Text
               style={{
@@ -10708,11 +10540,7 @@ function HealthHubScreen({ navigation, route }) {
                   borderColor: 'rgba(255,107,53,0.22)',
                   marginRight: 12,
                 }}>
-                  <MaterialCommunityIcons
-                    name={resolveUiIconName(selectedRecord?.type || selectedRecord?.title)}
-                    size={26}
-                    color={C.primaryActionBg}
-                  />
+                  <Text style={{ fontSize: 28 }}>{selectedRecord?.icon || '??'}</Text>
                 </View>
 
                 <View style={{ flex: 1, paddingTop: 2 }}>
@@ -11479,10 +11307,10 @@ function MemoryVaultScreen({ navigation }) {
       <View style={s.pageHeader}>
         <View>
           <Text style={s.pageTitle}>Memory Vault</Text>
-          <Text style={s.pageSub}>{visibleMemories.length} memories · {visibleMemories.filter((m) => m.milestone).length} milestones</Text>
+          <Text style={s.pageSub}>{visibleMemories.length} memories � {visibleMemories.filter((m) => m.milestone).length} milestones</Text>
         </View>
           <TouchableOpacity style={[s.iconBtn, isSelectedPetReadOnly && { opacity: 0.45 }]} onPress={isSelectedPetReadOnly ? undefined : openMemoryCamera}>
-            <MaterialCommunityIcons name="camera-outline" size={22} color={C.memoryAccent} />
+            <Text style={{ fontSize: 24 }}>??</Text>
           </TouchableOpacity>
       </View>
 
@@ -11505,7 +11333,7 @@ function MemoryVaultScreen({ navigation }) {
               />
             ) : (
               <Text style={{ fontSize: 48, textAlign: 'center', marginVertical: 8 }}>
-                <MaterialCommunityIcons name={resolveMemoryIconName(memoryOfTheDay)} size={40} color={C.memoryAccent} />
+                {getMemoryDisplayEmoji(memoryOfTheDay) || '???'}
               </Text>
             )}
             <Text style={s.motdCaption}>{memoryOfTheDay.caption || memoryOfTheDay.title || 'Special memory'}</Text>
@@ -11513,7 +11341,7 @@ function MemoryVaultScreen({ navigation }) {
           </>
         ) : (
           <>
-            <MaterialCommunityIcons name="image-outline" size={40} color={C.memoryAccent} style={{ alignSelf: 'center', marginVertical: 8 }} />
+            <Text style={{ fontSize: 42, textAlign: 'center', marginVertical: 8 }}>???</Text>
             <Text style={s.motdCaption}>No memory of the day yet</Text>
             <Text style={s.motdDate}>Add a memory to start seeing highlights.</Text>
           </>
@@ -11535,7 +11363,7 @@ function MemoryVaultScreen({ navigation }) {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 60 }}>
         {visibleMemories.length === 0 ? (
           <Card style={[s.petProfileInfoCard, { marginHorizontal: 0, alignItems: 'center', backgroundColor: C.memoryCard }]}>
-            <MaterialCommunityIcons name="image-outline" size={40} color={C.memoryAccent} style={{ marginBottom: 10 }} />
+            <Text style={{ fontSize: 42, marginBottom: 10 }}>???</Text>
             <Text style={s.petProfileSectionTitle}>No memories yet</Text>
             <Text style={[s.petProfileBodyText, { textAlign: 'center' }]}>
               Add your first photo, milestone, or special moment.
@@ -11557,14 +11385,14 @@ function MemoryVaultScreen({ navigation }) {
                   <Image source={{ uri: mem.photoUri }} style={{ width: '100%', height: '100%' }} />
                 ) : mem.photoUri && isVideoMedia(mem.mediaType || mem.mimeType) ? (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                    <MaterialCommunityIcons name={resolveMemoryIconName(mem)} size={28} color={C.memoryAccent} />
+                    <Text style={s.memEmoji}>??</Text>
                     <Text style={{ color: C.text, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 }}>
                       {mem.caption}
                     </Text>
                   </View>
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                    <MaterialCommunityIcons name={resolveMemoryIconName(mem)} size={28} color={C.memoryAccent} />
+                    <Text style={s.memEmoji}>{getMemoryDisplayEmoji(mem)}</Text>
                     <Text style={{ color: C.text, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 }}>
                       {mem.caption}
                     </Text>
@@ -11596,7 +11424,7 @@ function MemoryVaultScreen({ navigation }) {
                 {memoryDraft.photoUri ? (
                   isVideoMedia(memoryDraft.mimeType) ? (
                     <View style={s.memoryPhotoPickerPreview}>
-                      <MaterialCommunityIcons name="video-outline" size={28} color={C.memoryAccent} />
+                      <Text style={s.memoryPhotoPickerIcon}>??</Text>
                       <Text style={s.memoryPhotoPickerText}>Video selected</Text>
                       <Text style={s.memoryPhotoPickerSubtext}>Tap to choose a different photo or video</Text>
                     </View>
@@ -11734,7 +11562,7 @@ function MemoryVaultScreen({ navigation }) {
               {selectedMemory?.photoUri ? (
                 isVideoMedia(selectedMemory.mediaType || selectedMemory.mimeType) ? (
                   <View style={{ height: 180, alignItems: 'center', justifyContent: 'center', backgroundColor: C.memoryCard, borderRadius: 16, borderWidth: 1, borderColor: C.memoryCardBorder, marginBottom: 12 }}>
-                    <MaterialCommunityIcons name="camera-outline" size={38} color={C.memoryAccent} />
+                    <Text style={{ fontSize: 40 }}>??</Text>
                     <Text style={{ color: C.memoryMutedText, marginTop: 6 }}>Video memory</Text>
                   </View>
                 ) : (
@@ -11742,7 +11570,7 @@ function MemoryVaultScreen({ navigation }) {
                 )
               ) : (
                 <View style={{ height: 120, borderRadius: 16, marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: C.memoryCard, borderWidth: 1, borderColor: C.memoryCardBorder }}>
-                  <MaterialCommunityIcons name={resolveMemoryIconName(selectedMemory || {})} size={38} color={C.memoryAccent} />
+                  <Text style={{ fontSize: 40 }}>{getMemoryDisplayEmoji(selectedMemory || {}) || '???'}</Text>
                 </View>
               )}
 
@@ -12519,17 +12347,17 @@ function CommunityScreen() {
 
     return (
       <Card key={alert.id} style={{ marginBottom: 14, paddingTop: 14, backgroundColor: C.communityCard }}>
-          <View style={s.postAuthorRow}>
-            <View style={s.postAvatar}>
+        <View style={s.postAuthorRow}>
+          <View style={s.postAvatar}>
             {alert.photoUrl ? (
               <Image source={{ uri: alert.photoUrl }} style={{ width: 42, height: 42, borderRadius: 21 }} />
             ) : (
-              <PetSpeciesIcon species={speciesLabel} size={18} color={C.sosBodyText} />
+              <Text style={{ fontSize: 18 }}>{alert.petName ? alert.petName.charAt(0).toUpperCase() : '??'}</Text>
             )}
           </View>
           <View style={s.flex}>
             <Text style={s.postAuthor}>{alert.petName || 'Lost Pet'}</Text>
-            <Text style={s.postPetType}>{[speciesLabel, breedLabel].filter(Boolean).join(' · ') || 'Unknown species'}</Text>
+            <Text style={s.postPetType}>{[speciesLabel, breedLabel].filter(Boolean).join(' � ') || 'Unknown species'}</Text>
           </View>
           <View style={[s.lostFoundBadge, isFound ? s.lostFoundBadgeFound : s.lostFoundBadgeActive]}>
             <Text style={[s.lostFoundBadgeText, isFound ? s.lostFoundBadgeTextFound : s.lostFoundBadgeTextActive]}>
@@ -12544,7 +12372,7 @@ function CommunityScreen() {
           {alert.photoUrl ? (
             <Image source={{ uri: alert.photoUrl }} style={{ width: '100%', height: '100%', borderRadius: 16 }} />
           ) : (
-            <MaterialCommunityIcons name="alarm-light" size={40} color="#fff" />
+            <Text style={{ fontSize: 40 }}>{alert.petName ? '??' : '??'}</Text>
           )}
         </View>
 
@@ -12565,11 +12393,11 @@ function CommunityScreen() {
 
         <View style={s.postActions}>
           <TouchableOpacity style={s.postAction} onPress={() => openContactOwner(alert)}>
-            <MaterialCommunityIcons name="phone-outline" size={18} color={C.linkText} />
+            <Text style={{ fontSize: 18 }}>??</Text>
             <Text style={s.postActionText}>Contact Owner</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.postAction} onPress={() => shareLostPetAlert(alert)}>
-            <MaterialCommunityIcons name="share-variant-outline" size={18} color={C.linkText} />
+            <Text style={{ fontSize: 18 }}>??</Text>
             <Text style={s.postActionText}>Share Alert</Text>
           </TouchableOpacity>
         </View>
@@ -12604,24 +12432,24 @@ function CommunityScreen() {
       })()}
       {post.lost && (
         <View style={s.lostBanner}>
-          <Text style={s.lostBannerText}>Lost Pet Alert</Text>
+          <Text style={s.lostBannerText}>?? LOST PET ALERT</Text>
         </View>
       )}
       <View style={s.postAuthorRow}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => openCommunityProfile(post.author, post.author, post.emoji)}>
           <View style={s.postAvatar}>
-            <MaterialCommunityIcons name="account-circle-outline" size={20} color={C.communityTitleText} />
+            <Text style={{ fontSize: 18 }}>{post.emoji}</Text>
           </View>
         </TouchableOpacity>
       <TouchableOpacity style={s.flex} activeOpacity={0.85} onPress={() => openCommunityProfile(post.author, post.author, post.emoji)}>
           <Text style={s.postAuthor}>{post.author}</Text>
-          <Text style={s.postPetType}>{post.petType} · {post.time}</Text>
+          <Text style={s.postPetType}>{post.petType} � {post.time}</Text>
         </TouchableOpacity>
       </View>
       <Text style={s.postContent}>{post.content}</Text>
       <View style={s.postActions}>
         <TouchableOpacity style={s.postAction} onPress={() => toggleLike(post.id)}>
-          <MaterialCommunityIcons name={post.liked ? 'heart' : 'heart-outline'} size={18} color={post.liked ? '#e74c3c' : C.linkText} />
+          <Text style={{ fontSize: 18 }}>{post.liked ? '??' : '??'}</Text>
           <Text style={[s.postActionText, post.liked && { color: '#e74c3c' }]}>{post.likes}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -12632,11 +12460,11 @@ function CommunityScreen() {
             label: post.content || post.author || 'Community Post',
           })}
         >
-          <MaterialCommunityIcons name="comment-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>??</Text>
           <Text style={s.postActionText}>{post.comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Share', 'Share this post to Facebook, Nextdoor, or Twitter')}>
-          <MaterialCommunityIcons name="share-variant-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>??</Text>
           <Text style={s.postActionText}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -12651,8 +12479,8 @@ function CommunityScreen() {
         </View>
       )}
       {post.lost && (
-        <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('Alert Sent!', '156 pet owners in your area have been notified.')}>
-          <Text style={s.alertNeighborsBtnText}>Alert My Neighborhood</Text>
+        <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('?? Alert Sent!', '156 pet owners in your area have been notified.')}>
+          <Text style={s.alertNeighborsBtnText}>?? Alert My Neighborhood</Text>
         </TouchableOpacity>
       )}
     </Card>
@@ -12668,13 +12496,13 @@ function CommunityScreen() {
       <View style={s.recipeHeroRow}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => openCommunityProfile(recipe.author, recipe.author, recipe.emoji)}>
           <View style={s.recipeEmojiWrap}>
-            <MaterialCommunityIcons name="food-drumstick" size={22} color={C.communityTitleText} />
+            <Text style={s.recipeEmoji}>{recipe.emoji}</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={s.flex} activeOpacity={0.85} onPress={() => openCommunityProfile(recipe.author, recipe.author, recipe.emoji)}>
           <Text style={s.recipeTitle}>{recipe.title}</Text>
           <Text style={s.recipeMeta}>
-            {recipe.author} · {recipe.petType} / {recipeSafeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}
+            {recipe.author} � {recipe.petType} / {recipeSafeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -12695,8 +12523,8 @@ function CommunityScreen() {
         <View style={s.recipeIngredientsBlock}>
           <Text style={s.recipeIngredientsLabel}>Ingredients preview</Text>
           <Text style={s.recipeIngredientsText}>
-            {recipeIngredients.slice(0, 3).join(' · ')}
-            {recipeIngredients.length > 3 ? ' · ·' : ''}
+            {recipeIngredients.slice(0, 3).join(' � ')}
+            {recipeIngredients.length > 3 ? ' � �' : ''}
           </Text>
         </View>
 
@@ -12704,7 +12532,7 @@ function CommunityScreen() {
           <Text style={s.recipeExpandToggleText}>
             {expandedRecipeId === recipe.id ? 'Hide full instructions' : 'Show full instructions'}
           </Text>
-          <MaterialCommunityIcons name={expandedRecipeId === recipe.id ? 'chevron-up' : 'chevron-down'} size={20} color={C.linkText} />
+          <Text style={s.recipeExpandChevron}>{expandedRecipeId === recipe.id ? '?' : '?'}</Text>
         </TouchableOpacity>
 
         {expandedRecipeId === recipe.id && (
@@ -12723,7 +12551,7 @@ function CommunityScreen() {
               <Text style={s.recipeInstructionsLabel}>Full ingredients</Text>
               {recipeIngredients.map((ingredient, index) => (
                 <Text key={`${recipe.id}-ingredient-${index}`} style={s.recipeIngredientFullText}>
-                  · {ingredient}
+                  � {ingredient}
                 </Text>
               ))}
             </View>
@@ -12732,7 +12560,7 @@ function CommunityScreen() {
 
         <View style={s.recipeActions}>
         <TouchableOpacity style={s.postAction} onPress={() => toggleRecipeLike(recipe.id)}>
-          <MaterialCommunityIcons name={recipe.liked ? 'heart' : 'heart-outline'} size={18} color={recipe.liked ? '#e74c3c' : C.linkText} />
+          <Text style={{ fontSize: 18 }}>{recipe.liked ? '??' : '??'}</Text>
           <Text style={[s.postActionText, recipe.liked && { color: '#e74c3c' }]}>{recipe.likes}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -12743,11 +12571,11 @@ function CommunityScreen() {
             label: recipe.title || 'Recipe',
           })}
         >
-          <MaterialCommunityIcons name="comment-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>??</Text>
           <Text style={s.postActionText}>{recipe.comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.postAction} onPress={() => shareRecipe(recipe)}>
-          <MaterialCommunityIcons name="share-variant-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>??</Text>
           <Text style={s.postActionText}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -12774,7 +12602,7 @@ function CommunityScreen() {
       <View style={s.pageHeader}>
         <View>
           <Text style={s.pageTitle}>Community</Text>
-          <Text style={s.pageSub}>Bayville, NJ</Text>
+          <Text style={s.pageSub}>?? Bayville, NJ</Text>
         </View>
         <TouchableOpacity
           style={s.accentBtn}
@@ -12835,7 +12663,7 @@ function CommunityScreen() {
 
             {visibleLostPetAlerts.length === 0 ? (
           <Card style={{ alignItems: 'center', padding: 24, marginBottom: 14, backgroundColor: C.communityPostCard }}>
-                <MaterialCommunityIcons name="alarm-light-outline" size={36} color={C.linkText} style={{ marginBottom: 8 }} />
+                <Text style={{ fontSize: 36, marginBottom: 8 }}>??</Text>
                 <Text style={{ color: C.communityTitleText, fontSize: 18, fontWeight: '900' }}>
                   No lost pet alerts nearby.
                 </Text>
@@ -12881,7 +12709,7 @@ function CommunityScreen() {
             >
               <TextInput
                 style={s.composeInput}
-                placeholder="What's your pet up to today?"
+                placeholder="What's your pet up to today? ??"
                 placeholderTextColor={C.modalMutedText}
                 value={postText}
                 onChangeText={setPostText}
@@ -12908,16 +12736,10 @@ function CommunityScreen() {
               ) : null}
               <View style={s.composeTips}>
                 <TouchableOpacity style={s.composeTip} onPress={() => pickCommunityMedia('image')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="image-outline" size={14} color={C.linkText} />
-                    <Text style={{ color: C.linkText, fontSize: 13 }}>Add Photo</Text>
-                  </View>
+                  <Text style={{ color: C.linkText, fontSize: 13 }}>?? Add Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.composeTip} onPress={() => pickCommunityMedia('video')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="video-outline" size={14} color={C.linkText} />
-                    <Text style={{ color: C.linkText, fontSize: 13 }}>Add Video</Text>
-                  </View>
+                  <Text style={{ color: C.linkText, fontSize: 13 }}>?? Add Video</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -13247,7 +13069,9 @@ function FamilySharingScreen({ navigation }) {
   const renderFamilyMemberCard = (member, showResend = false) => (
     <Card key={member.id} style={s.familySharingMemberCard}>
       <View style={s.familySharingAvatarCircle}>
-        <MaterialCommunityIcons name="account-circle-outline" size={20} color={C.familySharingAccent} />
+        <Text style={s.familySharingAvatarText}>
+          {member.memberEmail ? member.memberEmail.charAt(0).toUpperCase() : '??'}
+        </Text>
       </View>
       <View style={s.flex}>
         <Text style={s.familySharingMemberEmail}>{member.memberEmail}</Text>
@@ -13581,7 +13405,7 @@ function AuthScreen() {
             <View style={{ width: '100%', maxWidth: 430, alignSelf: 'center' }}>
               <View style={{ alignItems: 'center', marginBottom: 18 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 14 }}>
-                  <MaterialCommunityIcons name="paw" size={30} color="#8E5BFF" />
+                  <Text style={{ fontSize: 34 }}>??</Text>
                   <LinearGradient
                     colors={['#6B3DFF', '#8E5BFF', '#FF8A3D']}
                     start={{ x: 0, y: 0 }}
@@ -13598,15 +13422,15 @@ function AuthScreen() {
                       shadowOffset: { width: 0, height: 10 },
                       elevation: 5,
                     }}
-                    >
+                  >
                     <MaterialCommunityIcons name="paw" size={54} color="#fff" />
                   </LinearGradient>
-                  <MaterialCommunityIcons name="paw" size={30} color="#8E5BFF" />
+                  <Text style={{ fontSize: 34 }}>??</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-                  <MaterialCommunityIcons name="paw" size={18} color="#B18BFF" />
-                  <Text style={{ fontSize: 22, color: '#FF8A3D', fontWeight: '900' }}>+</Text>
-                  <MaterialCommunityIcons name="paw" size={18} color="#B18BFF" />
+                  <Text style={{ fontSize: 22, color: '#B18BFF' }}>?</Text>
+                  <Text style={{ fontSize: 22, color: '#FF8A3D' }}>+</Text>
+                  <Text style={{ fontSize: 22, color: '#B18BFF' }}>?</Text>
                 </View>
                 <Text style={{ color: C.modalTitleText, fontSize: 30, fontWeight: '900', letterSpacing: -0.5, textAlign: 'center' }}>
                   Welcome back!
@@ -14452,17 +14276,12 @@ function SettingsScreen({ navigation, route }) {
           style={[s.menuItem, item.borderless ? null : s.menuItemBorder]}
           {...itemProps}
         >
-<MaterialCommunityIcons
-  name={item.icon || 'circle-outline'}
-  size={21}
-  color={item.accent ? C.settingsAccent : C.settingsMutedText}
-  style={s.menuIcon}
-/>
+          <Text style={s.menuIcon}>{item.icon}</Text>
           <View style={s.flex}>
     <Text style={[s.menuLabel, item.accent && { color: C.settingsAccent }, item.disabled && { color: C.muted }]}>{item.label}</Text>
             {item.sub ? <Text style={s.menuSub}>{item.sub}</Text> : null}
           </View>
-          {item.pressable === false ? <View style={{ width: 18 }} /> : <MaterialCommunityIcons name="chevron-right" size={18} color={item.disabled ? C.muted : C.settingsMutedText} />}
+          {item.pressable === false ? <View style={{ width: 18 }} /> : <Text style={[s.menuChevron, item.disabled && { color: C.muted }]}>�</Text>}
         </ItemComponent>
       );
     })()
@@ -14473,38 +14292,39 @@ function SettingsScreen({ navigation, route }) {
       title: 'Account',
       items: [
         {
-          icon: 'account-circle-outline',
+          icon: '??',
           label: 'Profile',
           sub: 'Tap to edit your profile.',
           onPress: () => setShowAccountModal(true),
         },
         {
-          icon: 'account-group-outline',
+          icon: '??',
           label: 'Family Sharing',
           sub: countsLoading
             ? 'Loading invitations...'
-: `${familyCounts.total ?? 0} members · ${familyCounts.pending ?? 0} pending`,          onPress: handleFamilySharingPress,
+            : `${familyCounts.total ?? 0} members � ${familyCounts.pending ?? 0} pending`,
+          onPress: handleFamilySharingPress,
         },
       ],
     },
     {
       title: 'Pet Management',
       items: [
-        ...safePets.map((pet) => ({
+          ...safePets.map((pet) => ({
             key: pet.id,
-            icon: resolvePetSpeciesIconName(pet.species),
+            icon: getDefaultPetEmoji(pet.species),
             label: pet.name || 'Unnamed Pet',
             sub: [
               pet.species,
               pet.breed,
               pet.age,
-].filter(Boolean).join(' · ') || 'Pet profile',
+            ].filter(Boolean).join(' � ') || 'Pet profile',
             onPress: () => handleOpenPet(pet),
             onLongPress: () => deletePet(pet),
           })),
         {
           key: 'add-pet',
-          icon: 'plus-circle-outline',
+          icon: '?',
           label: 'Add Pet',
           sub: 'Create a new pet profile',
           accent: true,
@@ -14516,13 +14336,13 @@ function SettingsScreen({ navigation, route }) {
       title: 'Notifications',
       items: [
         {
-          icon: 'bell-outline',
+          icon: '??',
           label: 'Reminder Notifications',
-          sub: `${reminderNotificationsStatus} · ${petSoundAlertsEnabled ? 'Pet sounds on' : 'Pet sounds off'}`,
+          sub: `${reminderNotificationsStatus} � ${petSoundAlertsEnabled ? 'Pet sounds on' : 'Pet sounds off'}`,
           onPress: handleReminderNotificationsPress,
         },
         {
-          icon: 'bell-ring-outline',
+          icon: '??',
           label: 'Push Notifications',
           sub: pushNotificationStatus,
           onPress: handlePushNotificationsPress,
@@ -14533,22 +14353,22 @@ function SettingsScreen({ navigation, route }) {
       title: 'Data & Storage',
       headerPress: toggleDataStorageExpanded,
       items: [
-        { icon: 'paw', label: 'Pets', sub: countsLoading ? 'Loading...' : `${safePets.length}`, pressable: false },
-        { icon: 'heart-pulse', label: 'Health Records', sub: countsLoading ? 'Loading...' : `${healthRecordCount}`, pressable: false },
-        { icon: 'calendar-clock', label: 'Care Reminders', sub: countsLoading ? 'Loading...' : `${reminderCount}`, pressable: false },
-        { icon: 'camera-outline', label: 'Memories', sub: countsLoading ? 'Loading...' : `${storageCounts.memories ?? 0}`, pressable: false },
-        { icon: 'forum-outline', label: 'Community Posts', sub: countsLoading ? 'Loading...' : `${storageCounts.communityPosts ?? 0}`, pressable: false },
-        { icon: 'book-open-variant', label: 'Recipes', sub: countsLoading ? 'Loading...' : `${storageCounts.recipes ?? 0}`, pressable: false },
-        { icon: 'comment-outline', label: 'Comments', sub: countsLoading ? 'Loading...' : `${storageCounts.comments ?? 0}`, pressable: false },
-        { icon: 'alarm-light-outline', label: 'Lost Pet Alerts', sub: countsLoading ? 'Loading...' : `${storageCounts.lostPetAlerts ?? 0}`, pressable: false },
-        { icon: 'backup-restore', label: 'Export / Backup', sub: 'Export full account data is unavailable right now', onPress: () => Alert.alert('Export / Backup', 'Export full account data is unavailable right now.') },
+        { icon: '??', label: 'Pets', sub: countsLoading ? 'Loading...' : `${safePets.length}`, pressable: false },
+        { icon: '??', label: 'Health Records', sub: countsLoading ? 'Loading...' : `${healthRecordCount}`, pressable: false },
+        { icon: '?', label: 'Care Reminders', sub: countsLoading ? 'Loading...' : `${reminderCount}`, pressable: false },
+        { icon: '???', label: 'Memories', sub: countsLoading ? 'Loading...' : `${storageCounts.memories ?? 0}`, pressable: false },
+        { icon: '??', label: 'Community Posts', sub: countsLoading ? 'Loading...' : `${storageCounts.communityPosts ?? 0}`, pressable: false },
+        { icon: '??', label: 'Recipes', sub: countsLoading ? 'Loading...' : `${storageCounts.recipes ?? 0}`, pressable: false },
+        { icon: '???', label: 'Comments', sub: countsLoading ? 'Loading...' : `${storageCounts.comments ?? 0}`, pressable: false },
+        { icon: '??', label: 'Lost Pet Alerts', sub: countsLoading ? 'Loading...' : `${storageCounts.lostPetAlerts ?? 0}`, pressable: false },
+        { icon: '??', label: 'Export / Backup', sub: 'Export full account data is unavailable right now', onPress: () => Alert.alert('Export / Backup', 'Export full account data is unavailable right now.') },
       ],
     },
     {
       title: 'Subscription',
       items: [
         {
-          icon: 'diamond-stone',
+          icon: '?',
           label: 'PetSync+ Premium',
           sub: revenueCatReady
             ? (premiumSubscriptionActive ? 'Active' : 'Upgrade available')
@@ -14561,16 +14381,16 @@ function SettingsScreen({ navigation, route }) {
       title: 'App Info',
       headerPress: handleAppInfoPress,
       items: [
-        { icon: 'information-outline', label: 'App Name', sub: 'PetSync+', pressable: false },
-        { icon: 'information-outline', label: 'Version', sub: 'v1.0.0', pressable: false },
-        { icon: 'database-outline', label: 'Supabase', sub: supabaseConnectedStatus, pressable: false },
+        { icon: '??', label: 'App Name', sub: 'PetSync+', pressable: false },
+        { icon: '??', label: 'Version', sub: 'v1.0.0', pressable: false },
+        { icon: '??', label: 'Supabase', sub: supabaseConnectedStatus, pressable: false },
       ],
     },
     {
       title: 'Support',
       items: [
-        { icon: 'help-circle-outline', label: 'Help Center', sub: 'Support resources', onPress: () => Alert.alert('Help Center', 'Support resources are being prepared. For now, contact PetSync+ support at petsyncplus@gmail.com.') },
-        { icon: 'star-outline', label: 'Rate PetSync+', sub: 'Post-launch', onPress: () => Alert.alert('Rate PetSync+', 'Ratings will be available after PetSync+ launches publicly.') },
+        { icon: '?', label: 'Help Center', sub: 'Coming soon', onPress: () => Alert.alert('Help Center', 'Help Center is coming soon.') },
+        { icon: '?', label: 'Rate PetSync+', sub: 'Coming soon', onPress: () => Alert.alert('Rate PetSync+', 'App reviews are coming soon.') },
       ],
     },
   ];
@@ -14594,9 +14414,8 @@ function SettingsScreen({ navigation, route }) {
               <Text style={s.profileEmail}>{resolvedProfileEmail}</Text>
               <Text style={s.menuSub}>Your profile summary.</Text>
             </View>
-            <View style={[s.premiumBadge, { flexDirection: 'row', alignItems: 'center' }]}>
-              <MaterialCommunityIcons name="diamond-stone" size={14} color="#fff" style={{ marginRight: 4 }} />
-              <Text style={s.premiumBadgeText}>Premium</Text>
+            <View style={s.premiumBadge}>
+              <Text style={s.premiumBadgeText}>? Premium</Text>
             </View>
         </Card>
 
@@ -14661,7 +14480,7 @@ function SettingsScreen({ navigation, route }) {
                       'Exports',
                     ].map((benefit) => (
                       <View key={benefit} style={s.featureLockedBenefitRow}>
-                        <MaterialCommunityIcons name="check-circle-outline" size={16} color={C.modalBodyText} style={s.featureLockedBullet} />
+                        <Text style={s.featureLockedBullet}>�</Text>
                         <Text style={s.featureLockedBenefitText}>{benefit}</Text>
                       </View>
                     ))}
@@ -14750,7 +14569,7 @@ function SettingsScreen({ navigation, route }) {
                   {safePets.length > 0 ? (
                     <View style={{ marginBottom: 12 }}>
                       <View style={s.myPetsSearchWrap}>
-                        <MaterialCommunityIcons name="magnify" size={18} color={C.settingsMutedText} style={s.myPetsSearchIcon} />
+                        <Text style={s.myPetsSearchIcon}>?</Text>
                         <TextInput
                           style={s.myPetsSearchInput}
                           value={petQuery}
@@ -14766,7 +14585,7 @@ function SettingsScreen({ navigation, route }) {
                             style={s.myPetsSearchClearBtn}
                             activeOpacity={0.8}
                           >
-                            <MaterialCommunityIcons name="close-circle" size={18} color={C.settingsMutedText} style={s.myPetsSearchClearText} />
+                            <Text style={s.myPetsSearchClearText}>?</Text>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -14803,7 +14622,7 @@ function SettingsScreen({ navigation, route }) {
                             {pet.photoUri ? (
                               <Image source={{ uri: pet.photoUri }} style={s.myPetsAvatarImage} />
                             ) : (
-                              <PetSpeciesIcon species={pet.species} size={22} color={C.primaryActionBg} />
+                              <Text style={s.myPetsAvatarEmoji}>{pet.emoji || getDefaultPetEmoji(pet.species)}</Text>
                             )}
                           </View>
 
@@ -14874,12 +14693,12 @@ function SettingsScreen({ navigation, route }) {
           <TouchableOpacity activeOpacity={0.9} onPress={handleMyPetsPress}>
             <Card style={[s.myPetsCard, { backgroundColor: C.settingsPetCard }]}>
               <View style={s.menuItem}>
-                <MaterialCommunityIcons name="paw" size={22} color={C.settingsAccent} style={s.menuIcon} />
+                <Text style={s.menuIcon}>??</Text>
                 <View style={s.flex}>
                   <Text style={s.menuLabel}>My Pets</Text>
                   <Text style={s.menuSub}>Tap to view and manage your pets</Text>
                 </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color={C.faintText} />
+                <Text style={s.menuChevron}>�</Text>
               </View>
             </Card>
           </TouchableOpacity>
@@ -14891,7 +14710,7 @@ function SettingsScreen({ navigation, route }) {
                 <TouchableOpacity onPress={toggleDataStorageExpanded} activeOpacity={0.88}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 }}>
                     <Text style={s.menuSectionTitle}>{showDataStorageExpanded ? 'RECORDS' : 'RECORDS'}</Text>
-  <MaterialCommunityIcons name={showDataStorageExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={C.settingsAccent} />
+  <Text style={[s.menuChevron, { color: C.settingsAccent }]}>{showDataStorageExpanded ? '^' : '?'}</Text>
                   </View>
                 </TouchableOpacity>
               ) : section.headerPress ? (
@@ -14919,12 +14738,12 @@ function SettingsScreen({ navigation, route }) {
                     onPress={toggleDataStorageExpanded}
                     activeOpacity={0.85}
                   >
-                    <MaterialCommunityIcons name="file-document-outline" size={20} color={C.settingsMutedText} style={s.menuIcon} />
+                    <Text style={s.menuIcon}>??</Text>
                     <View style={s.flex}>
                       <Text style={s.menuLabel}>Records</Text>
                       <Text style={s.menuSub}>Tap to view all storage counts</Text>
                     </View>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color={C.faintText} />
+                    <Text style={s.menuChevron}>�</Text>
                   </TouchableOpacity>
                 </Card>
               )}
@@ -14938,7 +14757,7 @@ function SettingsScreen({ navigation, route }) {
           >
             <Text style={s.signOutText}>Logout</Text>
           </TouchableOpacity>
-          <Text style={s.versionText}>PetSync+ v1.0.0 · Made with care for pet families</Text>
+          <Text style={s.versionText}>PetSync+ v1.0.0 � Made with ?? for pet families</Text>
         </ScrollView>
 
         <Modal visible={showAccountModal} transparent animationType="fade" onRequestClose={() => setShowAccountModal(false)}>
@@ -15007,21 +14826,21 @@ function SettingsScreen({ navigation, route }) {
               </Text>
 
               <TouchableOpacity style={[s.menuItem, s.menuItemBorder]} onPress={toggleReminderAlerts}>
-                <MaterialCommunityIcons name="bell-outline" size={20} color={C.settingsMutedText} style={s.menuIcon} />
+                <Text style={s.menuIcon}>??</Text>
                 <View style={s.flex}>
                   <Text style={s.menuLabel}>Reminder alerts</Text>
                   <Text style={s.menuSub}>{reminderAlertsEnabled ? 'On' : 'Off'}</Text>
                 </View>
-                <MaterialCommunityIcons name={reminderAlertsEnabled ? 'toggle-switch' : 'toggle-switch-off'} size={24} color={reminderAlertsEnabled ? C.settingsAccent : C.faintText} />
+                <Text style={s.menuChevron}>{reminderAlertsEnabled ? '?' : '?'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[s.menuItem, s.menuItemBorder]} onPress={togglePetSoundAlerts}>
-                <MaterialCommunityIcons name="volume-high" size={20} color={C.settingsMutedText} style={s.menuIcon} />
+                <Text style={s.menuIcon}>??</Text>
                 <View style={s.flex}>
                   <Text style={s.menuLabel}>Pet sound alerts</Text>
                   <Text style={s.menuSub}>{petSoundAlertsEnabled ? 'On' : 'Off'}</Text>
                 </View>
-                <MaterialCommunityIcons name={petSoundAlertsEnabled ? 'toggle-switch' : 'toggle-switch-off'} size={24} color={petSoundAlertsEnabled ? C.settingsAccent : C.faintText} />
+                <Text style={s.menuChevron}>{petSoundAlertsEnabled ? '?' : '?'}</Text>
               </TouchableOpacity>
 
               <View style={{ marginTop: 12, marginBottom: 18 }}>
@@ -15274,7 +15093,7 @@ function CommunityProfileScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={s.communityProfileScroll}>
         <View style={s.communityProfileTopBar}>
           <TouchableOpacity style={s.communityProfileCloseBtn} onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="close" size={18} color={C.linkText} />
+            <Text style={s.communityProfileCloseBtnText}>?</Text>
           </TouchableOpacity>
           <Text style={s.pageTitle}>Community Profile</Text>
           <View style={s.communityProfileTopBarSpacer} />
@@ -15292,7 +15111,7 @@ function CommunityProfileScreen({ navigation, route }) {
                   {profile.avatarUrl ? (
                     <Image source={{ uri: profile.avatarUrl }} style={s.communityProfileAvatarImage} />
                   ) : (
-                    <MaterialCommunityIcons name="account-circle-outline" size={38} color={C.communityTitleText} />
+                    <Text style={s.communityProfileAvatarEmoji}>{profile.avatarEmoji || favoritePetEmoji}</Text>
                   )}
                 </View>
               </View>
@@ -15328,12 +15147,16 @@ function CommunityProfileScreen({ navigation, route }) {
               {profile.favoritePetName ? (
                 <View style={s.communityProfilePetPreview}>
                   <View style={s.communityProfilePetPreviewAvatar}>
-                    <PetSpeciesIcon species={profile.favoritePetSpecies} size={20} color={C.communityTitleText} />
+                    {profile.favoritePetSpecies ? (
+                      <Text style={s.communityProfilePetPreviewEmoji}>{favoritePetEmoji}</Text>
+                    ) : (
+                      <Text style={s.communityProfilePetPreviewEmoji}>??</Text>
+                    )}
                   </View>
                   <View style={s.flex}>
                     <Text style={s.communityProfilePetPreviewName}>{profile.favoritePetName}</Text>
                     <Text style={s.communityProfilePetPreviewMeta}>
-                      {[profile.favoritePetSpecies, profile.favoritePetBreed].filter(Boolean).join(' · ') || 'Pet preview'}
+                      {[profile.favoritePetSpecies, profile.favoritePetBreed].filter(Boolean).join(' � ') || 'Pet preview'}
                     </Text>
                   </View>
                 </View>
@@ -18148,7 +17971,7 @@ function DiscoverHomeScreen() {
                                     <View style={s.flex}>
                                       <Text style={s.discoverCardTitle}>{pet.name}</Text>
                                       <Text style={s.discoverCardMeta}>
-                                        {[pet.species, pet.breed].filter(Boolean).join(' · ') || 'Adoptable pet'}
+                                        {[pet.species, pet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
                                       </Text>
                                     </View>
                                     <View style={s.discoverChipAlt}>
@@ -18157,7 +17980,7 @@ function DiscoverHomeScreen() {
                                   </View>
 
                                   <Text style={s.discoverDetailLine}>
-                                    {pet.age_label || 'Age not listed'} · {pet.sex || 'Sex not listed'}
+                                    {pet.age_label || 'Age not listed'} � {pet.sex || 'Sex not listed'}
                                   </Text>
                                   <Text style={s.discoverDetailLine}>
                                     {pet.adoption_fee != null ? `Adoption fee: $${Number(pet.adoption_fee).toFixed(0)}` : 'Adoption fee not listed'}
@@ -20261,7 +20084,7 @@ function AIVetScreen({ navigation, route }) {
     petContext.breed,
     `Age: ${petContext.age}`,
     `Weight: ${petContext.weight}`,
-  ].filter(Boolean).join(' · ');
+  ].filter(Boolean).join(' � ');
 
   const buildFallbackReply = (questionText) => {
     const lower = String(questionText || '').toLowerCase();
@@ -20270,12 +20093,12 @@ function AIVetScreen({ navigation, route }) {
     }
 
     const recordHighlights = petContext.recentHealthRecords
-      .map((record) => `${record.title}${record.date ? ` · ${formatDate(record.date)}` : ''}`)
+      .map((record) => `${record.title}${record.date ? ` � ${formatDate(record.date)}` : ''}`)
       .join(' | ');
 
     return [
       `I couldn't reach the AI Vet backend right now, so I'm giving safe general guidance for ${petContext.name}.`,
-      `Context: ${petContext.species} · ${petContext.breed} · Age ${petContext.age} · Weight ${petContext.weight}`,
+      `Context: ${petContext.species} � ${petContext.breed} � Age ${petContext.age} � Weight ${petContext.weight}`,
       petContext.medications.length ? `Medications: ${petContext.medications.join(', ')}` : 'Medications: none recorded',
       petContext.vaccinations.length ? `Vaccinations: ${petContext.vaccinations.join(', ')}` : 'Vaccinations: none recorded',
       recordHighlights ? `Recent health records: ${recordHighlights}` : 'Recent health records: none recorded',
@@ -20416,11 +20239,11 @@ function AIVetScreen({ navigation, route }) {
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <View style={s.modalHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: C.linkText, fontSize: 16 }}>Back</Text>
+          <Text style={{ color: C.linkText, fontSize: 16 }}>? Back</Text>
         </TouchableOpacity>
         <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 12 }}>
           <Text style={s.modalTitle}>AI Vet</Text>
-          <Text style={{ color: C.aiVetMutedText, fontSize: 12, fontWeight: '700', marginTop: 2 }}>General guidance only - Not a real vet</Text>
+          <Text style={{ color: C.aiVetMutedText, fontSize: 12, fontWeight: '700', marginTop: 2 }}>General guidance only � Not a real vet</Text>
         </View>
         {messages.length > 0 ? (
           <TouchableOpacity onPress={resetChat} style={{ backgroundColor: C.modalCard, borderWidth: 1, borderColor: C.modalCardBorder, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 }}>
@@ -20487,10 +20310,7 @@ function AIVetScreen({ navigation, route }) {
                 'Severe bleeding',
                 'Unable to walk',
               ].map((item) => (
-                <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
-                  <MaterialCommunityIcons name="alert-circle-outline" size={14} color={C.aiVetBodyText} style={{ marginTop: 2 }} />
-                  <Text style={{ color: C.aiVetBodyText, fontSize: 13, lineHeight: 19, flex: 1 }}>{item}</Text>
-                </View>
+                <Text key={item} style={{ color: C.aiVetBodyText, fontSize: 13, lineHeight: 19, marginBottom: 4 }}>� {item}</Text>
               ))}
               <TouchableOpacity style={[s.accentBtn, { marginTop: 12 }]} onPress={() => Linking.openURL('tel:8884264435')}>
                 <Text style={s.accentBtnText}>ASPCA Poison Control</Text>
@@ -20526,7 +20346,7 @@ function AIVetScreen({ navigation, route }) {
                   : { alignSelf: 'flex-start', marginRight: 36 },
               ]}
             >
-              {msg.role === 'assistant' && <MaterialCommunityIcons name="stethoscope" size={22} color={C.aiVetTitleText} style={{ marginBottom: 4 }} />}
+              {msg.role === 'assistant' && <Text style={{ fontSize: 24, marginBottom: 4 }}>??</Text>}
               {msg.emergency && (
                 <View style={{
                   marginBottom: 8,
@@ -20571,7 +20391,7 @@ function AIVetScreen({ navigation, route }) {
 
         {isTyping && (
           <View style={[s.chatBubbleWrap, { alignSelf: 'flex-start', marginRight: 36 }]}>
-            <MaterialCommunityIcons name="stethoscope" size={22} color={C.aiVetTitleText} />
+            <Text style={{ fontSize: 24 }}>??</Text>
             <View style={s.chatBubbleAIBg}>
               <Text style={s.typingText}>AI Vet is typing...</Text>
             </View>
@@ -20926,7 +20746,7 @@ function LostPetScreen({ navigation }) {
               </Text>
             </View>
           <TouchableOpacity onPress={closePetActionPicker} style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: C.sosCard, borderWidth: 1, borderColor: C.sosCardBorder }}>
-              <MaterialCommunityIcons name="close" size={16} color={C.text} />
+              <Text style={{ color: C.text, fontSize: 16, fontWeight: '900' }}>?</Text>
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ paddingBottom: 6 }}>
@@ -20952,13 +20772,13 @@ function LostPetScreen({ navigation }) {
                 }}
               >
                 <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.sosCard, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  <PetSpeciesIcon species={pet.species} size={22} color={C.sosAccent} />
+                  <Text style={{ fontSize: 24 }}>{pet.emoji || '??'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.sosTitleText, fontSize: 15, fontWeight: '900' }}>{pet.name}</Text>
                   <Text style={{ color: C.sosMutedText, fontSize: 12, marginTop: 2 }}>{pet.breed || pet.species || 'Pet profile'}</Text>
                 </View>
-                <MaterialCommunityIcons name="chevron-right" size={18} color={C.sosAccent} />
+                <Text style={{ color: C.sosAccent, fontSize: 16, fontWeight: '900' }}>�</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -21069,7 +20889,7 @@ function LostPetScreen({ navigation }) {
               }}
             >
               <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.sosCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.sosCardBorder }}>
-                <PetSpeciesIcon species={reportPet.species} size={22} color={C.sosAccent} />
+                <Text style={{ fontSize: 24 }}>{reportPet.emoji || '??'}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.sosTitleText, fontSize: 15, fontWeight: '900' }}>{reportPet.name}</Text>
@@ -21092,7 +20912,7 @@ function LostPetScreen({ navigation }) {
                 {photoUri ? (
                   <Image source={{ uri: photoUri }} style={{ width: 84, height: 84, borderRadius: 42 }} />
                 ) : (
-                  <PetSpeciesIcon species={reportPet.species} size={30} color={C.sosAccent} />
+                  <Text style={{ fontSize: 36 }}>{reportPet.emoji || '??'}</Text>
                 )}
               </View>
               <TouchableOpacity style={s.accentBtn} onPress={pickPetPhoto} activeOpacity={0.9}>
@@ -21180,7 +21000,7 @@ function LostPetScreen({ navigation }) {
                       {avatarImage ? (
                         <Image source={{ uri: avatarImage }} style={{ width: 52, height: 52, borderRadius: 26 }} />
                       ) : (
-                        <PetSpeciesIcon species={pet?.species} size={24} color={C.sosBodyText} />
+                        <Text style={{ fontSize: 24 }}>{pet?.emoji || '??'}</Text>
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
@@ -21238,7 +21058,7 @@ function LostPetScreen({ navigation }) {
               'Search at dawn and dusk',
             ].map((tip) => (
               <View key={tip} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
-                <MaterialCommunityIcons name="check-circle-outline" size={16} color={C.sosAccent} />
+                <Text style={{ color: C.sosAccent, fontSize: 16, fontWeight: '900', lineHeight: 20 }}>�</Text>
                 <Text style={{ flex: 1, color: C.sosBodyText, fontSize: 13, lineHeight: 19, fontWeight: '600' }}>{tip}</Text>
               </View>
             ))}
@@ -21264,7 +21084,6 @@ function ControlCenterScreen() {
   const [partnerApplicationsSectionY, setPartnerApplicationsSectionY] = useState(0);
   const [analyticsSectionY, setAnalyticsSectionY] = useState(0);
   const [settingsSectionY, setSettingsSectionY] = useState(0);
-  const [launchCenterSectionY, setLaunchCenterSectionY] = useState(0);
   const [businessesLoading, setBusinessesLoading] = useState(true);
   const [sheltersLoading, setSheltersLoading] = useState(true);
   const [adoptablePetsLoading, setAdoptablePetsLoading] = useState(true);
@@ -21627,39 +21446,6 @@ function ControlCenterScreen() {
       return String(a.name || '').localeCompare(String(b.name || ''));
     });
   }, [controlCenterBusinessCategories]);
-
-  const launchCenterSummary = useMemo(() => {
-    const now = new Date();
-    const approvedBusinesses = controlCenterBusinesses.filter((business) => String(business.status || '').toLowerCase() === 'approved').length;
-    const approvedShelters = controlCenterShelters.filter((shelter) => String(shelter.status || '').toLowerCase() === 'approved').length;
-    const availablePets = controlCenterAdoptablePets.filter((pet) => String(pet.status || 'available').toLowerCase() === 'available').length;
-    const activePromotions = controlCenterPromotions.filter((promotion) => String(promotion.status || '').toLowerCase() === 'active').length;
-    const activeFutureEvents = controlCenterEvents.filter((event) => {
-      const status = String(event.status || '').toLowerCase();
-      if (status !== 'active') return false;
-      const startValue = event.starts_at || event.start_at || event.start_date;
-      const startDate = startValue ? new Date(startValue) : null;
-      if (!startDate || Number.isNaN(startDate.getTime())) return false;
-      return startDate.getTime() >= now.getTime();
-    }).length;
-    const pendingPartnerApplications = partnerApplications.filter((application) => String(application.status || 'pending').toLowerCase() === 'pending').length;
-    return {
-      approvedBusinesses,
-      approvedShelters,
-      availablePets,
-      activePromotions,
-      activeFutureEvents,
-      pendingPartnerApplications,
-      checklist: [
-        { key: 'businesses', label: 'Businesses ready', ready: approvedBusinesses > 0 },
-        { key: 'shelters', label: 'Shelters ready', ready: approvedShelters > 0 },
-        { key: 'pets', label: 'Adoptable pets ready', ready: availablePets > 0 },
-        { key: 'promotions', label: 'Promotions ready', ready: activePromotions > 0 },
-        { key: 'events', label: 'Events ready', ready: activeFutureEvents > 0 },
-        { key: 'applications', label: 'Partner applications reviewed', ready: pendingPartnerApplications === 0 },
-      ],
-    };
-  }, [controlCenterBusinesses, controlCenterShelters, controlCenterAdoptablePets, controlCenterPromotions, controlCenterEvents, partnerApplications]);
 
   useEffect(() => {
     let isActive = true;
@@ -22081,14 +21867,6 @@ function ControlCenterScreen() {
     if (!controlCenterScrollRef.current) return;
     controlCenterScrollRef.current.scrollTo({
       y: Math.max(0, settingsSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToLaunchCenter = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, launchCenterSectionY - 16),
       animated: true,
     });
   };
@@ -23072,7 +22850,7 @@ function ControlCenterScreen() {
       icon: 'rocket-launch',
       iconColor: '#6B46C1',
       iconBg: 'rgba(107,70,193,0.12)',
-      onPress: scrollToLaunchCenter,
+      onPress: () => Alert.alert('Coming soon', 'This section is coming in the next phase.'),
     },
   ];
 
@@ -24262,7 +24040,7 @@ function ControlCenterScreen() {
                   { label: 'Active Events', value: dashboard.eventsActive },
                   { label: 'Pending Partner Applications', value: dashboard.pendingPartnerApplications },
                 ].map((item) => {
-                  const displayValue = item.value == null ? 'Not available yet' : item.value;
+                  const displayValue = item.value == null ? 'Coming Soon' : item.value;
                   return (
                     <View key={item.label} style={s.controlCenterAnalyticsCard}>
                       <Text style={s.controlCenterAnalyticsLabel}>{item.label}</Text>
@@ -24334,75 +24112,19 @@ function ControlCenterScreen() {
                 )}
               </View>
 
-                <View style={s.controlCenterSettingsSection}>
-                  <Text style={s.controlCenterBusinessesTitle}>Marketplace Launch Settings</Text>
-                  <Text style={s.controlCenterApplicationsEmptyText}>Configured in Launch Center.</Text>
-                </View>
-
-                <View style={s.controlCenterSettingsSection}>
-                  <Text style={s.controlCenterBusinessesTitle}>Email Notifications</Text>
-                  <Text style={s.controlCenterApplicationsEmptyText}>Planned for post-TestFlight automation.</Text>
-                </View>
-
-                <View style={s.controlCenterSettingsSection}>
-                  <Text style={s.controlCenterBusinessesTitle}>App Store / TestFlight Checklist</Text>
-                  <Text style={s.controlCenterApplicationsEmptyText}>Handled during TestFlight readiness.</Text>
-                </View>
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setLaunchCenterSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Launch Center</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Marketplace launch stays private until a future phase.</Text>
-                </View>
-                <View style={s.discoverSectionPill}>
-                  <Text style={s.discoverSectionPillText}>Private</Text>
-                </View>
+              <View style={s.controlCenterSettingsSection}>
+                <Text style={s.controlCenterBusinessesTitle}>Marketplace Launch Settings</Text>
+                <Text style={s.controlCenterApplicationsEmptyText}>Coming Soon</Text>
               </View>
 
-              <View style={s.controlCenterLaunchSummaryRow}>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Approved Businesses</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.approvedBusinesses}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Approved Shelters</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.approvedShelters}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Available Adoptable Pets</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.availablePets}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Active Promotions</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.activePromotions}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Active Future Events</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.activeFutureEvents}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Pending Partner Applications</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.pendingPartnerApplications}</Text>
-                </View>
+              <View style={s.controlCenterSettingsSection}>
+                <Text style={s.controlCenterBusinessesTitle}>Email Notifications</Text>
+                <Text style={s.controlCenterApplicationsEmptyText}>Coming Soon</Text>
               </View>
 
-              <View style={s.controlCenterLaunchChecklist}>
-                {launchCenterSummary.checklist.map((item) => (
-                  <View key={item.key} style={s.controlCenterLaunchChecklistRow}>
-                    <View style={s.flex}>
-                      <Text style={s.controlCenterLaunchChecklistLabel}>{item.label}</Text>
-                    </View>
-                    <View style={[s.controlCenterLaunchChecklistBadge, item.ready ? s.controlCenterLaunchChecklistBadgeReady : s.controlCenterLaunchChecklistBadgeNotReady]}>
-                      <Text style={[s.controlCenterLaunchChecklistBadgeText, item.ready ? s.controlCenterLaunchChecklistBadgeTextReady : s.controlCenterLaunchChecklistBadgeTextNotReady]}>
-                        {item.ready ? 'Ready' : 'Not ready'}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+              <View style={s.controlCenterSettingsSection}>
+                <Text style={s.controlCenterBusinessesTitle}>App Store / TestFlight Checklist</Text>
+                <Text style={s.controlCenterApplicationsEmptyText}>Coming Soon</Text>
               </View>
             </Card>
           </View>
@@ -24851,63 +24573,40 @@ const Tab   = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 function TabNavigator() {
-  const PETSYNC_ICONS = {
-    Home: require('./assets/icons/petsync/house_with_paw_1024.png'),
-    Health: require('./assets/icons/petsync/health_1024.png'),
-    Memories: require('./assets/icons/petsync/photos_gallery_1024.png'),
-    Community: require('./assets/icons/petsync/users_1024.png'),
-    Discover: require('./assets/icons/petsync/compass_1024.png'),
-    Settings: require('./assets/icons/petsync/admin-settings_1024.png'),
-  };
-
-const tabIcon = (name) => ({ focused }) => (
-<View
-  style={{
-    width: 60,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 25,
-    backgroundColor: focused
-      ? 'rgba(255,107,53,0.14)'
-      : 'transparent',
-  }}
->
-  <Image
-    source={PETSYNC_ICONS[name]}
-    style={{
-      width: focused ? 38 : 34,
-      height: focused ? 38 : 34,
-      opacity: focused ? 1 : 0.75,
-    }}
-    resizeMode="contain"
-  />
-</View>
-);
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+
         tabBarStyle: {
           position: 'absolute',
-          left: 0,
-          right: 0,
+          left: 16,
+          right: 16,
           bottom: 0,
-          height: 78,
+
+          height: 75,
+
+          borderRadius: 0,
           backgroundColor: '#f7faff',
+
           borderTopWidth: 0,
-          paddingTop: 6,
+
+          paddingTop: 0,
           paddingBottom: 12,
+
           elevation: 0,
+
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.12,
+          shadowRadius: 0,
         },
-        tabBarActiveTintColor: C.primaryActionBg,
-        tabBarInactiveTintColor: '#1f2a44',
+
+  tabBarActiveTintColor: C.primaryActionBg,
+        tabBarInactiveTintColor: C.muted,
+
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: '900',
         },
       }}
@@ -24916,7 +24615,24 @@ const tabIcon = (name) => ({ focused }) => (
         name="Home"
         component={DashboardScreen}
         options={{
-          tabBarIcon: tabIcon('Home'),
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused
+                  ? 'rgba(255,107,53,0.18)'
+                  : 'transparent',
+
+                padding: 5,
+                borderRadius: 16,
+              }}
+            >
+              <MaterialCommunityIcons
+                name="paw"
+                size={22}
+                color={color}
+              />
+            </View>
+          ),
         }}
       />
 
@@ -24924,7 +24640,11 @@ const tabIcon = (name) => ({ focused }) => (
         name="Health"
         component={HealthHubScreen}
         options={{
-          tabBarIcon: tabIcon('Health'),
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              ??
+            </Text>
+          ),
         }}
       />
 
@@ -24932,8 +24652,11 @@ const tabIcon = (name) => ({ focused }) => (
         name="Memories"
         component={MemoryVaultScreen}
         options={{
-          tabBarIcon: tabIcon('Memories'),
-          tabBarLabel: 'Memories',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              ??
+            </Text>
+          ),
         }}
       />
 
@@ -24941,8 +24664,11 @@ const tabIcon = (name) => ({ focused }) => (
         name="Community"
         component={CommunityScreen}
         options={{
-          tabBarIcon: tabIcon('Community'),
-          tabBarLabel: 'Community',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              ??
+            </Text>
+          ),
         }}
       />
 
@@ -24950,7 +24676,19 @@ const tabIcon = (name) => ({ focused }) => (
         name="Discover"
         component={DiscoverHomeScreen}
         options={{
-          tabBarIcon: tabIcon('Discover'),
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused
+                  ? 'rgba(255,107,53,0.18)'
+                  : 'transparent',
+                padding: 5,
+                borderRadius: 16,
+              }}
+            >
+              <MaterialCommunityIcons name="compass-outline" size={22} color={color} />
+            </View>
+          ),
         }}
       />
 
@@ -24958,12 +24696,17 @@ const tabIcon = (name) => ({ focused }) => (
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarIcon: tabIcon('Settings'),
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              ??
+            </Text>
+          ),
         }}
       />
     </Tab.Navigator>
   );
-}export default function App() {
+}
+export default function App() {
   const [authSession, setAuthSession] = useState(null);
   const [authUser, setAuthUser] = useState(null);
   const [authProfile, setAuthProfile] = useState(null);
@@ -25194,9 +24937,8 @@ const tabIcon = (name) => ({ focused }) => (
 
 
   const openAddPetModal = (onSelect, speciesHint = 'dog') => {
-    const safePetList = Array.isArray(pets) ? pets : [];
     const isFreePlan = authReady && !isPremiumUser(authProfile);
-    if (isFreePlan && safePetList.length >= MONETIZATION_LIMITS.free_pet_limit) {
+    if (isFreePlan && safePets.length >= MONETIZATION_LIMITS.free_pet_limit) {
       openLockedFeature(
         'unlimited_pets',
         'Add Pet',
@@ -25485,30 +25227,24 @@ const tabIcon = (name) => ({ focused }) => (
   }, [authReady, authUser?.id]);
 
   if (!authReady) {
-return (
-  <PetSyncBackground opacity={0.18}>
-    <View style={s.screen}>
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    return (
+      <PetSyncBackground opacity={0.18}>
+        <SafeAreaView style={s.screen} edges={['top']}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <Card style={[s.authCard, { width: '100%', maxWidth: 420, alignItems: 'center' }]}>
               <ActivityIndicator size="large" color={C.teal} />
               <Text style={[s.authTitle, { marginTop: 16 }]}>PetSync+</Text>
               <Text style={[s.authSub, { textAlign: 'center' }]}>Loading your account...</Text>
             </Card>
           </View>
-</View>
+        </SafeAreaView>
       </PetSyncBackground>
     );
   }
 
-if (!authSession) {
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <AuthScreen />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
-  );
-}
+  if (!authSession) {
+    return <AuthScreen />;
+  }
 
   const authContextValue = {
     authUser,
@@ -25522,8 +25258,8 @@ if (!authSession) {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-<SafeAreaProvider initialMetrics={initialWindowMetrics}>
-          <StatusBar barStyle="light-content" backgroundColor={C.homeBg} />       
+      <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor={C.homeBg} />       
         <AuthContext.Provider value={authContextValue}>
           <RevenueCatContext.Provider value={{
             revenueCatReady,
@@ -25680,7 +25416,7 @@ if (!authSession) {
                                   </Text>
                                 </View>
                                 <TouchableOpacity style={s.localVetFinderCloseBtn} onPress={closeVetFinder} activeOpacity={0.85}>
-                                  <MaterialCommunityIcons name="close" size={18} color={C.linkText} />
+                                  <Text style={s.localVetFinderCloseBtnText}>?</Text>
                                 </TouchableOpacity>
                               </View>
 
@@ -25723,7 +25459,7 @@ if (!authSession) {
                                       <View key={clinic.id} style={s.localVetCard}>
                                         <View style={s.localVetCardTopRow}>
                                           <View style={s.localVetAvatar}>
-                                            <MaterialCommunityIcons name="stethoscope" size={18} color={C.linkText} />
+                                            <Text style={s.localVetAvatarText}>??</Text>
                                           </View>
                                           <View style={{ flex: 1 }}>
                                             <Text style={s.localVetName}>{clinic.name}</Text>
@@ -28809,7 +28545,7 @@ sosButton: {
   },
   controlCenterHeaderEyebrow: {
     color: '#F97316',
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1.15,
     textTransform: 'uppercase',
@@ -28817,7 +28553,7 @@ sosButton: {
   },
   controlCenterHeaderTitle: {
     color: '#0F172A',
-    fontSize: 20,
+    fontSize: 27,
     fontWeight: '900',
     lineHeight: 31,
   },
@@ -29270,77 +29006,6 @@ sosButton: {
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
-  controlCenterLaunchSummaryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  controlCenterLaunchSummaryPill: {
-    minWidth: 112,
-    flexGrow: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 4,
-  },
-  controlCenterLaunchSummaryLabel: {
-    color: C.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  controlCenterLaunchSummaryValue: {
-    color: C.primaryText,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  controlCenterLaunchChecklist: {
-    gap: 8,
-  },
-  controlCenterLaunchChecklistRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  controlCenterLaunchChecklistLabel: {
-    color: C.primaryText,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  controlCenterLaunchChecklistBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-  },
-  controlCenterLaunchChecklistBadgeReady: {
-    backgroundColor: 'rgba(74,222,128,0.14)',
-    borderColor: 'rgba(74,222,128,0.32)',
-  },
-  controlCenterLaunchChecklistBadgeNotReady: {
-    backgroundColor: 'rgba(248,113,113,0.10)',
-    borderColor: 'rgba(248,113,113,0.24)',
-  },
-  controlCenterLaunchChecklistBadgeText: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.7,
-  },
-  controlCenterLaunchChecklistBadgeTextReady: {
-    color: C.successText,
-  },
-  controlCenterLaunchChecklistBadgeTextNotReady: {
-    color: C.dangerText,
-  },
   controlCenterBusinessSearch: {
     minHeight: 54,
     borderRadius: 16,
@@ -29510,3 +29175,4 @@ sosButton: {
   foundBtn:          { backgroundColor: C.successBg, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   foundBtnText:      { color: C.sosFoundBtnText, fontWeight: '900', fontSize: 16 },
 });
+

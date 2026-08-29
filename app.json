@@ -2,16 +2,22 @@
   "expo": {
     "name": "PetSyncPlus",
     "slug": "PetSyncPlus",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "petsyncplus",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.raymond.petsyncplus",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.raymond.petsyncplus",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -22,29 +28,42 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#f6f8ff",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#f6f8ff"
           }
         }
       ],
       "expo-notifications",
-      "@react-native-community/datetimepicker"
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "18.0"
+          }
+        }
+      ]
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+    "extra": {
+      "revenueCat": {
+        "iosApiKey": "appl_oQJJalFDiBXrfvurJbhOspOghlL",
+        "androidApiKey": "test_EELjpBJvREmgKgdwkoknpJRSWnf",
+        "entitlementId": "Premium"
+      },
+      "eas": {
+        "projectId": "3e0a31b9-19b3-4db0-84c9-b3b3e2ea19d2"
+      }
+    },
+    "owner": "rayzor579"
   }
 }

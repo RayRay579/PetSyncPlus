@@ -1,18 +1,15 @@
-﻿import React, { useState, useRef, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
   KeyboardAvoidingView, Keyboard, Platform, StatusBar, Vibration, useWindowDimensions,
   ActivityIndicator,
 } from 'react-native';
+import { useCallback } from 'react';
 import { NavigationContainer, createNavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import {
-  SafeAreaView,
-  SafeAreaProvider,
-  initialWindowMetrics,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -45,9 +42,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // COLORS & THEME
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 const C = {
   bg:        '#6f7f9127',
   card:      '#a682b2d9',
@@ -241,135 +238,6 @@ const PETSYNC_BACKGROUND_IMAGE = require('./assets/images/petsync-background.png
 const PETSYNC_STARTUP_BACKGROUND = '#f6f8ff';
 const KEYBOARD_AVOIDING_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : 'height';
 
-const resolveUiIconName = (label = '') => {
-  const normalized = String(label || '').trim().toLowerCase();
-  if (normalized.includes('profile')) return 'account-circle-outline';
-  if (normalized.includes('family')) return 'account-group-outline';
-  if (normalized.includes('my pets')) return 'paw';
-  if (normalized.includes('reminder notifications')) return 'bell-outline';
-  if (normalized.includes('reminder alerts')) return 'bell-outline';
-  if (normalized.includes('pet sound alerts')) return 'volume-high';
-  if (normalized.includes('push notifications')) return 'bell-ring-outline';
-  if (normalized === 'pets') return 'paw';
-  if (normalized.includes('health')) return 'heart-pulse';
-  if (normalized.includes('care reminders')) return 'calendar-clock';
-  if (normalized.includes('memories')) return 'camera-outline';
-  if (normalized.includes('community posts')) return 'forum-outline';
-  if (normalized.includes('recipes')) return 'book-open-variant';
-  if (normalized.includes('comments')) return 'comment-outline';
-  if (normalized.includes('lost pet alerts')) return 'alarm-light-outline';
-  if (normalized.includes('export')) return 'backup-restore';
-  if (normalized.includes('records')) return 'file-document-outline';
-  if (normalized.includes('petsync+ premium')) return 'diamond-stone';
-  if (normalized.includes('app name')) return 'information-outline';
-  if (normalized.includes('version')) return 'information-outline';
-  if (normalized.includes('supabase')) return 'database-outline';
-  if (normalized.includes('help center')) return 'help-circle-outline';
-  if (normalized.includes('rate petsync+')) return 'star-outline';
-  if (normalized.includes('add pet')) return 'plus-circle-outline';
-  if (normalized.includes('settings')) return 'cog-outline';
-  if (normalized.includes('notifications')) return 'bell-outline';
-  if (normalized.includes('log meal')) return 'silverware-fork-knife';
-  if (normalized.includes('feed')) return 'silverware-fork-knife';
-  if (normalized.includes('walk')) return 'walk';
-  if (normalized.includes('trail ride')) return 'horse-human';
-  if (normalized.includes('weight')) return 'scale-bathroom';
-  if (normalized.includes('medication')) return 'pill';
-  if (normalized.includes('groom')) return 'content-cut';
-  if (normalized.includes('play')) return 'paw';
-  if (normalized.includes('bath')) return 'shower';
-  if (normalized.includes('photo')) return 'camera-outline';
-  if (normalized.includes('cuddle')) return 'heart-outline';
-  if (normalized.includes('nap')) return 'sleep';
-  if (normalized.includes('fish')) return 'fish';
-  if (normalized.includes('bird')) return 'bird';
-  if (normalized.includes('rabbit')) return 'rabbit';
-  if (normalized.includes('hamster')) return 'rodent';
-  if (normalized.includes('reptile')) return 'snake';
-  if (normalized.includes('ai vet')) return 'stethoscope';
-  if (normalized.includes('lost pet')) return 'alarm-light';
-  if (normalized.includes('contact owner')) return 'phone-outline';
-  if (normalized.includes('share alert') || normalized.includes('share')) return 'share-variant-outline';
-  if (normalized.includes('lost pet sos')) return 'alarm-light';
-  return 'paw-outline';
-};
-
-const resolveUiIconColor = (label = '', accent = false) => {
-  const normalized = String(label || '').trim().toLowerCase();
-  if (accent) return C.settingsAccent;
-  if (normalized.includes('profile')) return '#7E57C2';
-  if (normalized.includes('family')) return '#22C7B7';
-  if (normalized.includes('reminder notifications') || normalized.includes('reminder alerts')) return '#FFB020';
-  if (normalized.includes('push notifications') || normalized.includes('notifications')) return '#4C9AFF';
-  if (normalized === 'pets' || normalized.includes('my pets')) return '#22C55E';
-  if (normalized.includes('health')) return '#FF8A3D';
-  if (normalized.includes('care reminders')) return '#8E5BFF';
-  if (normalized.includes('memories')) return '#FF6B9A';
-  if (normalized.includes('community posts')) return '#5B7CFA';
-  if (normalized.includes('recipes')) return '#22C55E';
-  if (normalized.includes('comments')) return '#4C9AFF';
-  if (normalized.includes('lost pet alerts')) return '#FF5B5B';
-  if (normalized.includes('export')) return '#FF8A3D';
-  if (normalized.includes('premium')) return '#8E5BFF';
-  if (normalized.includes('help')) return '#22C7B7';
-  if (normalized.includes('rate')) return '#F5A524';
-  if (normalized.includes('app name') || normalized.includes('version') || normalized.includes('supabase')) return '#8F97A6';
-  if (normalized.includes('add pet')) return '#FF8A3D';
-  if (normalized.includes('settings')) return '#8E5BFF';
-  if (normalized.includes('logout')) return '#FF5B5B';
-  return C.settingsMutedText;
-};
-
-const resolvePetSpeciesIconName = (species = '') => {
-  const normalized = String(species || '').trim().toLowerCase();
-  if (normalized.includes('dog')) return 'dog';
-  if (normalized.includes('cat')) return 'cat';
-  if (normalized.includes('fish')) return 'fish';
-  if (normalized.includes('bird')) return 'twitter';
-  if (normalized.includes('reptile') || normalized.includes('snake') || normalized.includes('lizard') || normalized.includes('turtle')) return 'snake';
-  if (normalized.includes('rabbit') || normalized.includes('bunny')) return 'rabbit';
-  if (normalized.includes('hamster') || normalized.includes('guinea') || normalized.includes('gerbil')) return 'paw';
-  if (normalized.includes('horse') || normalized.includes('pony')) return 'horse';
-  return 'paw';
-};
-
-const resolvePetSpeciesAccentColor = (species = '') => {
-  const normalized = String(species || '').trim().toLowerCase();
-  if (normalized.includes('dog')) return '#FF8A3D';
-  if (normalized.includes('cat')) return '#8E5BFF';
-  if (normalized.includes('fish')) return '#2F80ED';
-  if (normalized.includes('bird')) return '#22C7B7';
-  if (normalized.includes('reptile') || normalized.includes('snake') || normalized.includes('lizard') || normalized.includes('turtle')) return '#57B65B';
-  if (normalized.includes('rabbit') || normalized.includes('bunny')) return '#FF5B9F';
-  if (normalized.includes('hamster') || normalized.includes('guinea') || normalized.includes('gerbil')) return '#F5A524';
-  if (normalized.includes('horse') || normalized.includes('pony')) return '#A66B3D';
-  return C.primaryActionBg;
-};
-
-const PetSpeciesIcon = ({ species, size = 18, color }) => {
-  const iconName = resolvePetSpeciesIconName(species);
-  return (
-    <MaterialCommunityIcons
-      name={iconName || 'paw'}
-      size={size}
-      color={color || C.primaryActionBg}
-    />
-  );
-};
-const resolveMemoryIconName = (memory = {}) => {
-  const title = String(memory?.title || memory?.caption || memory?.type || '').trim().toLowerCase();
-  const mediaType = String(memory?.mediaType || memory?.mimeType || '').toLowerCase();
-  if (mediaType.startsWith('video/')) return 'video-outline';
-  if (memory?.milestone) return 'star-outline';
-  if (title.includes('birthday')) return 'cake-variant-outline';
-  if (title.includes('adoption')) return 'home-heart-outline';
-  if (title.includes('groom')) return 'content-cut';
-  if (title.includes('bath')) return 'shower';
-  if (title.includes('walk') || title.includes('park') || title.includes('run')) return 'walk';
-  if (title.includes('play')) return 'gamepad-variant-outline';
-  return 'image-outline';
-};
-
 const PetSyncBackground = ({ children, opacity = 0.12, style }) => (
   <View style={[{ flex: 1, backgroundColor: PETSYNC_STARTUP_BACKGROUND }, style]}>
     <Image
@@ -392,7 +260,7 @@ const PetSyncBackground = ({ children, opacity = 0.12, style }) => (
   </View>
 );
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // Runtime collections start empty and are populated from Supabase or user-created data.
 
 const PET_SOUNDS = {
@@ -642,7 +510,7 @@ const getCommunityProfileFixture = (profileKey, displayName) => {
 
   return COMMUNITY_PROFILE_FIXTURES[normalizedKey] || {
     displayName: fallbackName,
-    avatarEmoji: '??',
+    avatarEmoji: '🐾',
     memberSince: 'Jan 2026',
     bio: 'Community member',
     favoritePetName: '',
@@ -660,7 +528,7 @@ const mapCommunityProfileRow = (row, fallback = {}) => ({
   displayName: row.display_name || row.displayName || row.full_name || row.username || row.name || fallback.displayName,
   email: row.email || row.email_address || fallback.email || '',
   avatarUrl: row.avatar_url || row.avatarUrl || row.photo_url || fallback.avatarUrl || '',
-  avatarEmoji: row.avatar_emoji || row.avatarEmoji || fallback.avatarEmoji || '??',
+  avatarEmoji: row.avatar_emoji || row.avatarEmoji || fallback.avatarEmoji || '🐾',
   memberSince: row.member_since || row.memberSince || row.created_at || fallback.memberSince || '',
   bio: row.bio || row.about || fallback.bio || '',
   favoritePetName: row.favorite_pet_name || row.favoritePetName || fallback.favoritePetName || '',
@@ -1006,15 +874,15 @@ const buildCommunityProfileAchievements = (profile) => ([
 ]);
 
 const PET_SPECIES_EMOJIS = {
-  dog: '??',
-  cat: '??',
-  fish: '??',
-  bird: '??',
-  reptile: '??',
-  rabbit: '??',
-  hamster: '??',
-  horse: '??',
-  other: '??',
+  dog: '🐕',
+  cat: '🐈',
+  fish: '🐟',
+  bird: '🐦',
+  reptile: '🦎',
+  rabbit: '🐇',
+  hamster: '🐹',
+  horse: '🐴',
+  other: '🐾',
 };
 
 const PetsContext = createContext({
@@ -1188,7 +1056,7 @@ function FeatureLockedModal({ visible, feature, onClose }) {
             <View style={s.featureLockedBenefitList}>
               {featureBenefits.map((benefit) => (
                 <View key={benefit} style={s.featureLockedBenefitRow}>
-                  <MaterialCommunityIcons name="check-circle-outline" size={16} color={C.modalBodyText} style={s.featureLockedBullet} />
+                  <Text style={s.featureLockedBullet}>•</Text>
                   <Text style={s.featureLockedBenefitText}>{benefit}</Text>
                 </View>
               ))}
@@ -1213,7 +1081,7 @@ function FeatureLockedModal({ visible, feature, onClose }) {
   );
 }
 
-const getDefaultPetEmoji = (species) => PET_SPECIES_EMOJIS[species] || '??';
+const getDefaultPetEmoji = (species) => PET_SPECIES_EMOJIS[species] || '🐾';
 
 const getStarterPetScore = (species) => {
   const scoreMap = {
@@ -1730,20 +1598,20 @@ const registerForPushNotificationsAsync = async () => {
 
 const getHealthRecordIcon = (type) => {
   const iconMap = {
-    vaccination: 'needle',
-    medication: 'pill',
-    appointment: 'calendar-clock',
-    weight: 'scale-bathroom',
-    symptom: 'alert-circle-outline',
-    surgery: 'scalpel',
-    allergy: 'allergy',
-    diagnosis: 'file-document-outline',
-    lab: 'test-tube',
-    fish: 'fish',
-    imported_file: 'file-import-outline',
+    vaccination: '💉',
+    medication: '💊',
+    appointment: '🏥',
+    weight: '⚖️',
+    symptom: '🤒',
+    surgery: '🩺',
+    allergy: '⚠️',
+    diagnosis: '📋',
+    lab: '🧪',
+    fish: '🐟',
+    imported_file: '📎',
   };
 
-  return iconMap[type] || 'file-document-outline';
+  return iconMap[type] || '📋';
 };
 
 const getHealthRecordNotes = (type, details = {}, fallback = '') => {
@@ -2591,7 +2459,7 @@ const buildLostPetContactLine = (contactPhone, reward) => {
   const parts = [];
   if (contactPhone) parts.push(`Contact: ${contactPhone}`);
   if (reward) parts.push(`Reward: ${reward}`);
-  return parts.join(' � ');
+  return parts.join(' • ');
 };
 
 const buildProfileText = ({ pet, report, contactPhone, reward }) => {
@@ -2757,7 +2625,7 @@ const saveMemoryToSupabase = async (memory) => {
       mediaType,
       title,
       createdAt: memory.createdAt || new Date().toISOString(),
-      emoji: publicUrl ? null : (memory.milestone ? '??' : '???'),
+      emoji: publicUrl ? null : (memory.milestone ? '🏆' : '🖼️'),
     };
   } catch (error) {
     console.log('Supabase memories save error:', error);
@@ -2826,7 +2694,7 @@ const loadMemoriesFromSupabase = async (currentUser = null, accessiblePetIds = [
       title: row.caption || '',
       userId: row.user_id || null,
       createdAt: row.created_at || '',
-      emoji: row.photo_url ? null : (row.milestone ? '??' : '???'),
+      emoji: row.photo_url ? null : (row.milestone ? '🏆' : '🖼️'),
       syncStatus: 'synced',
       description: row.caption || '',
       isShared: String(row.user_id || '') !== String(currentUserId),
@@ -3339,7 +3207,7 @@ const loadRecipesFromSupabase = async () => {
     prepTime: row.prep_time,
     likes: row.likes || 0,
     comments: row.comments || 0,
-    emoji: row.emoji || '??',
+    emoji: row.emoji || '🥣',
     instructions: [],
     liked: false,
   }));
@@ -3374,7 +3242,7 @@ const DatePickerField = ({ label, value, onChange, placeholder }) => {
         <Text style={[s.datePickerFieldText, !value && s.datePickerPlaceholder]}>
           {value ? formatDate(value) : placeholder}
         </Text>
-        <Text style={s.datePickerChevron}>?</Text>
+        <Text style={s.datePickerChevron}>▾</Text>
       </TouchableOpacity>
 
       <Modal visible={showPicker} transparent animationType="fade" onRequestClose={closePicker}>
@@ -3383,7 +3251,7 @@ const DatePickerField = ({ label, value, onChange, placeholder }) => {
             <View style={s.datePickerModalHeader}>
               <Text style={s.datePickerModalTitle}>{label}</Text>
               <TouchableOpacity onPress={closePicker}>
-                <Text style={s.datePickerModalClose}>?</Text>
+                <Text style={s.datePickerModalClose}>✕</Text>
               </TouchableOpacity>
             </View>
 
@@ -3456,7 +3324,7 @@ const ReminderTimePickerField = ({
         <Text style={[s.datePickerFieldText, !normalizeReminderTimeLabel(value) && s.datePickerPlaceholder]}>
           {normalizeReminderTimeLabel(value) || 'Select time'}
         </Text>
-        <Text style={s.datePickerChevron}>?</Text>
+        <Text style={s.datePickerChevron}>▾</Text>
       </TouchableOpacity>
       <Text style={{ color: C.healthMutedText, fontSize: 12, marginTop: 6, fontWeight: '600' }}>
         Use AM or PM.
@@ -3497,7 +3365,7 @@ const ReminderTimePickerField = ({
             <View style={s.datePickerModalHeader}>
               <Text style={s.datePickerModalTitle}>Select Time</Text>
               <TouchableOpacity onPress={closePicker}>
-                <Text style={s.datePickerModalClose}>?</Text>
+                <Text style={s.datePickerModalClose}>✕</Text>
               </TouchableOpacity>
             </View>
             <View style={s.datePickerPickerWrap}>
@@ -3719,58 +3587,58 @@ const buildStarterReminders = (pet) => {
   switch (species) {
     case 'dog':
       return [
-        makeReminder('Morning Feeding', 'silverware-fork-knife', 0, '7:00 AM'),
-        makeReminder('Evening Feeding', 'silverware-fork-knife', 0, '6:00 PM'),
-        makeReminder('Daily Walk', 'walk', 1, '8:00 AM'),
-        makeReminder('Grooming Reminder', 'content-cut', 2, '4:00 PM'),
+        makeReminder('Morning Feeding', '🍽️', 0, '7:00 AM'),
+        makeReminder('Evening Feeding', '🍽️', 0, '6:00 PM'),
+        makeReminder('Daily Walk', '🦮', 1, '8:00 AM'),
+        makeReminder('Grooming Reminder', '🧼', 2, '4:00 PM'),
       ];
     case 'cat':
       return [
-        makeReminder('Feeding', 'silverware-fork-knife', 0, '8:00 AM'),
-        makeReminder('Litter Cleaning', 'broom', 0, '5:00 PM'),
-        makeReminder('Play Session', 'paw', 1, '6:00 PM'),
+        makeReminder('Feeding', '🍽️', 0, '8:00 AM'),
+        makeReminder('Litter Cleaning', '🧹', 0, '5:00 PM'),
+        makeReminder('Play Session', '🎾', 1, '6:00 PM'),
       ];
     case 'fish':
       return [
-        makeReminder('Feed Fish', 'fish', 0, '9:00 AM'),
-        makeReminder('Water Change', 'water', 1, '4:00 PM'),
-        makeReminder('Tank Check', 'fish', 2, '10:00 AM'),
+        makeReminder('Feed Fish', '🍽️', 0, '9:00 AM'),
+        makeReminder('Water Change', '💧', 1, '4:00 PM'),
+        makeReminder('Tank Check', '🌡️', 2, '10:00 AM'),
       ];
     case 'bird':
       return [
-        makeReminder('Feed Bird', 'bird', 0, '8:00 AM'),
-        makeReminder('Cage Cleaning', 'broom', 1, '5:00 PM'),
-        makeReminder('Enrichment Time', 'dots-horizontal', 2, '3:00 PM'),
+        makeReminder('Feed Bird', '🍽️', 0, '8:00 AM'),
+        makeReminder('Cage Cleaning', '🧼', 1, '5:00 PM'),
+        makeReminder('Enrichment Time', '💬', 2, '3:00 PM'),
       ];
     case 'reptile':
       return [
-        makeReminder('Heat Lamp Check', 'lightbulb-on-outline', 0, '8:00 AM'),
-        makeReminder('Feeding', 'silverware-fork-knife', 0, '6:00 PM'),
-        makeReminder('Habitat Cleaning', 'broom', 1, '4:00 PM'),
+        makeReminder('Heat Lamp Check', '🔥', 0, '8:00 AM'),
+        makeReminder('Feeding', '🍽️', 0, '6:00 PM'),
+        makeReminder('Habitat Cleaning', '🧽', 1, '4:00 PM'),
       ];
     case 'rabbit':
       return [
-        makeReminder('Morning Feeding', 'silverware-fork-knife', 0, '8:00 AM'),
-        makeReminder('Hutch Cleaning', 'broom', 1, '5:00 PM'),
-        makeReminder('Play Time', 'paw', 2, '4:00 PM'),
+        makeReminder('Morning Feeding', '🍽️', 0, '8:00 AM'),
+        makeReminder('Hutch Cleaning', '🧹', 1, '5:00 PM'),
+        makeReminder('Play Time', '🎾', 2, '4:00 PM'),
       ];
     case 'hamster':
       return [
-        makeReminder('Feed Hamster', 'silverware-fork-knife', 0, '8:00 AM'),
-        makeReminder('Cage Tidy', 'broom', 1, '5:00 PM'),
-        makeReminder('Wheel Time', 'rotate-right', 2, '4:00 PM'),
+        makeReminder('Feed Hamster', '🍽️', 0, '8:00 AM'),
+        makeReminder('Cage Tidy', '🧼', 1, '5:00 PM'),
+        makeReminder('Wheel Time', '🎾', 2, '4:00 PM'),
       ];
     case 'horse':
       return [
-        makeReminder('Morning Feed', 'silverware-fork-knife', 0, '7:00 AM'),
-        makeReminder('Grooming', 'content-cut', 1, '4:00 PM'),
-        makeReminder('Trail Ride', 'horse-human', 2, '3:00 PM'),
+        makeReminder('Morning Feed', '🍽️', 0, '7:00 AM'),
+        makeReminder('Grooming', '🧼', 1, '4:00 PM'),
+        makeReminder('Trail Ride', '🐎', 2, '3:00 PM'),
       ];
     default:
       return [
-        makeReminder('Daily Care Check', 'check-circle-outline', 0, '9:00 AM'),
-        makeReminder('Feed Time', 'silverware-fork-knife', 1, '9:00 AM'),
-        makeReminder('Habitat Cleaning', 'broom', 2, '4:00 PM'),
+        makeReminder('Daily Care Check', '✨', 0, '9:00 AM'),
+        makeReminder('Feed Time', '🍽️', 1, '9:00 AM'),
+        makeReminder('Habitat Cleaning', '🧹', 2, '4:00 PM'),
       ];
   }
 };
@@ -3790,7 +3658,7 @@ const buildStarterHealthRecords = (pet) => {
       date: todayLabel,
       provider: null,
       status: 'current',
-      icon: 'scale-bathroom',
+      icon: '⚖️',
       nextDue: null,
       value: parsedWeightValue,
       unit: 'lbs',
@@ -3810,7 +3678,7 @@ const buildStarterHealthRecords = (pet) => {
       date: todayLabel,
       provider: 'Onboarding',
       status: 'current',
-      icon: 'calendar-check-outline',
+      icon: '🌊',
       nextDue: null,
       details: {
         vetClinic: 'Onboarding',
@@ -3826,7 +3694,7 @@ const buildStarterHealthRecords = (pet) => {
       date: todayLabel,
       provider: 'To be scheduled',
       status: 'upcoming',
-      icon: 'calendar-check-outline',
+      icon: '🏥',
       nextDue: nextYearLabel,
       details: {
         vetClinic: 'To be scheduled',
@@ -3842,81 +3710,81 @@ const buildQuickActionsForSpecies = (pet, handleQuickAction, navigation, onAIVet
   const openAIVet = typeof onAIVetPress === 'function'
     ? onAIVetPress
     : () => navigation.navigate('AIVet', { selectedPetId: pet?.id || '' });
-  const baseVetAction = { icon: 'stethoscope', label: 'AI Vet', action: openAIVet };
+  const baseVetAction = { icon: '🩺', label: 'AI Vet', action: openAIVet };
   const species = pet.species?.toLowerCase();
 
   switch (species) {
     case 'dog':
       return [
-        { icon: 'silverware-fork-knife', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, 'silverware-fork-knife') },
-        { icon: 'walk', label: 'Log Walk', action: () => handleQuickAction('walk', 'Walk logged', pet, 'walk') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
-        { icon: 'pill', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, 'pill') },
-        { icon: 'paw', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, 'paw') },
-        { icon: 'content-cut', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, 'content-cut') },
+        { icon: '🍽️', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, '🍽️') },
+        { icon: '🦮', label: 'Log Walk', action: () => handleQuickAction('walk', 'Walk logged', pet, '🦮') },
+        { icon: '⚖️', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '⚖️') },
+        { icon: '💊', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, '💊') },
+        { icon: '🎾', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, '🎾') },
+        { icon: '🧼', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, '🧼') },
         baseVetAction,
       ];
     case 'cat':
       return [
-        { icon: 'silverware-fork-knife', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, 'silverware-fork-knife') },
-        { icon: 'paw', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, 'paw') },
-        { icon: 'content-cut', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, 'content-cut') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
-        { icon: 'pill', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, 'pill') },
-        { icon: 'broom', label: 'Litter Cleaned', action: () => handleQuickAction('custom', 'Litter cleaned', pet, 'broom') },
+        { icon: '🍽️', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, '🍽️') },
+        { icon: '🎾', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, '🎾') },
+        { icon: '🧼', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, '🧼') },
+        { icon: '⚖️', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '⚖️') },
+        { icon: '💊', label: 'Medication', action: () => handleQuickAction('medication', 'Medication given', pet, '💊') },
+        { icon: '🧹', label: 'Litter Cleaned', action: () => handleQuickAction('custom', 'Litter cleaned', pet, '🧹') },
         baseVetAction,
       ];
     case 'fish':
       return [
-        { icon: 'fish', label: 'Feed Fish', action: () => handleQuickAction('meal', 'Fish fed', pet, 'fish') },
-        { icon: 'water', label: 'Water Change', action: () => handleQuickAction('custom', 'Water changed', pet, 'water') },
-        { icon: 'thermometer', label: 'Tank Temp', action: () => handleQuickAction('custom', 'Tank temperature checked', pet, 'thermometer') },
-        { icon: 'flask-outline', label: 'Check pH', action: () => handleQuickAction('custom', 'Water pH checked', pet, 'flask-outline') },
-        { icon: 'air-filter', label: 'Filter Cleaned', action: () => handleQuickAction('custom', 'Filter cleaned', pet, 'air-filter') },
+        { icon: '🍽️', label: 'Feed Fish', action: () => handleQuickAction('meal', 'Fish fed', pet, '🍽️') },
+        { icon: '💧', label: 'Water Change', action: () => handleQuickAction('custom', 'Water changed', pet, '💧') },
+        { icon: '🌡️', label: 'Tank Temp', action: () => handleQuickAction('custom', 'Tank temperature checked', pet, '🌡️') },
+        { icon: '🧪', label: 'Check pH', action: () => handleQuickAction('custom', 'Water pH checked', pet, '🧪') },
+        { icon: '🧽', label: 'Filter Cleaned', action: () => handleQuickAction('custom', 'Filter cleaned', pet, '🧽') },
         baseVetAction,
       ];
     case 'bird':
       return [
-        { icon: 'twitter', label: 'Feed Bird', action: () => handleQuickAction('meal', 'Bird fed', pet, 'twitter') },
-        { icon: 'broom', label: 'Cage Cleaned', action: () => handleQuickAction('custom', 'Cage cleaned', pet, 'broom') },
-        { icon: 'account-group-outline', label: 'Social Time', action: () => handleQuickAction('custom', 'Social time logged', pet, 'account-group-outline') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
+        { icon: '🍽️', label: 'Feed Bird', action: () => handleQuickAction('meal', 'Bird fed', pet, '🍽️') },
+        { icon: '🧼', label: 'Cage Cleaned', action: () => handleQuickAction('custom', 'Cage cleaned', pet, '🧼') },
+        { icon: '💬', label: 'Social Time', action: () => handleQuickAction('custom', 'Social time logged', pet, '💬') },
+        { icon: '⚖️', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '⚖️') },
         baseVetAction,
       ];
     case 'reptile':
       return [
-        { icon: 'snake', label: 'Feed Reptile', action: () => handleQuickAction('meal', 'Reptile fed', pet, 'snake') },
-        { icon: 'thermometer', label: 'Heat Check', action: () => handleQuickAction('custom', 'Heat checked', pet, 'thermometer') },
-        { icon: 'water', label: 'Humidity Check', action: () => handleQuickAction('custom', 'Humidity checked', pet, 'water') },
-        { icon: 'broom', label: 'Habitat Cleaned', action: () => handleQuickAction('custom', 'Habitat cleaned', pet, 'broom') },
+        { icon: '🍽️', label: 'Feed Reptile', action: () => handleQuickAction('meal', 'Reptile fed', pet, '🍽️') },
+        { icon: '🔥', label: 'Heat Check', action: () => handleQuickAction('custom', 'Heat checked', pet, '🔥') },
+        { icon: '💧', label: 'Humidity Check', action: () => handleQuickAction('custom', 'Humidity checked', pet, '💧') },
+        { icon: '🧽', label: 'Habitat Cleaned', action: () => handleQuickAction('custom', 'Habitat cleaned', pet, '🧽') },
         baseVetAction,
       ];
     case 'rabbit':
       return [
-        { icon: 'paw', label: 'Feed Rabbit', action: () => handleQuickAction('meal', 'Rabbit fed', pet, 'paw') },
-        { icon: 'broom', label: 'Hutch Cleaned', action: () => handleQuickAction('custom', 'Hutch cleaned', pet, 'broom') },
-        { icon: 'paw', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, 'paw') },
+        { icon: '🍽️', label: 'Feed Rabbit', action: () => handleQuickAction('meal', 'Rabbit fed', pet, '🍽️') },
+        { icon: '🧹', label: 'Hutch Cleaned', action: () => handleQuickAction('custom', 'Hutch cleaned', pet, '🧹') },
+        { icon: '🎾', label: 'Play Time', action: () => handleQuickAction('custom', 'Play time logged', pet, '🎾') },
         baseVetAction,
       ];
     case 'hamster':
       return [
-        { icon: 'paw', label: 'Feed Hamster', action: () => handleQuickAction('meal', 'Hamster fed', pet, 'paw') },
-        { icon: 'broom', label: 'Cage Tidy', action: () => handleQuickAction('custom', 'Cage tidied', pet, 'broom') },
-        { icon: 'rotate-right', label: 'Wheel Time', action: () => handleQuickAction('custom', 'Wheel time logged', pet, 'rotate-right') },
+        { icon: '🍽️', label: 'Feed Hamster', action: () => handleQuickAction('meal', 'Hamster fed', pet, '🍽️') },
+        { icon: '🧼', label: 'Cage Tidy', action: () => handleQuickAction('custom', 'Cage tidied', pet, '🧼') },
+        { icon: '🎾', label: 'Wheel Time', action: () => handleQuickAction('custom', 'Wheel time logged', pet, '🎾') },
         baseVetAction,
       ];
     case 'horse':
       return [
-        { icon: 'horse', label: 'Feed Horse', action: () => handleQuickAction('meal', 'Horse fed', pet, 'horse') },
-        { icon: 'content-cut', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, 'content-cut') },
-        { icon: 'walk', label: 'Trail Ride', action: () => handleQuickAction('walk', 'Trail ride logged', pet, 'walk') },
+        { icon: '🍽️', label: 'Feed Horse', action: () => handleQuickAction('meal', 'Horse fed', pet, '🍽️') },
+        { icon: '🧼', label: 'Grooming', action: () => handleQuickAction('grooming', 'Grooming logged', pet, '🧼') },
+        { icon: '🐎', label: 'Trail Ride', action: () => handleQuickAction('walk', 'Trail ride logged', pet, '🐎') },
         baseVetAction,
       ];
     default:
       return [
-        { icon: 'silverware-fork-knife', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, 'silverware-fork-knife') },
-        { icon: 'heart-pulse', label: 'Care Check', action: () => handleQuickAction('custom', 'Care check logged', pet, 'heart-pulse') },
-        { icon: 'scale-bathroom', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, 'scale-bathroom') },
+        { icon: '🍽️', label: 'Log Meal', action: () => handleQuickAction('meal', 'Meal logged', pet, '🍽️') },
+        { icon: '🧹', label: 'Care Check', action: () => handleQuickAction('custom', 'Care check logged', pet, '🧹') },
+        { icon: '⚖️', label: 'Log Weight', action: () => handleQuickAction('weight', 'Weight updated', pet, '⚖️') },
         baseVetAction,
       ];
   }
@@ -3930,29 +3798,29 @@ const AI_SUGGESTIONS = [
 ];
 
 const PRESET_ACTIONS = [
-  { label: 'Treat Time', icon: 'candy-outline' },
-  { label: 'Couch Cuddles', icon: 'heart-outline' },
-  { label: 'Bath Time', icon: 'shower' },
-  { label: 'Grooming', icon: 'content-cut' },
-  { label: 'Nap Time', icon: 'sleep' },
-  { label: 'Photo Time', icon: 'camera-outline' },
-  { label: 'Park Time', icon: 'pine-tree' },
-  { label: 'Beach Day', icon: 'beach' },
-  { label: 'Fetch Session', icon: 'circle-outline' },
-  { label: 'Run Together', icon: 'run-fast' },
-  { label: 'Yarn Play', icon: 'cat' },
-  { label: 'Bird Watching', icon: 'binoculars' },
-  { label: 'Cat Nap', icon: 'cat' },
-  { label: 'Bird Bath', icon: 'shower' },
-  { label: 'Singing Time', icon: 'music-note-outline' },
-  { label: 'Tank Cleaning', icon: 'water' },
-  { label: 'Aquarium Time', icon: 'fish' },
-  { label: 'Heat Lamp Check', icon: 'lightbulb-on-outline' },
-  { label: 'Clean Enclosure', icon: 'broom' },
-  { label: 'Bunny Cuddles', icon: 'paw' },
-  { label: 'Snack Time', icon: 'silverware-fork-knife' },
-  { label: 'Trail Ride', icon: 'horse' },
-  { label: 'Horse Grooming', icon: 'content-cut' },
+  { label: 'Treat Time', icon: '🍖' },
+  { label: 'Couch Cuddles', icon: '❤️' },
+  { label: 'Bath Time', icon: '🛁' },
+  { label: 'Grooming', icon: '🧼' },
+  { label: 'Nap Time', icon: '😴' },
+  { label: 'Photo Time', icon: '📸' },
+  { label: 'Park Time', icon: '🏞️' },
+  { label: 'Beach Day', icon: '🏖️' },
+  { label: 'Fetch Session', icon: '🎾' },
+  { label: 'Run Together', icon: '🏃' },
+  { label: 'Yarn Play', icon: '🧶' },
+  { label: 'Bird Watching', icon: '👀' },
+  { label: 'Cat Nap', icon: '😺' },
+  { label: 'Bird Bath', icon: '🛁' },
+  { label: 'Singing Time', icon: '🎶' },
+  { label: 'Tank Cleaning', icon: '🧽' },
+  { label: 'Aquarium Time', icon: '✨' },
+  { label: 'Heat Lamp Check', icon: '🔥' },
+  { label: 'Clean Enclosure', icon: '🧹' },
+  { label: 'Bunny Cuddles', icon: '🐰' },
+  { label: 'Snack Time', icon: '🥕' },
+  { label: 'Trail Ride', icon: '🐎' },
+  { label: 'Horse Grooming', icon: '🧴' },
 ];
 
 const CARE_ACTIVITY_TYPES = new Set([
@@ -3974,9 +3842,9 @@ const normalizeCareActivityType = (type) => {
   return normalized;
 };
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // REUSABLE COMPONENTS
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function Card({ children, style }) {
   return (
     <View style={[s.card, style]}>
@@ -4084,7 +3952,13 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }
                     }}
                   />
                 ) : (
-                  <PetSpeciesIcon species={pet.species} size={34} color="#fff" />
+                  <Text
+                    style={{
+                      fontSize: 38,
+                    }}
+                  >
+                    {pet.emoji || getDefaultPetEmoji(pet.species)}
+                  </Text>
                 )}
               </Animated.View>
             ) : (
@@ -4125,7 +3999,13 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }
                     }}
                   />
                 ) : (
-                  <PetSpeciesIcon species={pet.species} size={28} color="#7E57C2" />
+                  <Text
+                    style={{
+                      fontSize: 32,
+                    }}
+                  >
+                    {pet.emoji || getDefaultPetEmoji(pet.species)}
+                  </Text>
                 )}
               </View>
             )}
@@ -4172,7 +4052,7 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }
               justifyContent: 'center',
             }}
           >
-            <Text style={{ color: C.memoryAccent, fontSize: 30, fontWeight: '700' }}>+</Text>
+            <Text style={{ color: C.memoryAccent, fontSize: 30, fontWeight: '700' }}>＋</Text>
           </View>
           <Text
             style={{
@@ -4192,12 +4072,10 @@ function PetAvatarRow({ pets, selectedId, onSelect, bounceValue, onOpenProfile }
 
 function AnimatedQuickAction({ icon, label, onPress, isAddAction }) {
   const pressScale = useRef(new Animated.Value(1)).current;
-  const safeIcon = typeof icon === 'string' || typeof icon === 'number' ? String(icon) : resolveUiIconName(label);
+  const safeIcon = typeof icon === 'string' || typeof icon === 'number' ? icon : '⭐';
   const safeLabel = typeof label === 'string' || typeof label === 'number'
     ? String(label)
     : String(label?.label || label?.name || label?.title || '');
-  const iconName = isAddAction ? 'plus-circle-outline' : safeIcon;
-  const iconColor = isAddAction ? C.primaryActionBg : resolveUiIconColor(safeLabel);
 
   const animateTo = (toValue, callback) => {
     Animated.timing(pressScale, {
@@ -4222,7 +4100,7 @@ function AnimatedQuickAction({ icon, label, onPress, isAddAction }) {
           { transform: [{ scale: pressScale }] },
         ]}
       >
-        <MaterialCommunityIcons name={iconName} size={26} color={iconColor} style={s.quickActionIcon} />
+        <Text style={s.quickActionIcon}>{safeIcon}</Text>
         <Text style={s.quickActionLabel}>{safeLabel}</Text>
       </Animated.View>
     </TouchableOpacity>
@@ -4321,7 +4199,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
   const goNext = () => {
     if (step === 1) {
       if (!petName.trim()) {
-        Alert.alert('Pet name required', "Please enter your pet's name.");
+        Alert.alert('Pet name required', 'Please enter your pet’s name.');
         return;
       }
       setStep(2);
@@ -4343,7 +4221,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
 
   const savePet = () => {
     if (!petName.trim()) {
-      Alert.alert('Pet name required', "Please enter your pet's name.");
+      Alert.alert('Pet name required', 'Please enter your pet’s name.');
       return;
     }
 
@@ -4384,7 +4262,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
   };
 
   const stepProgress = step / 3;
-  const introCopy = 'Let�s set up your pet portal';
+  const introCopy = 'Let’s set up your pet portal';
 
   const selectedSpeciesLabel = speciesOptions.find(item => item.value === petSpecies)?.label || 'Pet';
 
@@ -4411,7 +4289,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
           >
             <View style={s.addPetModalHeader}>
               <TouchableOpacity onPress={onClose}>
-                <Text style={s.addPetModalClose}>?</Text>
+                <Text style={s.addPetModalClose}>✕</Text>
               </TouchableOpacity>
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={s.addPetModalTitle}>Add Pet</Text>
@@ -4580,7 +4458,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
                       <View style={{ flex: 1 }}>
                         <Text style={s.addPetReviewName}>{petName.trim() || 'Your pet'}</Text>
                         <Text style={s.addPetReviewMeta}>
-                          {selectedSpeciesLabel} � {breedType.trim() || 'Breed / type'} � {
+                          {selectedSpeciesLabel} · {breedType.trim() || 'Breed / type'} · {
                             birthMode === 'birthday'
                               ? (birthday.trim() ? `Birthday: ${formatDate(birthday.trim())}` : 'Birthday pending')
                               : (ageText.trim() || 'Age pending')
@@ -4674,9 +4552,9 @@ const playSosSound = async () => {
     Vibration.vibrate(80);
   }
 };
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // SCREEN: DASHBOARD
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function DashboardScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
   const { openAddPetModal } = useContext(AddPetContext);
@@ -4693,14 +4571,14 @@ function DashboardScreen({ navigation }) {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
   const [reminderTitle, setReminderTitle] = useState('');
-  const [reminderIcon, setReminderIcon] = useState('bell-outline');
+  const [reminderIcon, setReminderIcon] = useState('🍽️');
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('');
   const [showReminderTimePicker, setShowReminderTimePicker] = useState(false);
   const [customActions, setCustomActions] = useState([]);
   const [showAddActionModal, setShowAddActionModal] = useState(false);
   const [customActionName, setCustomActionName] = useState('');
-  const [customActionIcon, setCustomActionIcon] = useState('paw');
+  const [customActionIcon, setCustomActionIcon] = useState('⭐');
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [weightValue, setWeightValue] = useState('');
   const [weightNotes, setWeightNotes] = useState('');
@@ -4902,20 +4780,7 @@ function DashboardScreen({ navigation }) {
       }),
     ]).start();
   }, [selectedCalendarDateKey]);
-  const reminderIconOptions = [
-    'bell-outline',
-    'silverware-fork-knife',
-    'walk',
-    'scale-bathroom',
-    'pill',
-    'content-cut',
-    'paw',
-    'fish',
-    'water',
-    'thermometer',
-    'broom',
-    'sleep',
-  ];
+  const reminderIconOptions = ['🍽️', '💊', '🦮', '🎾', '🧼', '⚖️', '💧', '🌡️', '🧪', '🧹', '🔥', '💬'];
   const formatLocalDateKey = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -5048,7 +4913,7 @@ function DashboardScreen({ navigation }) {
     logQuickActionFire('Add Reminder');
     setEditingReminder(null);
     setReminderTitle('');
-    setReminderIcon('bell-outline');
+    setReminderIcon('🍽️');
     setReminderDate(selectedCalendarDateKey);
     setReminderTime('');
     setShowReminderModal(true);
@@ -5111,7 +4976,7 @@ function DashboardScreen({ navigation }) {
     setShowReminderModal(false);
     setEditingReminder(null);
     setReminderTitle('');
-    setReminderIcon('bell-outline');
+    setReminderIcon('🍽️');
     setReminderDate(selectedCalendarDateKey);
     setReminderTime('');
     setShowReminderTimePicker(false);
@@ -5139,7 +5004,7 @@ function DashboardScreen({ navigation }) {
       if (nextReminder) {
         if (nextReminder.completed) {
           void cancelReminderNotification(reminderId);
-          addActivityLog('reminder_completed', nextReminder.title, nextReminder.icon || '?', {
+          addActivityLog('reminder_completed', nextReminder.title, nextReminder.icon || '✅', {
             source: 'quick_action',
             origin: 'reminder_complete',
             reminderId,
@@ -5259,7 +5124,7 @@ function DashboardScreen({ navigation }) {
   const openEditReminder = (reminder) => {
     setEditingReminder(reminder);
     setReminderTitle(reminder.title || '');
-    setReminderIcon(reminder.icon || 'bell-outline');
+    setReminderIcon(reminder.icon || '🍽️');
     setReminderDate(normalizeReminderDateKey(reminder.date) || selectedCalendarDateKey);
     setReminderTime(normalizeReminderTimeLabel(reminder.time) || '');
     setShowReminderModal(true);
@@ -5308,7 +5173,7 @@ function DashboardScreen({ navigation }) {
   };
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = hour < 12 ? '☀️ Good morning' : hour < 17 ? '🌤️ Good afternoon' : '🌙 Good evening';
   const displayName = authProfile?.display_name
     || authUser?.user_metadata?.display_name
     || authUser?.email?.split('@')?.[0]
@@ -5404,9 +5269,7 @@ function DashboardScreen({ navigation }) {
     const safeDescription = typeof extra.description === 'string' && extra.description.trim()
       ? extra.description.trim()
       : safeTitle;
-    const safeIcon = typeof icon === 'string' && icon.trim() && icon !== '?' && icon !== '??' && icon !== '???'
-      ? icon
-      : resolveUiIconName(safeTitle);
+    const safeIcon = typeof icon === 'string' || typeof icon === 'number' ? icon : '⭐';
     const newLog = {
       id: Date.now().toString(),
       user_id: currentUserId,
@@ -5462,7 +5325,7 @@ function DashboardScreen({ navigation }) {
     }
   };
 
-  const handleQuickAction = (actionType, label, targetPet = pet, icon = resolveUiIconName(label), extra = {}) => {
+  const handleQuickAction = (actionType, label, targetPet = pet, icon = '⭐', extra = {}) => {
     console.log('Quick action pressed:', actionType);
 
     if (!targetPet || targetPet?.isReadOnly || isSharedPetForCurrentUser(targetPet, CURRENT_USER_OWNER_ID)) {
@@ -5523,30 +5386,31 @@ function DashboardScreen({ navigation }) {
     );
   }
   const scoreColor = currentScore >= 85 ? C.successText : currentScore >= 65 ? C.warningText : C.dangerText;
-  const selectedPetActivity = getTrendEventsForPet(activityLogs, pet.id);
+  const recentActivity = getTrendEventsForPet(activityLogs, pet.id);
   const weeklyTrendSummary = getWeeklyTrendSummaryForPet(activityLogs, pet.id);
   const trendBreakdown = getTrendActionBreakdownForPet(activityLogs, pet.id);
+  const trendEvents = getTrendEventsForPet(activityLogs, pet.id);
   const streakDays = getStreakDaysForPet(activityLogs, pet.id);
   const healthInsights = [];
 
   if (streakDays >= 3) {
-    healthInsights.push('Daily care streak active');
+    healthInsights.push('🟢 Daily care streak active');
   }
 
-  if (selectedPetActivity.length >= 3) {
-    healthInsights.push('Active care logging');
-  } else if (selectedPetActivity.length === 0) {
-    healthInsights.push('No recent pet care logged');
+  if (recentActivity.length >= 3) {
+    healthInsights.push('🟢 Active care logging');
+  } else if (recentActivity.length === 0) {
+    healthInsights.push('🟡 No recent pet care logged');
   }
 
   if (currentScore >= 90) {
-    healthInsights.push('Excellent wellness status');
+    healthInsights.push('🟢 Excellent wellness status');
   } else if (currentScore < 70) {
-    healthInsights.push('Wellness needs attention');
+    healthInsights.push('🟡 Wellness needs attention');
   }
 
   if (healthInsights.length === 0) {
-    healthInsights.push('Wellness status looks stable');
+    healthInsights.push('🟢 Wellness status looks stable');
   }
 
   const visibleHealthInsights = healthInsights.slice(0, 3);
@@ -5601,24 +5465,13 @@ function DashboardScreen({ navigation }) {
       };
     });
   const ACTION_ICONS = [
-    'silverware-fork-knife',
-    'walk',
-    'scale-bathroom',
-    'pill',
-    'paw',
-    'content-cut',
-    'fish',
-    'water',
-    'thermometer',
-    'broom',
-    'stethoscope',
-    'camera-outline',
+
   ];
   const displayedQuickActions = [
     ...dashboardQuickActions,
     ...customActions,
     {
-      icon: 'plus-circle-outline',
+      icon: '➕',
       label: 'Add Action',
       action: () => setShowAddActionModal(true),
       isAddAction: true,
@@ -5643,7 +5496,7 @@ function DashboardScreen({ navigation }) {
       },
     ]);
     setCustomActionName('');
-    setCustomActionIcon('paw');
+    setCustomActionIcon('⭐');
     setShowAddActionModal(false);
   };
 
@@ -5677,7 +5530,7 @@ function DashboardScreen({ navigation }) {
         weightNotes: weightNotes.trim(),
         source: 'dashboard_quick_action',
       },
-      icon: 'scale-bathroom',
+      icon: '⚖️',
       status: 'current',
     };
 
@@ -5685,7 +5538,7 @@ function DashboardScreen({ navigation }) {
     if (typeof saveHealthRecordToSupabase === 'function') {
       void saveHealthRecordToSupabase(nextRecord);
     }
-    handleQuickAction('weight', 'Weight logged', pet, 'scale-bathroom', {
+    handleQuickAction('weight', 'Weight logged', pet, '⚖️', {
       origin: 'weight_modal',
     });
     setWeightValue('');
@@ -5722,7 +5575,7 @@ function DashboardScreen({ navigation }) {
         medicationNotes: trimmedDose,
         source: 'dashboard_quick_action',
       },
-      icon: 'pill',
+      icon: '💊',
       status: 'current',
     };
 
@@ -5730,7 +5583,7 @@ function DashboardScreen({ navigation }) {
     if (typeof saveHealthRecordToSupabase === 'function') {
       void saveHealthRecordToSupabase(nextRecord);
     }
-    handleQuickAction('medication', `${trimmedName} logged`, pet, 'pill', {
+    handleQuickAction('medication', `${trimmedName} logged`, pet, '💊', {
       origin: 'medication_modal',
     });
     setMedicationName('');
@@ -5748,10 +5601,10 @@ function DashboardScreen({ navigation }) {
       >
         {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingTop: 3, paddingBottom: 0 }}>
-            <View style={s.dashboardBrandRow}>
+          <View style={s.dashboardBrandRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <View style={s.dashboardBrandMark}>
-                <MaterialCommunityIcons name="paw" size={20} color={C.primaryActionBg} />
+                <Text style={s.dashboardBrandMarkText}>🐾</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.dashboardBrandName}>PetSync+</Text>
@@ -5782,7 +5635,7 @@ function DashboardScreen({ navigation }) {
                 adjustsFontSizeToFit
                 minimumFontScale={0.7}
               >
-                {greeting}, {displayName}!
+                {greeting}, {displayName}! 👋
               </Text>
 
               <Text style={s.subGreeting} numberOfLines={1}>
@@ -5811,10 +5664,7 @@ function DashboardScreen({ navigation }) {
                 activeOpacity={0.95}
                 disabled={isSosAnimating}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <MaterialCommunityIcons name="alarm-light" size={15} color="#fff" />
-                  <Text style={s.sosText}>SOS</Text>
-                </View>
+                <Text style={s.sosText}>🚨 SOS</Text>
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -5836,16 +5686,14 @@ function DashboardScreen({ navigation }) {
                 {pet.photoUri ? (
                   <Image source={{ uri: pet.photoUri }} style={s.dashboardAvatarImage} />
                 ) : (
-                  <MaterialCommunityIcons name="paw" size={28} color={C.primaryActionBg} />
+                  <Text style={s.dashboardAvatarEmoji}>{pet.emoji || '🐾'}</Text>
                 )}
               </View>
 
               <View style={s.dashboardHeroInfo}>
                 <View style={s.dashboardPetNameRow}>
                   <Text style={s.dashboardPetName}>{pet.name}</Text>
-                  <View style={s.dashboardPetBadge}>
-                    <MaterialCommunityIcons name="paw" size={12} color="#fff" />
-                  </View>
+                  <Text style={s.dashboardPetBadge}>🐾</Text>
                 </View>
                 <Text style={s.dashboardPetMeta}>
                 {pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet'} · {pet.breed || 'Breed'}
@@ -6000,7 +5848,7 @@ function DashboardScreen({ navigation }) {
           <View style={s.calendarHeaderTopRow}>
             <Text style={[s.sectionTitle, { color: '#152033', marginBottom: 0 }]}>Care Calendar</Text>
             <TouchableOpacity style={s.calendarAddBtn} onPress={openReminderModal}>
-              <Text style={s.calendarAddBtnText}>+ Add Reminder</Text>
+              <Text style={s.calendarAddBtnText}>＋ Add Reminder</Text>
             </TouchableOpacity>
           </View>
           <View style={s.calendarHeaderBottomRow}>
@@ -6104,11 +5952,7 @@ function DashboardScreen({ navigation }) {
               >
                 <Card style={[s.reminderCard, { backgroundColor: '#ffffffa6', borderColor: '#E6EAF5' }, reminder.completed && s.reminderCardDone]}>
                   <View style={s.reminderIconWrap}>
-                    <MaterialCommunityIcons
-                      name={resolveUiIconName(reminder.title)}
-                      size={18}
-                      color={C.primaryActionBg}
-                    />
+                    <Text style={s.reminderIcon}>{reminder.icon || '🔔'}</Text>
                   </View>
                   <View style={s.reminderContent}>
                     <Text style={[s.reminderTitle, reminder.completed && s.reminderTitleDone]}>
@@ -6116,7 +5960,7 @@ function DashboardScreen({ navigation }) {
                     </Text>
                     <Text style={s.reminderDate}>
                       {formatReminderDate(reminder.date)}
-                      {reminder.time ? ` � ${reminder.time}` : ''}
+                      {reminder.time ? ` · ${reminder.time}` : ''}
                     </Text>
                     {reminder.source === 'healthRecord' && reminder.sourceRecordId ? (
                       <TouchableOpacity
@@ -6143,12 +5987,12 @@ function DashboardScreen({ navigation }) {
         {/* Recent Activity */}
         <View style={[s.section, { marginTop: 8 }]}>
           <Text style={[s.sectionTitle, { color: '#152033' }]}>Recent Activity</Text>
-          {selectedPetActivity.length === 0 ? (
+          {recentActivity.length === 0 ? (
             <Card style={[s.recentActivityEmptyCard, { backgroundColor: C.homeRecentActivityCard, borderColor: C.homeCardBorder }]}>
-              <Text style={s.recentActivityEmptyText}>No recent activity yet.</Text>
+              <Text style={s.recentActivityEmptyText}>No activity yet for {pet.name}</Text>
             </Card>
         ) : (
-            selectedPetActivity.map(log => (
+            recentActivity.map(log => (
               <TouchableOpacity
                 key={log.id}
                 activeOpacity={0.9}
@@ -6199,7 +6043,7 @@ function DashboardScreen({ navigation }) {
                     setCustomActionIcon(preset.icon);
                   }}
                 >
-                  <MaterialCommunityIcons name={preset.icon} size={24} color={C.primaryActionBg} style={s.presetActionIcon} />
+                  <Text style={s.presetActionIcon}>{preset.icon}</Text>
                   <Text style={s.presetActionLabel}>{preset.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -6211,12 +6055,7 @@ function DashboardScreen({ navigation }) {
                   style={[s.iconPickChip, customActionIcon === icon && s.iconPickChipActive]}
                   onPress={() => setCustomActionIcon(icon)}
                 >
-                  <MaterialCommunityIcons
-                    name={icon}
-                    size={24}
-                    color={customActionIcon === icon ? C.primaryActionBg : C.muted}
-                    style={s.iconPickChipText}
-                  />
+                  <Text style={[s.iconPickChipText, customActionIcon === icon && s.iconPickChipTextActive]}>{icon}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -6348,12 +6187,7 @@ function DashboardScreen({ navigation }) {
                         style={[s.iconPickChip, reminderIcon === icon && s.iconPickChipActive]}
                         onPress={() => setReminderIcon(icon)}
                       >
-                        <MaterialCommunityIcons
-                          name={icon}
-                          size={24}
-                          color={reminderIcon === icon ? C.primaryActionBg : C.muted}
-                          style={s.iconPickChipText}
-                        />
+                        <Text style={[s.iconPickChipText, reminderIcon === icon && s.iconPickChipTextActive]}>{icon}</Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -6364,7 +6198,7 @@ function DashboardScreen({ navigation }) {
                         setShowReminderModal(false);
                         setEditingReminder(null);
                         setReminderTitle('');
-                        setReminderIcon('???');
+                        setReminderIcon('🍽️');
                         setReminderDate(selectedCalendarDateKey);
                         setReminderTime('');
                         setShowReminderTimePicker(false);
@@ -6393,7 +6227,7 @@ function DashboardScreen({ navigation }) {
             <View style={s.datePickerModalHeader}>
               <Text style={s.datePickerModalTitle}>Select Time</Text>
               <TouchableOpacity onPress={() => setShowReminderTimePicker(false)}>
-                <Text style={s.datePickerModalClose}>?</Text>
+                <Text style={s.datePickerModalClose}>✕</Text>
               </TouchableOpacity>
             </View>
             <View style={s.datePickerPickerWrap}>
@@ -6423,9 +6257,9 @@ function DashboardScreen({ navigation }) {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // SCREEN: PET PROFILE
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function PetProfileScreen({ navigation, route }) {
   const { pets, setPets } = useContext(PetsContext);
   const { petScores } = useContext(PetScoresContext);
@@ -6573,7 +6407,7 @@ function PetProfileScreen({ navigation, route }) {
             <Text style={s.pageSub}>No pets available yet</Text>
           </View>
           <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color={C.text} />
+            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>✕</Text>
           </TouchableOpacity>
         </View>
 
@@ -6597,7 +6431,6 @@ function PetProfileScreen({ navigation, route }) {
 
   const currentScore = Math.max(0, Math.min(100, petScores[pet.id] ?? pet.score ?? 80));
   const scoreColor = currentScore >= 85 ? C.successText : currentScore >= 65 ? C.warningText : C.dangerText;
-  const selectedPetActivity = getTrendEventsForPet(activityLogs || [], pet.id);
   const speciesLabel = pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet';
   const ageOrBirthday = pet.birthday ? `Birthday: ${formatDate(pet.birthday)}` : `Age: ${pet.age || 'Unknown'}`;
   const careGoalsText = Array.isArray(pet.careGoals)
@@ -6637,7 +6470,7 @@ function PetProfileScreen({ navigation, route }) {
     if (dateA !== 0) return dateA;
     return parseReminderTimeToMinutes(a.time) - parseReminderTimeToMinutes(b.time);
   }).slice(0, 3);
-  const petActivity = selectedPetActivity
+  const petActivity = trendEvents
     .sort((a, b) => {
       const dateA = parseProfileDate(b.created_at || b.createdAt || b.dateKey || b.date)?.getTime() || 0;
       const dateB = parseProfileDate(a.created_at || a.createdAt || a.dateKey || a.date)?.getTime() || 0;
@@ -6647,7 +6480,7 @@ function PetProfileScreen({ navigation, route }) {
     .slice(0, 3);
   const petHealthRecordCount = healthRecords.filter((record) => record.petId === pet.id).length;
   const achievementBadges = [
-    selectedPetActivity.length > 0 && { label: 'First Care Log' },
+    trendEvents.length > 0 && { label: 'First Care Log' },
     streakDays >= 7 && { label: '7 Day Streak' },
     currentScore >= 90 && { label: 'Health Champion' },
     petHealthRecordCount >= 5 && { label: 'Organized Pet Parent' },
@@ -6708,7 +6541,7 @@ function PetProfileScreen({ navigation, route }) {
           </View>
 
           <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
-            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>?</Text>
+            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>✕</Text>
           </TouchableOpacity>
         </View>
 
@@ -6718,7 +6551,7 @@ function PetProfileScreen({ navigation, route }) {
               {pet.photoUri ? (
                 <Image source={{ uri: pet.photoUri }} style={s.petProfileAvatarImage} />
               ) : (
-                <PetSpeciesIcon species={pet.species} size={24} color={C.primaryActionBg} />
+                <Text style={s.petProfileAvatarEmoji}>{pet.emoji || getDefaultPetEmoji(pet.species)}</Text>
               )}
             </View>
           </View>
@@ -6789,12 +6622,12 @@ function PetProfileScreen({ navigation, route }) {
             petActivity.map((log) => (
               <View key={log.id} style={s.petProfileActivityRow}>
                 <View style={s.petProfileActivityIcon}>
-                  <Text style={{ fontSize: 18 }}>{log.icon || '?'}</Text>
+                  <Text style={{ fontSize: 18 }}>{log.icon || '✨'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.petProfileActivityTitle}>{log.title}</Text>
                   <Text style={s.petProfileActivitySub}>
-                    {log.time}{log.dateKey ? ` � ${formatDate(log.dateKey)}` : ''}
+                    {log.time}{log.dateKey ? ` · ${formatDate(log.dateKey)}` : ''}
                   </Text>
                 </View>
               </View>
@@ -6810,13 +6643,13 @@ function PetProfileScreen({ navigation, route }) {
             upcomingReminders.map((reminder) => (
               <View key={reminder.id} style={s.petProfileCareRow}>
                 <View style={s.petProfileCareIcon}>
-                <MaterialCommunityIcons name={resolveUiIconName(reminder.title)} size={18} color={C.primaryActionBg} />
+                  <Text style={{ fontSize: 18 }}>{reminder.icon || '📌'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.petProfileActivityTitle}>{reminder.title}</Text>
                   <Text style={s.petProfileActivitySub}>
                     {formatDate(reminder.date)}
-                    {reminder.time ? ` � ${reminder.time}` : ''}
+                    {reminder.time ? ` · ${reminder.time}` : ''}
                   </Text>
                 </View>
               </View>
@@ -7036,7 +6869,7 @@ function PetProfileScreen({ navigation, route }) {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function HealthHubScreen({ navigation, route }) {
   const { pets } = useContext(PetsContext);
   const { openAddPetModal } = useContext(AddPetContext);
@@ -7528,7 +7361,7 @@ function HealthHubScreen({ navigation, route }) {
             <Text style={s.pageSub}>No pets available yet</Text>
           </View>
           <TouchableOpacity style={s.iconBtn} onPress={() => navigation.goBack()}>
-            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>?</Text>
+            <Text style={{ color: C.text, fontSize: 20, fontWeight: '900' }}>✕</Text>
           </TouchableOpacity>
         </View>
         <Card style={s.petProfileInfoCard}>
@@ -7706,7 +7539,7 @@ function HealthHubScreen({ navigation, route }) {
   const appointmentFrequencyMax = Math.max(0, ...appointmentFrequencyMonths.map((item) => item.count));
   const appointmentFrequencyHasData = appointmentFrequencyMonths.some((item) => item.count > 0);
   const formatWeightTrendValue = (value) => (
-    Number.isFinite(value) ? `${value.toFixed(1).replace(/\.0$/, '')} lbs` : '�'
+    Number.isFinite(value) ? `${value.toFixed(1).replace(/\.0$/, '')} lbs` : '—'
   );
 
   const renderWeightAnalyticsCard = () => (
@@ -7718,9 +7551,9 @@ function HealthHubScreen({ navigation, route }) {
           {weightTrendRecords.length >= 2 ? (
             <Text style={s.healthAnalyticsTrendSummary}>
               {weightTrendChange > 0
-                ? `? ${Math.abs(weightTrendChange).toFixed(1).replace(/\.0$/, '')} lbs since previous entry`
+                ? `↑ ${Math.abs(weightTrendChange).toFixed(1).replace(/\.0$/, '')} lbs since previous entry`
                 : weightTrendChange < 0
-                  ? `? ${Math.abs(weightTrendChange).toFixed(1).replace(/\.0$/, '')} lbs since previous entry`
+                  ? `↓ ${Math.abs(weightTrendChange).toFixed(1).replace(/\.0$/, '')} lbs since previous entry`
                   : 'No change since previous entry'}
             </Text>
           ) : null}
@@ -8091,7 +7924,7 @@ function HealthHubScreen({ navigation, route }) {
     const typeConfig = {
       vaccination: {
         title: `Vaccination: ${mainValue}`,
-        icon: 'needle',
+        icon: '💉',
         status: 'current',
         date: clean.dateGiven || todayKey,
         nextDue: clean.nextDueDate || clean.expirationDate || clean.renewalDate || clean.dueDate || '',
@@ -8109,7 +7942,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       medication: {
         title: `Medication: ${mainValue}`,
-        icon: 'pill',
+        icon: '💊',
         status: 'current',
         date: clean.startDate || todayKey,
         nextDue: clean.endDate || clean.nextDoseDate || clean.nextRefillDate || '',
@@ -8128,7 +7961,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       appointment: {
         title: `Appointment: ${mainValue}`,
-        icon: 'calendar-clock',
+        icon: '🏥',
         status: 'upcoming',
         date: clean.appointmentDate || todayKey,
         nextDue: clean.followUpDate || clean.nextAppointmentDate || '',
@@ -8145,7 +7978,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       weight: {
         title: `Weight: ${mainValue}`,
-        icon: 'scale-bathroom',
+        icon: '⚖️',
         status: 'current',
         date: clean.weightDate || todayKey,
         details: {
@@ -8156,7 +7989,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       symptom: {
         title: `Symptom: ${mainValue}`,
-        icon: 'alert-circle-outline',
+        icon: '🤒',
         status: 'due_soon',
         date: clean.symptomDate || todayKey,
         nextDue: clean.symptomFollowUpDate || '',
@@ -8170,7 +8003,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       surgery: {
         title: `Surgery: ${mainValue}`,
-        icon: 'scalpel',
+        icon: '🩺',
         status: 'current',
         date: clean.surgeryDate || todayKey,
         nextDue: clean.surgeryFollowUpDate || '',
@@ -8185,7 +8018,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       allergy: {
         title: `Allergy: ${mainValue}`,
-        icon: 'allergy',
+        icon: '⚠️',
         status: 'current',
         date: todayKey,
         details: {
@@ -8197,7 +8030,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       diagnosis: {
         title: `Diagnosis: ${mainValue}`,
-        icon: 'file-document-outline',
+        icon: '📋',
         status: 'current',
         date: clean.diagnosedDate || todayKey,
         provider: clean.diagnosisVet || '',
@@ -8213,7 +8046,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       lab: {
         title: `Lab Result: ${mainValue}`,
-        icon: 'test-tube',
+        icon: '🧪',
         status: 'current',
         date: clean.testDate || todayKey,
         provider: clean.labVet || '',
@@ -8227,7 +8060,7 @@ function HealthHubScreen({ navigation, route }) {
       },
       fish: {
         title: `Tank Reading: ${mainValue}`,
-        icon: 'fish',
+        icon: '🐟',
         status: 'current',
         date: clean.readingDate || todayKey,
         details: {
@@ -8682,7 +8515,7 @@ function HealthHubScreen({ navigation, route }) {
         add(`Dosage: ${String(details.dosage || record.dosage || '').trim() || 'Not set'}`);
         break;
       case 'weight':
-        add(`${record.title || 'Weight'}`);
+        add(`⚖️ ${record.title || 'Weight'}`);
         add(`${String(details.weightValue || record.value || record.weightValue || '').trim() || 'Not set'}${record.unit ? ` ${record.unit}` : ''}`);
         add(`Recorded: ${formatDate(details.weightDate || record.date)}`);
         break;
@@ -8871,15 +8704,15 @@ function HealthHubScreen({ navigation, route }) {
   };
 
   if (overdueCount > 0) {
-    pushInsight(`${overdueCount} overdue care item${overdueCount === 1 ? '' : 's'} need attention`);
+    pushInsight(`⚠️ ${overdueCount} overdue care item${overdueCount === 1 ? '' : 's'} need attention`);
   }
 
   if (dueSoonCount > 0) {
-    pushInsight(`${dueSoonCount} item${dueSoonCount === 1 ? '' : 's'} due soon`);
+    pushInsight(`⏳ ${dueSoonCount} item${dueSoonCount === 1 ? '' : 's'} due soon`);
   }
 
   if (insightLines.length < 3 && medicationRecords.length > 0) {
-    pushInsight(`${medicationRecords.length} medication record${medicationRecords.length === 1 ? '' : 's'} active`);
+    pushInsight(`💊 ${medicationRecords.length} medication record${medicationRecords.length === 1 ? '' : 's'} active`);
   }
 
   if (insightLines.length < 3) {
@@ -8895,36 +8728,36 @@ function HealthHubScreen({ navigation, route }) {
       const latestWeightText = String(latestWeightValue).trim();
 
       if (latestWeightText && ageInDays <= 30) {
-        pushInsight(`Latest weight: ${latestWeightText}`);
+        pushInsight(`⚖️ Latest weight: ${latestWeightText}`);
       } else {
-        pushInsight('No recent weight record');
+        pushInsight('⚖️ No recent weight record');
       }
     } else {
-      pushInsight('No recent weight record');
+      pushInsight('⚖️ No recent weight record');
     }
   }
 
   if (insightLines.length < 3) {
     if (vaccineRecords.length > 0 && vaccineRecords.every((record) => record.displayStatus === 'current')) {
-      pushInsight('Vaccines are up to date');
+      pushInsight('💉 Vaccines are up to date');
     } else if (vaccineRecords.length === 0) {
-      pushInsight('No vaccine records yet');
+      pushInsight('💉 No vaccine records yet');
     }
   }
 
   if (insightLines.length < 3 && importedFileRecords.length > 0) {
-    pushInsight(`?? ${importedFileRecords.length} imported file${importedFileRecords.length === 1 ? '' : 's'} stored`);
+    pushInsight(`📄 ${importedFileRecords.length} imported file${importedFileRecords.length === 1 ? '' : 's'} stored`);
   }
 
   if (insightLines.length < 3) {
     const upcomingAppointmentCount = appointmentRecords.filter((record) => record.displayStatus === 'upcoming').length;
     if (upcomingAppointmentCount > 0) {
-      pushInsight(`?? ${upcomingAppointmentCount} upcoming appointment${upcomingAppointmentCount === 1 ? '' : 's'}`);
+      pushInsight(`📅 ${upcomingAppointmentCount} upcoming appointment${upcomingAppointmentCount === 1 ? '' : 's'}`);
     }
   }
 
   if (insightLines.length === 0 && (recordCount > 0 || selectedPetReminders.length > 0)) {
-    pushInsight('? Wellness records are up to date');
+    pushInsight('✨ Wellness records are up to date');
   }
 
   const safeInsightLines = Array.isArray(insightLines) ? insightLines : [];
@@ -9943,7 +9776,7 @@ function HealthHubScreen({ navigation, route }) {
       {items && items.length > 0 ? (
         items.map((item, index) => (
           <View key={`${fallbackKey}-${index}`} style={s.analysisItemRow}>
-            <MaterialCommunityIcons name="check-circle-outline" size={14} color={C.healthTitleText} style={s.analysisItemBullet} />
+            <Text style={[s.analysisItemBullet, { color: C.healthTitleText }]}>•</Text>
             <Text style={[s.analysisItemText, { color: C.healthBodyText }]}>{formatAnalysisItem(item)}</Text>
           </View>
         ))
@@ -10314,14 +10147,14 @@ function HealthHubScreen({ navigation, route }) {
                   borderColor: C.healthCardBorder,
                 }}
               >
-                <PetSpeciesIcon species={pet?.species} size={24} color={C.primaryActionBg} />
+                <Text style={{ fontSize: 28 }}>{pet?.emoji || '🐾'}</Text>
               </View>
             )}
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: C.healthTitleText, fontSize: 20, fontWeight: '900' }}>{pet.name}</Text>
               <Text style={{ color: C.healthMutedText, fontSize: 12, marginTop: 2, textTransform: 'capitalize' }}>
-                {pet.species || 'Pet'} · {getPetAgeLabel(pet)} · {pet.gender || 'Gender not set'}
+                {pet.species || 'Pet'} • {getPetAgeLabel(pet)} • {pet.gender || 'Gender not set'}
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                 <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: `${C.infoBg}18`, borderWidth: 1, borderColor: `${C.infoBg}40` }}>
@@ -10493,7 +10326,7 @@ function HealthHubScreen({ navigation, route }) {
 
         {records.length === 0 ? (
           <Card style={{ alignItems: 'center', padding: 32, marginHorizontal: 16, borderRadius: 22, backgroundColor: C.healthRecordCard, borderWidth: 1, borderColor: C.healthCardBorder }}>
-            <MaterialCommunityIcons name="image-outline" size={38} color={C.healthAccent} style={{ marginBottom: 8 }} />
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>📋</Text>
 
             <Text
               style={{
@@ -10649,7 +10482,7 @@ function HealthHubScreen({ navigation, route }) {
                         justifyContent: 'center',
                       }}
                     >
-                      {addReminderToCalendar ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>?</Text> : null}
+                      {addReminderToCalendar ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>✓</Text> : null}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>Add reminder to Care Calendar</Text>
@@ -10708,11 +10541,7 @@ function HealthHubScreen({ navigation, route }) {
                   borderColor: 'rgba(255,107,53,0.22)',
                   marginRight: 12,
                 }}>
-                  <MaterialCommunityIcons
-                    name={resolveUiIconName(selectedRecord?.type || selectedRecord?.title)}
-                    size={26}
-                    color={C.primaryActionBg}
-                  />
+                  <Text style={{ fontSize: 28 }}>{selectedRecord?.icon || '📄'}</Text>
                 </View>
 
                 <View style={{ flex: 1, paddingTop: 2 }}>
@@ -10813,7 +10642,7 @@ function HealthHubScreen({ navigation, route }) {
                           >
                             <Text style={s.recordDetailFieldLabel}>{label}</Text>
                             <Text style={[s.recordDetailFieldValue, isNotes && s.recordDetailNotesValue]}>
-                              {value || '�'}
+                              {value || '—'}
                             </Text>
                           </View>
                         );
@@ -10941,7 +10770,7 @@ function HealthHubScreen({ navigation, route }) {
                       </Text>
                       {analysisResults.warnings.map((warning, index) => (
                         <Text key={`warning-${index}`} style={{ color: C.healthMutedText, fontSize: 12, lineHeight: 18 }}>
-                          � {warning}
+                          • {warning}
                         </Text>
                       ))}
                     </View>
@@ -11074,7 +10903,7 @@ function HealthHubScreen({ navigation, route }) {
             <View style={s.datePickerModalHeader}>
               <Text style={s.datePickerModalTitle}>Select Time</Text>
               <TouchableOpacity onPress={() => setShowReminderTimePicker(false)}>
-                <Text style={s.datePickerModalClose}>?</Text>
+                <Text style={s.datePickerModalClose}>✕</Text>
               </TouchableOpacity>
             </View>
             <View style={s.datePickerPickerWrap}>
@@ -11104,9 +10933,9 @@ function HealthHubScreen({ navigation, route }) {
     </PetSyncBackground>
   );
 }
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // SCREEN: MEMORY VAULT
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function MemoryVaultScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
   const { openAddPetModal } = useContext(AddPetContext);
@@ -11243,9 +11072,9 @@ function MemoryVaultScreen({ navigation }) {
 
   const getMemoryDisplayEmoji = (memory) => {
     if (memory?.photoUri && !isVideoMedia(memory?.mediaType || memory?.mimeType)) return '';
-    if (isVideoMedia(memory?.mediaType || memory?.mimeType)) return '??';
-    if (memory?.milestone) return '??';
-    return '???';
+    if (isVideoMedia(memory?.mediaType || memory?.mimeType)) return '🎥';
+    if (memory?.milestone) return '🏆';
+    return '🖼️';
   };
 
   const resetMemoryDraft = (overrides = {}) => {
@@ -11482,7 +11311,7 @@ function MemoryVaultScreen({ navigation }) {
           <Text style={s.pageSub}>{visibleMemories.length} memories · {visibleMemories.filter((m) => m.milestone).length} milestones</Text>
         </View>
           <TouchableOpacity style={[s.iconBtn, isSelectedPetReadOnly && { opacity: 0.45 }]} onPress={isSelectedPetReadOnly ? undefined : openMemoryCamera}>
-            <MaterialCommunityIcons name="camera-outline" size={22} color={C.memoryAccent} />
+            <Text style={{ fontSize: 24 }}>📷</Text>
           </TouchableOpacity>
       </View>
 
@@ -11495,7 +11324,7 @@ function MemoryVaultScreen({ navigation }) {
 
       {/* Memory of the Day */}
       <Card style={[s.motdCard, { backgroundColor: C.memoryCard }]}>
-        <Text style={s.motdBadge}>? Memory of the Day</Text>
+        <Text style={s.motdBadge}>✨ Memory of the Day</Text>
         {memoryOfTheDay ? (
           <>
             {memoryOfTheDay.photoUri && !isVideoMedia(memoryOfTheDay.mediaType || memoryOfTheDay.mimeType) ? (
@@ -11505,7 +11334,7 @@ function MemoryVaultScreen({ navigation }) {
               />
             ) : (
               <Text style={{ fontSize: 48, textAlign: 'center', marginVertical: 8 }}>
-                <MaterialCommunityIcons name={resolveMemoryIconName(memoryOfTheDay)} size={40} color={C.memoryAccent} />
+                {getMemoryDisplayEmoji(memoryOfTheDay) || '🖼️'}
               </Text>
             )}
             <Text style={s.motdCaption}>{memoryOfTheDay.caption || memoryOfTheDay.title || 'Special memory'}</Text>
@@ -11513,7 +11342,7 @@ function MemoryVaultScreen({ navigation }) {
           </>
         ) : (
           <>
-            <MaterialCommunityIcons name="image-outline" size={40} color={C.memoryAccent} style={{ alignSelf: 'center', marginVertical: 8 }} />
+            <Text style={{ fontSize: 42, textAlign: 'center', marginVertical: 8 }}>🖼️</Text>
             <Text style={s.motdCaption}>No memory of the day yet</Text>
             <Text style={s.motdDate}>Add a memory to start seeing highlights.</Text>
           </>
@@ -11535,7 +11364,7 @@ function MemoryVaultScreen({ navigation }) {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 60 }}>
         {visibleMemories.length === 0 ? (
           <Card style={[s.petProfileInfoCard, { marginHorizontal: 0, alignItems: 'center', backgroundColor: C.memoryCard }]}>
-            <MaterialCommunityIcons name="image-outline" size={40} color={C.memoryAccent} style={{ marginBottom: 10 }} />
+            <Text style={{ fontSize: 42, marginBottom: 10 }}>🖼️</Text>
             <Text style={s.petProfileSectionTitle}>No memories yet</Text>
             <Text style={[s.petProfileBodyText, { textAlign: 'center' }]}>
               Add your first photo, milestone, or special moment.
@@ -11557,20 +11386,20 @@ function MemoryVaultScreen({ navigation }) {
                   <Image source={{ uri: mem.photoUri }} style={{ width: '100%', height: '100%' }} />
                 ) : mem.photoUri && isVideoMedia(mem.mediaType || mem.mimeType) ? (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                    <MaterialCommunityIcons name={resolveMemoryIconName(mem)} size={28} color={C.memoryAccent} />
+                    <Text style={s.memEmoji}>🎥</Text>
                     <Text style={{ color: C.text, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 }}>
                       {mem.caption}
                     </Text>
                   </View>
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-                    <MaterialCommunityIcons name={resolveMemoryIconName(mem)} size={28} color={C.memoryAccent} />
+                    <Text style={s.memEmoji}>{getMemoryDisplayEmoji(mem)}</Text>
                     <Text style={{ color: C.text, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 }}>
                       {mem.caption}
                     </Text>
                   </View>
                 )}
-                {mem.milestone && <View style={s.mileStar}><Text style={{ fontSize: 10 }}>?</Text></View>}
+                {mem.milestone && <View style={s.mileStar}><Text style={{ fontSize: 10 }}>⭐</Text></View>}
               </TouchableOpacity>
             ))}
           </View>
@@ -11578,7 +11407,7 @@ function MemoryVaultScreen({ navigation }) {
       </ScrollView>
 
       <TouchableOpacity style={[s.fab, isSelectedPetReadOnly && { opacity: 0.45 }]} onPress={isSelectedPetReadOnly ? undefined : openAddMemoryModal}>
-        <Text style={s.fabText}>+</Text>
+        <Text style={s.fabText}>＋</Text>
       </TouchableOpacity>
 
       <Modal visible={showMemoryModal} transparent animationType="fade" onRequestClose={closeMemoryModal}>
@@ -11596,7 +11425,7 @@ function MemoryVaultScreen({ navigation }) {
                 {memoryDraft.photoUri ? (
                   isVideoMedia(memoryDraft.mimeType) ? (
                     <View style={s.memoryPhotoPickerPreview}>
-                      <MaterialCommunityIcons name="video-outline" size={28} color={C.memoryAccent} />
+                      <Text style={s.memoryPhotoPickerIcon}>🎥</Text>
                       <Text style={s.memoryPhotoPickerText}>Video selected</Text>
                       <Text style={s.memoryPhotoPickerSubtext}>Tap to choose a different photo or video</Text>
                     </View>
@@ -11734,7 +11563,7 @@ function MemoryVaultScreen({ navigation }) {
               {selectedMemory?.photoUri ? (
                 isVideoMedia(selectedMemory.mediaType || selectedMemory.mimeType) ? (
                   <View style={{ height: 180, alignItems: 'center', justifyContent: 'center', backgroundColor: C.memoryCard, borderRadius: 16, borderWidth: 1, borderColor: C.memoryCardBorder, marginBottom: 12 }}>
-                    <MaterialCommunityIcons name="camera-outline" size={38} color={C.memoryAccent} />
+                    <Text style={{ fontSize: 40 }}>🎥</Text>
                     <Text style={{ color: C.memoryMutedText, marginTop: 6 }}>Video memory</Text>
                   </View>
                 ) : (
@@ -11742,7 +11571,7 @@ function MemoryVaultScreen({ navigation }) {
                 )
               ) : (
                 <View style={{ height: 120, borderRadius: 16, marginBottom: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: C.memoryCard, borderWidth: 1, borderColor: C.memoryCardBorder }}>
-                  <MaterialCommunityIcons name={resolveMemoryIconName(selectedMemory || {})} size={38} color={C.memoryAccent} />
+                  <Text style={{ fontSize: 40 }}>{getMemoryDisplayEmoji(selectedMemory || {}) || '🖼️'}</Text>
                 </View>
               )}
 
@@ -11817,9 +11646,9 @@ function MemoryVaultScreen({ navigation }) {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // SCREEN: COMMUNITY
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function CommunityScreen() {
   const { pets } = useContext(PetsContext);
   const navigation = useNavigation();
@@ -11859,7 +11688,7 @@ function CommunityScreen() {
     navigation.navigate('CommunityProfile', {
       profileKey: normalizeCommunityProfileKey(profileKey || displayName),
       displayName: displayName || profileKey || 'Community Member',
-      avatarEmoji: avatarEmoji || '??',
+      avatarEmoji: avatarEmoji || '🐾',
       avatarUrl,
     });
   };
@@ -12237,7 +12066,7 @@ function CommunityScreen() {
       petType: existingPost?.petType || 'Multi-pet Dad',
       time: 'Just now',
       content: postText,
-      emoji: existingPost?.emoji || '??',
+      emoji: existingPost?.emoji || '🐾',
       likes: existingPost?.likes ?? 0,
       comments: existingPost?.comments ?? 0,
       type: existingPost?.type || 'general',
@@ -12436,7 +12265,7 @@ function CommunityScreen() {
       prepTime,
       likes: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.likes ?? 0 : 0,
       comments: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.comments ?? 0 : 0,
-      emoji: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.emoji ?? '??' : '??',
+      emoji: editingRecipeId ? recipes.find((recipe) => recipe.id === editingRecipeId)?.emoji ?? '🥣' : '🥣',
       instructions: editingRecipeId
         ? recipes.find((recipe) => recipe.id === editingRecipeId)?.instructions ?? generatedInstructions
         : generatedInstructions,
@@ -12519,12 +12348,12 @@ function CommunityScreen() {
 
     return (
       <Card key={alert.id} style={{ marginBottom: 14, paddingTop: 14, backgroundColor: C.communityCard }}>
-          <View style={s.postAuthorRow}>
-            <View style={s.postAvatar}>
+        <View style={s.postAuthorRow}>
+          <View style={s.postAvatar}>
             {alert.photoUrl ? (
               <Image source={{ uri: alert.photoUrl }} style={{ width: 42, height: 42, borderRadius: 21 }} />
             ) : (
-              <PetSpeciesIcon species={speciesLabel} size={18} color={C.sosBodyText} />
+              <Text style={{ fontSize: 18 }}>{alert.petName ? alert.petName.charAt(0).toUpperCase() : '🐾'}</Text>
             )}
           </View>
           <View style={s.flex}>
@@ -12544,7 +12373,7 @@ function CommunityScreen() {
           {alert.photoUrl ? (
             <Image source={{ uri: alert.photoUrl }} style={{ width: '100%', height: '100%', borderRadius: 16 }} />
           ) : (
-            <MaterialCommunityIcons name="alarm-light" size={40} color="#fff" />
+            <Text style={{ fontSize: 40 }}>{alert.petName ? '🐾' : '🚨'}</Text>
           )}
         </View>
 
@@ -12565,11 +12394,11 @@ function CommunityScreen() {
 
         <View style={s.postActions}>
           <TouchableOpacity style={s.postAction} onPress={() => openContactOwner(alert)}>
-            <MaterialCommunityIcons name="phone-outline" size={18} color={C.linkText} />
+            <Text style={{ fontSize: 18 }}>📞</Text>
             <Text style={s.postActionText}>Contact Owner</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.postAction} onPress={() => shareLostPetAlert(alert)}>
-            <MaterialCommunityIcons name="share-variant-outline" size={18} color={C.linkText} />
+            <Text style={{ fontSize: 18 }}>↗️</Text>
             <Text style={s.postActionText}>Share Alert</Text>
           </TouchableOpacity>
         </View>
@@ -12604,13 +12433,13 @@ function CommunityScreen() {
       })()}
       {post.lost && (
         <View style={s.lostBanner}>
-          <Text style={s.lostBannerText}>Lost Pet Alert</Text>
+          <Text style={s.lostBannerText}>🚨 LOST PET ALERT</Text>
         </View>
       )}
       <View style={s.postAuthorRow}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => openCommunityProfile(post.author, post.author, post.emoji)}>
           <View style={s.postAvatar}>
-            <MaterialCommunityIcons name="account-circle-outline" size={20} color={C.communityTitleText} />
+            <Text style={{ fontSize: 18 }}>{post.emoji}</Text>
           </View>
         </TouchableOpacity>
       <TouchableOpacity style={s.flex} activeOpacity={0.85} onPress={() => openCommunityProfile(post.author, post.author, post.emoji)}>
@@ -12621,7 +12450,7 @@ function CommunityScreen() {
       <Text style={s.postContent}>{post.content}</Text>
       <View style={s.postActions}>
         <TouchableOpacity style={s.postAction} onPress={() => toggleLike(post.id)}>
-          <MaterialCommunityIcons name={post.liked ? 'heart' : 'heart-outline'} size={18} color={post.liked ? '#e74c3c' : C.linkText} />
+          <Text style={{ fontSize: 18 }}>{post.liked ? '❤️' : '🤍'}</Text>
           <Text style={[s.postActionText, post.liked && { color: '#e74c3c' }]}>{post.likes}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -12632,11 +12461,11 @@ function CommunityScreen() {
             label: post.content || post.author || 'Community Post',
           })}
         >
-          <MaterialCommunityIcons name="comment-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>💬</Text>
           <Text style={s.postActionText}>{post.comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.postAction} onPress={() => Alert.alert('Share', 'Share this post to Facebook, Nextdoor, or Twitter')}>
-          <MaterialCommunityIcons name="share-variant-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>↗️</Text>
           <Text style={s.postActionText}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -12651,8 +12480,8 @@ function CommunityScreen() {
         </View>
       )}
       {post.lost && (
-        <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('Alert Sent!', '156 pet owners in your area have been notified.')}>
-          <Text style={s.alertNeighborsBtnText}>Alert My Neighborhood</Text>
+        <TouchableOpacity style={s.alertNeighborsBtn} onPress={() => Alert.alert('🚨 Alert Sent!', '156 pet owners in your area have been notified.')}>
+          <Text style={s.alertNeighborsBtnText}>🚨 Alert My Neighborhood</Text>
         </TouchableOpacity>
       )}
     </Card>
@@ -12668,7 +12497,7 @@ function CommunityScreen() {
       <View style={s.recipeHeroRow}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => openCommunityProfile(recipe.author, recipe.author, recipe.emoji)}>
           <View style={s.recipeEmojiWrap}>
-            <MaterialCommunityIcons name="food-drumstick" size={22} color={C.communityTitleText} />
+            <Text style={s.recipeEmoji}>{recipe.emoji}</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={s.flex} activeOpacity={0.85} onPress={() => openCommunityProfile(recipe.author, recipe.author, recipe.emoji)}>
@@ -12695,8 +12524,8 @@ function CommunityScreen() {
         <View style={s.recipeIngredientsBlock}>
           <Text style={s.recipeIngredientsLabel}>Ingredients preview</Text>
           <Text style={s.recipeIngredientsText}>
-            {recipeIngredients.slice(0, 3).join(' · ')}
-            {recipeIngredients.length > 3 ? ' · ·' : ''}
+            {recipeIngredients.slice(0, 3).join(' • ')}
+            {recipeIngredients.length > 3 ? ' • …' : ''}
           </Text>
         </View>
 
@@ -12704,7 +12533,7 @@ function CommunityScreen() {
           <Text style={s.recipeExpandToggleText}>
             {expandedRecipeId === recipe.id ? 'Hide full instructions' : 'Show full instructions'}
           </Text>
-          <MaterialCommunityIcons name={expandedRecipeId === recipe.id ? 'chevron-up' : 'chevron-down'} size={20} color={C.linkText} />
+          <Text style={s.recipeExpandChevron}>{expandedRecipeId === recipe.id ? '▴' : '▾'}</Text>
         </TouchableOpacity>
 
         {expandedRecipeId === recipe.id && (
@@ -12723,7 +12552,7 @@ function CommunityScreen() {
               <Text style={s.recipeInstructionsLabel}>Full ingredients</Text>
               {recipeIngredients.map((ingredient, index) => (
                 <Text key={`${recipe.id}-ingredient-${index}`} style={s.recipeIngredientFullText}>
-                  · {ingredient}
+                  • {ingredient}
                 </Text>
               ))}
             </View>
@@ -12732,7 +12561,7 @@ function CommunityScreen() {
 
         <View style={s.recipeActions}>
         <TouchableOpacity style={s.postAction} onPress={() => toggleRecipeLike(recipe.id)}>
-          <MaterialCommunityIcons name={recipe.liked ? 'heart' : 'heart-outline'} size={18} color={recipe.liked ? '#e74c3c' : C.linkText} />
+          <Text style={{ fontSize: 18 }}>{recipe.liked ? '❤️' : '🤍'}</Text>
           <Text style={[s.postActionText, recipe.liked && { color: '#e74c3c' }]}>{recipe.likes}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -12743,11 +12572,11 @@ function CommunityScreen() {
             label: recipe.title || 'Recipe',
           })}
         >
-          <MaterialCommunityIcons name="comment-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>💬</Text>
           <Text style={s.postActionText}>{recipe.comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.postAction} onPress={() => shareRecipe(recipe)}>
-          <MaterialCommunityIcons name="share-variant-outline" size={18} color={C.linkText} />
+          <Text style={{ fontSize: 18 }}>↗️</Text>
           <Text style={s.postActionText}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -12774,13 +12603,13 @@ function CommunityScreen() {
       <View style={s.pageHeader}>
         <View>
           <Text style={s.pageTitle}>Community</Text>
-          <Text style={s.pageSub}>Bayville, NJ</Text>
+          <Text style={s.pageSub}>📍 Bayville, NJ</Text>
         </View>
         <TouchableOpacity
           style={s.accentBtn}
           onPress={activeCommunityTab === 'recipes' ? openRecipeModal : () => openPostModal()}
         >
-          <Text style={s.accentBtnText}>{activeCommunityTab === 'recipes' ? '+ Recipe' : '+ Post'}</Text>
+          <Text style={s.accentBtnText}>{activeCommunityTab === 'recipes' ? '＋ Recipe' : '＋ Post'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -12835,7 +12664,7 @@ function CommunityScreen() {
 
             {visibleLostPetAlerts.length === 0 ? (
           <Card style={{ alignItems: 'center', padding: 24, marginBottom: 14, backgroundColor: C.communityPostCard }}>
-                <MaterialCommunityIcons name="alarm-light-outline" size={36} color={C.linkText} style={{ marginBottom: 8 }} />
+                <Text style={{ fontSize: 36, marginBottom: 8 }}>🚨</Text>
                 <Text style={{ color: C.communityTitleText, fontSize: 18, fontWeight: '900' }}>
                   No lost pet alerts nearby.
                 </Text>
@@ -12881,7 +12710,7 @@ function CommunityScreen() {
             >
               <TextInput
                 style={s.composeInput}
-                placeholder="What's your pet up to today?"
+                placeholder="What's your pet up to today? 🐾"
                 placeholderTextColor={C.modalMutedText}
                 value={postText}
                 onChangeText={setPostText}
@@ -12908,16 +12737,10 @@ function CommunityScreen() {
               ) : null}
               <View style={s.composeTips}>
                 <TouchableOpacity style={s.composeTip} onPress={() => pickCommunityMedia('image')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="image-outline" size={14} color={C.linkText} />
-                    <Text style={{ color: C.linkText, fontSize: 13 }}>Add Photo</Text>
-                  </View>
+                  <Text style={{ color: C.linkText, fontSize: 13 }}>📷 Add Photo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.composeTip} onPress={() => pickCommunityMedia('video')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="video-outline" size={14} color={C.linkText} />
-                    <Text style={{ color: C.linkText, fontSize: 13 }}>Add Video</Text>
-                  </View>
+                  <Text style={{ color: C.linkText, fontSize: 13 }}>🎥 Add Video</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -13071,9 +12894,9 @@ function CommunityScreen() {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // SCREEN: FAMILY SHARING
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function FamilySharingScreen({ navigation }) {
   const [familyMembers, setFamilyMembers] = useState([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -13247,7 +13070,9 @@ function FamilySharingScreen({ navigation }) {
   const renderFamilyMemberCard = (member, showResend = false) => (
     <Card key={member.id} style={s.familySharingMemberCard}>
       <View style={s.familySharingAvatarCircle}>
-        <MaterialCommunityIcons name="account-circle-outline" size={20} color={C.familySharingAccent} />
+        <Text style={s.familySharingAvatarText}>
+          {member.memberEmail ? member.memberEmail.charAt(0).toUpperCase() : '👤'}
+        </Text>
       </View>
       <View style={s.flex}>
         <Text style={s.familySharingMemberEmail}>{member.memberEmail}</Text>
@@ -13291,7 +13116,7 @@ function FamilySharingScreen({ navigation }) {
           <Text style={s.pageSub}>Invite caregivers and viewers</Text>
         </View>
         <TouchableOpacity style={s.accentBtn} onPress={() => setShowInviteModal(true)}>
-          <Text style={s.accentBtnText}>+ Invite Member</Text>
+          <Text style={s.accentBtnText}>＋ Invite Member</Text>
         </TouchableOpacity>
       </View>
 
@@ -13424,9 +13249,9 @@ function FamilySharingScreen({ navigation }) {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // SCREEN: AUTH
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function AuthScreen() {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
@@ -13581,7 +13406,7 @@ function AuthScreen() {
             <View style={{ width: '100%', maxWidth: 430, alignSelf: 'center' }}>
               <View style={{ alignItems: 'center', marginBottom: 18 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 14 }}>
-                  <MaterialCommunityIcons name="paw" size={30} color="#8E5BFF" />
+                  <Text style={{ fontSize: 34 }}>🐶</Text>
                   <LinearGradient
                     colors={['#6B3DFF', '#8E5BFF', '#FF8A3D']}
                     start={{ x: 0, y: 0 }}
@@ -13598,15 +13423,15 @@ function AuthScreen() {
                       shadowOffset: { width: 0, height: 10 },
                       elevation: 5,
                     }}
-                    >
+                  >
                     <MaterialCommunityIcons name="paw" size={54} color="#fff" />
                   </LinearGradient>
-                  <MaterialCommunityIcons name="paw" size={30} color="#8E5BFF" />
+                  <Text style={{ fontSize: 34 }}>🐱</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-                  <MaterialCommunityIcons name="paw" size={18} color="#B18BFF" />
-                  <Text style={{ fontSize: 22, color: '#FF8A3D', fontWeight: '900' }}>+</Text>
-                  <MaterialCommunityIcons name="paw" size={18} color="#B18BFF" />
+                  <Text style={{ fontSize: 22, color: '#B18BFF' }}>♡</Text>
+                  <Text style={{ fontSize: 22, color: '#FF8A3D' }}>+</Text>
+                  <Text style={{ fontSize: 22, color: '#B18BFF' }}>♡</Text>
                 </View>
                 <Text style={{ color: C.modalTitleText, fontSize: 30, fontWeight: '900', letterSpacing: -0.5, textAlign: 'center' }}>
                   Welcome back!
@@ -13759,7 +13584,7 @@ function AuthScreen() {
                         justifyContent: 'center',
                       }}
                     >
-                      {rememberMe ? <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>?</Text> : null}
+                      {rememberMe ? <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>✓</Text> : null}
                     </View>
                     <View style={s.flex}>
                       <Text style={{ color: C.modalTitleText, fontSize: 14, fontWeight: '800' }}>Remember me</Text>
@@ -13911,9 +13736,9 @@ function AuthScreen() {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // SCREEN: SETTINGS
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function SettingsScreen({ navigation, route }) {
   const { pets, setPets } = useContext(PetsContext);
   const { lostPetAlerts } = useContext(LostPetAlertsContext);
@@ -14452,17 +14277,12 @@ function SettingsScreen({ navigation, route }) {
           style={[s.menuItem, item.borderless ? null : s.menuItemBorder]}
           {...itemProps}
         >
-<MaterialCommunityIcons
-  name={item.icon || 'circle-outline'}
-  size={21}
-  color={item.accent ? C.settingsAccent : C.settingsMutedText}
-  style={s.menuIcon}
-/>
+          <Text style={s.menuIcon}>{item.icon}</Text>
           <View style={s.flex}>
     <Text style={[s.menuLabel, item.accent && { color: C.settingsAccent }, item.disabled && { color: C.muted }]}>{item.label}</Text>
             {item.sub ? <Text style={s.menuSub}>{item.sub}</Text> : null}
           </View>
-          {item.pressable === false ? <View style={{ width: 18 }} /> : <MaterialCommunityIcons name="chevron-right" size={18} color={item.disabled ? C.muted : C.settingsMutedText} />}
+          {item.pressable === false ? <View style={{ width: 18 }} /> : <Text style={[s.menuChevron, item.disabled && { color: C.muted }]}>›</Text>}
         </ItemComponent>
       );
     })()
@@ -14473,38 +14293,39 @@ function SettingsScreen({ navigation, route }) {
       title: 'Account',
       items: [
         {
-          icon: 'account-circle-outline',
+          icon: '👤',
           label: 'Profile',
           sub: 'Tap to edit your profile.',
           onPress: () => setShowAccountModal(true),
         },
         {
-          icon: 'account-group-outline',
+          icon: '🏠',
           label: 'Family Sharing',
           sub: countsLoading
             ? 'Loading invitations...'
-: `${familyCounts.total ?? 0} members · ${familyCounts.pending ?? 0} pending`,          onPress: handleFamilySharingPress,
+            : `${familyCounts.total ?? 0} members · ${familyCounts.pending ?? 0} pending`,
+          onPress: handleFamilySharingPress,
         },
       ],
     },
     {
       title: 'Pet Management',
       items: [
-        ...safePets.map((pet) => ({
+          ...safePets.map((pet) => ({
             key: pet.id,
-            icon: resolvePetSpeciesIconName(pet.species),
+            icon: getDefaultPetEmoji(pet.species),
             label: pet.name || 'Unnamed Pet',
             sub: [
               pet.species,
               pet.breed,
               pet.age,
-].filter(Boolean).join(' · ') || 'Pet profile',
+            ].filter(Boolean).join(' · ') || 'Pet profile',
             onPress: () => handleOpenPet(pet),
             onLongPress: () => deletePet(pet),
           })),
         {
           key: 'add-pet',
-          icon: 'plus-circle-outline',
+          icon: '➕',
           label: 'Add Pet',
           sub: 'Create a new pet profile',
           accent: true,
@@ -14516,13 +14337,13 @@ function SettingsScreen({ navigation, route }) {
       title: 'Notifications',
       items: [
         {
-          icon: 'bell-outline',
+          icon: '🔔',
           label: 'Reminder Notifications',
           sub: `${reminderNotificationsStatus} · ${petSoundAlertsEnabled ? 'Pet sounds on' : 'Pet sounds off'}`,
           onPress: handleReminderNotificationsPress,
         },
         {
-          icon: 'bell-ring-outline',
+          icon: '📣',
           label: 'Push Notifications',
           sub: pushNotificationStatus,
           onPress: handlePushNotificationsPress,
@@ -14533,22 +14354,22 @@ function SettingsScreen({ navigation, route }) {
       title: 'Data & Storage',
       headerPress: toggleDataStorageExpanded,
       items: [
-        { icon: 'paw', label: 'Pets', sub: countsLoading ? 'Loading...' : `${safePets.length}`, pressable: false },
-        { icon: 'heart-pulse', label: 'Health Records', sub: countsLoading ? 'Loading...' : `${healthRecordCount}`, pressable: false },
-        { icon: 'calendar-clock', label: 'Care Reminders', sub: countsLoading ? 'Loading...' : `${reminderCount}`, pressable: false },
-        { icon: 'camera-outline', label: 'Memories', sub: countsLoading ? 'Loading...' : `${storageCounts.memories ?? 0}`, pressable: false },
-        { icon: 'forum-outline', label: 'Community Posts', sub: countsLoading ? 'Loading...' : `${storageCounts.communityPosts ?? 0}`, pressable: false },
-        { icon: 'book-open-variant', label: 'Recipes', sub: countsLoading ? 'Loading...' : `${storageCounts.recipes ?? 0}`, pressable: false },
-        { icon: 'comment-outline', label: 'Comments', sub: countsLoading ? 'Loading...' : `${storageCounts.comments ?? 0}`, pressable: false },
-        { icon: 'alarm-light-outline', label: 'Lost Pet Alerts', sub: countsLoading ? 'Loading...' : `${storageCounts.lostPetAlerts ?? 0}`, pressable: false },
-        { icon: 'backup-restore', label: 'Export / Backup', sub: 'Export full account data is unavailable right now', onPress: () => Alert.alert('Export / Backup', 'Export full account data is unavailable right now.') },
+        { icon: '🐾', label: 'Pets', sub: countsLoading ? 'Loading...' : `${safePets.length}`, pressable: false },
+        { icon: '📋', label: 'Health Records', sub: countsLoading ? 'Loading...' : `${healthRecordCount}`, pressable: false },
+        { icon: '⏰', label: 'Care Reminders', sub: countsLoading ? 'Loading...' : `${reminderCount}`, pressable: false },
+        { icon: '🖼️', label: 'Memories', sub: countsLoading ? 'Loading...' : `${storageCounts.memories ?? 0}`, pressable: false },
+        { icon: '💬', label: 'Community Posts', sub: countsLoading ? 'Loading...' : `${storageCounts.communityPosts ?? 0}`, pressable: false },
+        { icon: '🍲', label: 'Recipes', sub: countsLoading ? 'Loading...' : `${storageCounts.recipes ?? 0}`, pressable: false },
+        { icon: '🗨️', label: 'Comments', sub: countsLoading ? 'Loading...' : `${storageCounts.comments ?? 0}`, pressable: false },
+        { icon: '🚨', label: 'Lost Pet Alerts', sub: countsLoading ? 'Loading...' : `${storageCounts.lostPetAlerts ?? 0}`, pressable: false },
+        { icon: '📤', label: 'Export / Backup', sub: 'Export full account data is unavailable right now', onPress: () => Alert.alert('Export / Backup', 'Export full account data is unavailable right now.') },
       ],
     },
     {
       title: 'Subscription',
       items: [
         {
-          icon: 'diamond-stone',
+          icon: '⭐',
           label: 'PetSync+ Premium',
           sub: revenueCatReady
             ? (premiumSubscriptionActive ? 'Active' : 'Upgrade available')
@@ -14561,16 +14382,16 @@ function SettingsScreen({ navigation, route }) {
       title: 'App Info',
       headerPress: handleAppInfoPress,
       items: [
-        { icon: 'information-outline', label: 'App Name', sub: 'PetSync+', pressable: false },
-        { icon: 'information-outline', label: 'Version', sub: 'v1.0.0', pressable: false },
-        { icon: 'database-outline', label: 'Supabase', sub: supabaseConnectedStatus, pressable: false },
+        { icon: '🧩', label: 'App Name', sub: 'PetSync+', pressable: false },
+        { icon: '🔢', label: 'Version', sub: 'v1.0.0', pressable: false },
+        { icon: '☁️', label: 'Supabase', sub: supabaseConnectedStatus, pressable: false },
       ],
     },
     {
       title: 'Support',
       items: [
-        { icon: 'help-circle-outline', label: 'Help Center', sub: 'Support resources', onPress: () => Alert.alert('Help Center', 'Support resources are being prepared. For now, contact PetSync+ support at petsyncplus@gmail.com.') },
-        { icon: 'star-outline', label: 'Rate PetSync+', sub: 'Post-launch', onPress: () => Alert.alert('Rate PetSync+', 'Ratings will be available after PetSync+ launches publicly.') },
+        { icon: '❓', label: 'Help Center', sub: 'Coming soon', onPress: () => Alert.alert('Help Center', 'Help Center is coming soon.') },
+        { icon: '⭐', label: 'Rate PetSync+', sub: 'Coming soon', onPress: () => Alert.alert('Rate PetSync+', 'App reviews are coming soon.') },
       ],
     },
   ];
@@ -14594,9 +14415,8 @@ function SettingsScreen({ navigation, route }) {
               <Text style={s.profileEmail}>{resolvedProfileEmail}</Text>
               <Text style={s.menuSub}>Your profile summary.</Text>
             </View>
-            <View style={[s.premiumBadge, { flexDirection: 'row', alignItems: 'center' }]}>
-              <MaterialCommunityIcons name="diamond-stone" size={14} color="#fff" style={{ marginRight: 4 }} />
-              <Text style={s.premiumBadgeText}>Premium</Text>
+            <View style={s.premiumBadge}>
+              <Text style={s.premiumBadgeText}>⭐ Premium</Text>
             </View>
         </Card>
 
@@ -14661,7 +14481,7 @@ function SettingsScreen({ navigation, route }) {
                       'Exports',
                     ].map((benefit) => (
                       <View key={benefit} style={s.featureLockedBenefitRow}>
-                        <MaterialCommunityIcons name="check-circle-outline" size={16} color={C.modalBodyText} style={s.featureLockedBullet} />
+                        <Text style={s.featureLockedBullet}>•</Text>
                         <Text style={s.featureLockedBenefitText}>{benefit}</Text>
                       </View>
                     ))}
@@ -14750,7 +14570,7 @@ function SettingsScreen({ navigation, route }) {
                   {safePets.length > 0 ? (
                     <View style={{ marginBottom: 12 }}>
                       <View style={s.myPetsSearchWrap}>
-                        <MaterialCommunityIcons name="magnify" size={18} color={C.settingsMutedText} style={s.myPetsSearchIcon} />
+                        <Text style={s.myPetsSearchIcon}>⌕</Text>
                         <TextInput
                           style={s.myPetsSearchInput}
                           value={petQuery}
@@ -14766,7 +14586,7 @@ function SettingsScreen({ navigation, route }) {
                             style={s.myPetsSearchClearBtn}
                             activeOpacity={0.8}
                           >
-                            <MaterialCommunityIcons name="close-circle" size={18} color={C.settingsMutedText} style={s.myPetsSearchClearText} />
+                            <Text style={s.myPetsSearchClearText}>✕</Text>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -14789,7 +14609,7 @@ function SettingsScreen({ navigation, route }) {
                       const ageLabel = pet.birthday ? petAge(pet.birthday) : pet.age || '';
                       const weightLabel = String(pet.weight || '').trim();
                       const speciesLabel = pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet';
-                      const breedLabel = [pet.breed, speciesLabel].filter(Boolean).join(' � ');
+                      const breedLabel = [pet.breed, speciesLabel].filter(Boolean).join(' · ');
                       const isLost = activeLostPetIds.has(String(pet.id));
 
                       return (
@@ -14803,7 +14623,7 @@ function SettingsScreen({ navigation, route }) {
                             {pet.photoUri ? (
                               <Image source={{ uri: pet.photoUri }} style={s.myPetsAvatarImage} />
                             ) : (
-                              <PetSpeciesIcon species={pet.species} size={22} color={C.primaryActionBg} />
+                              <Text style={s.myPetsAvatarEmoji}>{pet.emoji || getDefaultPetEmoji(pet.species)}</Text>
                             )}
                           </View>
 
@@ -14874,12 +14694,12 @@ function SettingsScreen({ navigation, route }) {
           <TouchableOpacity activeOpacity={0.9} onPress={handleMyPetsPress}>
             <Card style={[s.myPetsCard, { backgroundColor: C.settingsPetCard }]}>
               <View style={s.menuItem}>
-                <MaterialCommunityIcons name="paw" size={22} color={C.settingsAccent} style={s.menuIcon} />
+                <Text style={s.menuIcon}>🐾</Text>
                 <View style={s.flex}>
                   <Text style={s.menuLabel}>My Pets</Text>
                   <Text style={s.menuSub}>Tap to view and manage your pets</Text>
                 </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color={C.faintText} />
+                <Text style={s.menuChevron}>›</Text>
               </View>
             </Card>
           </TouchableOpacity>
@@ -14891,7 +14711,7 @@ function SettingsScreen({ navigation, route }) {
                 <TouchableOpacity onPress={toggleDataStorageExpanded} activeOpacity={0.88}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 }}>
                     <Text style={s.menuSectionTitle}>{showDataStorageExpanded ? 'RECORDS' : 'RECORDS'}</Text>
-  <MaterialCommunityIcons name={showDataStorageExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={C.settingsAccent} />
+  <Text style={[s.menuChevron, { color: C.settingsAccent }]}>{showDataStorageExpanded ? '⌃' : '⌄'}</Text>
                   </View>
                 </TouchableOpacity>
               ) : section.headerPress ? (
@@ -14919,12 +14739,12 @@ function SettingsScreen({ navigation, route }) {
                     onPress={toggleDataStorageExpanded}
                     activeOpacity={0.85}
                   >
-                    <MaterialCommunityIcons name="file-document-outline" size={20} color={C.settingsMutedText} style={s.menuIcon} />
+                    <Text style={s.menuIcon}>📚</Text>
                     <View style={s.flex}>
                       <Text style={s.menuLabel}>Records</Text>
                       <Text style={s.menuSub}>Tap to view all storage counts</Text>
                     </View>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color={C.faintText} />
+                    <Text style={s.menuChevron}>›</Text>
                   </TouchableOpacity>
                 </Card>
               )}
@@ -14938,7 +14758,7 @@ function SettingsScreen({ navigation, route }) {
           >
             <Text style={s.signOutText}>Logout</Text>
           </TouchableOpacity>
-          <Text style={s.versionText}>PetSync+ v1.0.0 · Made with care for pet families</Text>
+          <Text style={s.versionText}>PetSync+ v1.0.0 · Made with 🐾 for pet families</Text>
         </ScrollView>
 
         <Modal visible={showAccountModal} transparent animationType="fade" onRequestClose={() => setShowAccountModal(false)}>
@@ -15007,21 +14827,21 @@ function SettingsScreen({ navigation, route }) {
               </Text>
 
               <TouchableOpacity style={[s.menuItem, s.menuItemBorder]} onPress={toggleReminderAlerts}>
-                <MaterialCommunityIcons name="bell-outline" size={20} color={C.settingsMutedText} style={s.menuIcon} />
+                <Text style={s.menuIcon}>🔔</Text>
                 <View style={s.flex}>
                   <Text style={s.menuLabel}>Reminder alerts</Text>
                   <Text style={s.menuSub}>{reminderAlertsEnabled ? 'On' : 'Off'}</Text>
                 </View>
-                <MaterialCommunityIcons name={reminderAlertsEnabled ? 'toggle-switch' : 'toggle-switch-off'} size={24} color={reminderAlertsEnabled ? C.settingsAccent : C.faintText} />
+                <Text style={s.menuChevron}>{reminderAlertsEnabled ? '✓' : '○'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[s.menuItem, s.menuItemBorder]} onPress={togglePetSoundAlerts}>
-                <MaterialCommunityIcons name="volume-high" size={20} color={C.settingsMutedText} style={s.menuIcon} />
+                <Text style={s.menuIcon}>🔊</Text>
                 <View style={s.flex}>
                   <Text style={s.menuLabel}>Pet sound alerts</Text>
                   <Text style={s.menuSub}>{petSoundAlertsEnabled ? 'On' : 'Off'}</Text>
                 </View>
-                <MaterialCommunityIcons name={petSoundAlertsEnabled ? 'toggle-switch' : 'toggle-switch-off'} size={24} color={petSoundAlertsEnabled ? C.settingsAccent : C.faintText} />
+                <Text style={s.menuChevron}>{petSoundAlertsEnabled ? '✓' : '○'}</Text>
               </TouchableOpacity>
 
               <View style={{ marginTop: 12, marginBottom: 18 }}>
@@ -15124,9 +14944,9 @@ function SettingsScreen({ navigation, route }) {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // MODAL: AI VET ASSISTANT
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function CommunityProfileScreen({ navigation, route }) {
   const { pets } = useContext(PetsContext);
   const { healthRecords } = useContext(HealthRecordsContext);
@@ -15266,7 +15086,7 @@ function CommunityProfileScreen({ navigation, route }) {
   const achievementBadges = buildCommunityProfileAchievements(profile);
   const favoritePetEmoji = profile.favoritePetSpecies
     ? getDefaultPetEmoji(profile.favoritePetSpecies)
-    : profile.avatarEmoji || '??';
+    : profile.avatarEmoji || '🐾';
 
   return (
     <PetSyncBackground opacity={0.08}>
@@ -15274,7 +15094,7 @@ function CommunityProfileScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={s.communityProfileScroll}>
         <View style={s.communityProfileTopBar}>
           <TouchableOpacity style={s.communityProfileCloseBtn} onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="close" size={18} color={C.linkText} />
+            <Text style={s.communityProfileCloseBtnText}>✕</Text>
           </TouchableOpacity>
           <Text style={s.pageTitle}>Community Profile</Text>
           <View style={s.communityProfileTopBarSpacer} />
@@ -15292,7 +15112,7 @@ function CommunityProfileScreen({ navigation, route }) {
                   {profile.avatarUrl ? (
                     <Image source={{ uri: profile.avatarUrl }} style={s.communityProfileAvatarImage} />
                   ) : (
-                    <MaterialCommunityIcons name="account-circle-outline" size={38} color={C.communityTitleText} />
+                    <Text style={s.communityProfileAvatarEmoji}>{profile.avatarEmoji || favoritePetEmoji}</Text>
                   )}
                 </View>
               </View>
@@ -15328,7 +15148,11 @@ function CommunityProfileScreen({ navigation, route }) {
               {profile.favoritePetName ? (
                 <View style={s.communityProfilePetPreview}>
                   <View style={s.communityProfilePetPreviewAvatar}>
-                    <PetSpeciesIcon species={profile.favoritePetSpecies} size={20} color={C.communityTitleText} />
+                    {profile.favoritePetSpecies ? (
+                      <Text style={s.communityProfilePetPreviewEmoji}>{favoritePetEmoji}</Text>
+                    ) : (
+                      <Text style={s.communityProfilePetPreviewEmoji}>🐾</Text>
+                    )}
                   </View>
                   <View style={s.flex}>
                     <Text style={s.communityProfilePetPreviewName}>{profile.favoritePetName}</Text>
@@ -15367,33 +15191,11 @@ function CommunityProfileScreen({ navigation, route }) {
             </Card>
           </>
         )}
-        </ScrollView>
-        <View style={s.controlCenterAdminNav}>
-          {bottomNavItems.map((item) => {
-            const isActive = activeControlCenterNav === item.key;
-            return (
-              <TouchableOpacity
-                key={item.key}
-                style={[s.controlCenterAdminNavItem, isActive && s.controlCenterAdminNavItemActive]}
-                activeOpacity={0.9}
-                onPress={item.onPress}
-              >
-                <MaterialCommunityIcons
-                  name={item.icon}
-                  size={22}
-                  color={isActive ? C.primaryActionBg : '#808080'}
-                />
-                <Text style={[s.controlCenterAdminNavLabel, isActive && s.controlCenterAdminNavLabelActive]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </SafeAreaView>
-      </PetSyncBackground>
-    );
-  }
+      </ScrollView>
+    </SafeAreaView>
+    </PetSyncBackground>
+  );
+}
 
 const normalizeDiscoverSearch = (value) => String(value || '').trim().toLowerCase();
 const discoverMatches = (values, searchTerm) => {
@@ -15559,196 +15361,6 @@ const openExternalDiscoverLink = (url) => {
   Linking.openURL(nextUrl);
 };
 
-const formatDiscoverListingStatus = (value) => {
-  const status = String(value || 'pending').trim().toLowerCase();
-  if (status === 'approved') return 'Approved';
-  if (status === 'rejected') return 'Rejected';
-  if (status === 'suspended') return 'Suspended';
-  return 'Pending Review';
-};
-
-const formatDiscoverPromotionStatus = (value) => {
-  const status = String(value || 'pending').trim().toLowerCase();
-  if (status === 'active') return 'Active';
-  if (status === 'paused') return 'Paused';
-  if (status === 'expired') return 'Expired';
-  if (status === 'rejected') return 'Rejected';
-  return 'Pending';
-};
-
-const formatDiscoverEventStatus = (value) => {
-  const status = String(value || 'pending').trim().toLowerCase();
-  if (status === 'active') return 'Active';
-  if (status === 'cancelled') return 'Cancelled';
-  if (status === 'hidden') return 'Hidden';
-  if (status === 'rejected') return 'Rejected';
-  return 'Pending';
-};
-
-const formatDiscoverListingDate = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
-const formatDiscoverPetStatus = (value) => {
-  const status = String(value || 'available').trim().toLowerCase();
-  if (status === 'pending') return 'Pending';
-  if (status === 'adopted') return 'Adopted';
-  if (status === 'hidden') return 'Hidden';
-  return 'Available';
-};
-
-const createDefaultDiscoverBusinessRegistration = () => ({
-  name: '',
-  category_id: '',
-  description: '',
-  phone: '',
-  email: '',
-  website: '',
-  address: '',
-  city: '',
-  state: '',
-  zip: '',
-});
-
-const createDefaultDiscoverShelterRegistration = () => ({
-  name: '',
-  description: '',
-  phone: '',
-  email: '',
-  website: '',
-  donation_url: '',
-  address: '',
-  city: '',
-  state: '',
-  zip: '',
-});
-
-const createDiscoverBusinessEditForm = (listing = {}) => ({
-  name: String(listing.name || ''),
-  description: String(listing.description || ''),
-  phone: String(listing.phone || ''),
-  email: String(listing.email || ''),
-  website: String(listing.website || ''),
-  facebook_url: String(listing.facebook_url || ''),
-  instagram_url: String(listing.instagram_url || ''),
-  tiktok_url: String(listing.tiktok_url || ''),
-  youtube_url: String(listing.youtube_url || ''),
-  service_mode: String(listing.service_mode || 'local_only'),
-  online_service_url: String(listing.online_service_url || ''),
-  address: String(listing.address || ''),
-  city: String(listing.city || ''),
-  state: String(listing.state || ''),
-  zip: String(listing.zip || ''),
-  hours_json: typeof listing.hours_json === 'string'
-    ? listing.hours_json
-    : listing.hours_json && typeof listing.hours_json === 'object'
-      ? JSON.stringify(listing.hours_json, null, 2)
-      : '',
-  logo_url: String(listing.logo_url || ''),
-});
-
-const createDiscoverShelterEditForm = (listing = {}) => ({
-  name: String(listing.name || ''),
-  description: String(listing.description || ''),
-  phone: String(listing.phone || ''),
-  email: String(listing.email || ''),
-  website: String(listing.website || ''),
-  donation_url: String(listing.donation_url || ''),
-  volunteer_url: String(listing.volunteer_url || ''),
-  wishlist_url: String(listing.wishlist_url || ''),
-  amazon_wishlist_url: String(listing.amazon_wishlist_url || ''),
-  service_mode: String(listing.service_mode || 'local_only'),
-  online_service_url: String(listing.online_service_url || ''),
-  address: String(listing.address || ''),
-  city: String(listing.city || ''),
-  state: String(listing.state || ''),
-  zip: String(listing.zip || ''),
-  logo_url: String(listing.logo_url || ''),
-});
-
-const createDiscoverPetForm = (pet = {}) => ({
-  shelter_id: String(pet.shelter_id || ''),
-  name: String(pet.name || ''),
-  species: String(pet.species || ''),
-  breed: String(pet.breed || ''),
-  age_label: String(pet.age_label || ''),
-  sex: String(pet.sex || ''),
-  size: String(pet.size || ''),
-  weight: String(pet.weight || ''),
-  description: String(pet.description || ''),
-  personality: String(pet.personality || ''),
-  good_with_kids: pet.good_with_kids ?? null,
-  good_with_dogs: pet.good_with_dogs ?? null,
-  good_with_cats: pet.good_with_cats ?? null,
-  house_trained: pet.house_trained ?? null,
-  medical_status: String(pet.medical_status || ''),
-  adoption_fee: pet.adoption_fee != null ? String(pet.adoption_fee) : '',
-  status: String(pet.status || 'available'),
-});
-
-const createDiscoverPromotionForm = (promotion = {}) => ({
-  business_id: String(promotion.business_id || ''),
-  title: String(promotion.title || ''),
-  description: String(promotion.description || ''),
-  promo_code: String(promotion.promo_code || ''),
-  button_text: String(promotion.button_text || ''),
-  button_url: String(promotion.button_url || ''),
-  starts_at: String(promotion.starts_at || ''),
-  ends_at: String(promotion.ends_at || ''),
-  image_url: String(promotion.image_url || ''),
-  status: String(promotion.status || 'pending'),
-});
-
-const createDiscoverPartnerApplicationForm = (application = {}) => ({
-  business_name: String(application.business_name || ''),
-  organization_name: String(application.organization_name || ''),
-  contact_name: String(application.contact_name || ''),
-  email: String(application.email || ''),
-  phone: String(application.phone || ''),
-  website: String(application.website || ''),
-  category: String(application.category || ''),
-  city: String(application.city || ''),
-  state: String(application.state || ''),
-  short_description: String(application.short_description || ''),
-  partner_type: String(application.partner_type || 'shelter'),
-  status: String(application.status || 'pending'),
-});
-
-const createDiscoverEventForm = (event = {}) => ({
-  host_type: String(event.host_type || 'community'),
-  business_id: String(event.business_id || ''),
-  shelter_id: String(event.shelter_id || ''),
-  title: String(event.title || ''),
-  description: String(event.description || ''),
-  event_type: String(event.event_type || ''),
-  starts_at: String(event.starts_at || ''),
-  ends_at: String(event.ends_at || ''),
-  max_attendees: event.max_attendees != null ? String(event.max_attendees) : '',
-  registration_required: Boolean(event.registration_required),
-  registration_url: String(event.registration_url || ''),
-  address: String(event.address || ''),
-  city: String(event.city || ''),
-  state: String(event.state || ''),
-  zip: String(event.zip || ''),
-  image_url: String(event.image_url || ''),
-  status: String(event.status || 'pending'),
-});
-
-const normalizeDiscoverSubmissionText = (value) => {
-  const text = String(value || '').trim();
-  return text || null;
-};
-
-const ADMIN_EMAILS = ['petsyncplus@gmail.com'];
-const APPROVAL_NOTIFICATION_EMAIL = 'petsyncplus@gmail.com';
-
 function DiscoverHomeScreen() {
   const { authUser, authReady } = useContext(AuthContext);
   const { width } = useWindowDimensions();
@@ -15762,93 +15374,21 @@ function DiscoverHomeScreen() {
   const [discoverPets, setDiscoverPets] = useState([]);
   const [discoverEvents, setDiscoverEvents] = useState([]);
   const [discoverPromotions, setDiscoverPromotions] = useState([]);
-  const [discoverOwnedPromotionsLoading, setDiscoverOwnedPromotionsLoading] = useState(true);
-  const [discoverOwnedPromotions, setDiscoverOwnedPromotions] = useState([]);   
   const [selectedDiscoverDetail, setSelectedDiscoverDetail] = useState(null);
-  const [discoverRegistrationType, setDiscoverRegistrationType] = useState(null);
-  const [discoverRegistrationSubmitting, setDiscoverRegistrationSubmitting] = useState(false);
-  const [discoverPartnerApplicationForm, setDiscoverPartnerApplicationForm] = useState(createDiscoverPartnerApplicationForm);
-  const [favoriteHintVisible, setFavoriteHintVisible] = useState(false);        
-  const [discoverPartnerApplicationsLoading, setDiscoverPartnerApplicationsLoading] = useState(true);
-  const [discoverPartnerApplications, setDiscoverPartnerApplications] = useState([]);
-  const [discoverOwnedListingsLoading, setDiscoverOwnedListingsLoading] = useState(true);
-  const [discoverOwnedListings, setDiscoverOwnedListings] = useState([]);
-  const [discoverApprovalQueueLoading, setDiscoverApprovalQueueLoading] = useState(true);
-  const [discoverApprovalQueue, setDiscoverApprovalQueue] = useState([]);
-  const [showDiscoverSubmittedListings, setShowDiscoverSubmittedListings] = useState(false);
-  const [showDiscoverApprovalQueue, setShowDiscoverApprovalQueue] = useState(true);
-  const [showDiscoverOwnerDashboard, setShowDiscoverOwnerDashboard] = useState(true);
-  const [showDiscoverPromotionsManager, setShowDiscoverPromotionsManager] = useState(true);
-  const [showDiscoverEventsManager, setShowDiscoverEventsManager] = useState(true);
-  const [discoverModerationSavingId, setDiscoverModerationSavingId] = useState(null);
-  const [discoverEditModalVisible, setDiscoverEditModalVisible] = useState(false);
-  const [discoverEditingListing, setDiscoverEditingListing] = useState(null);
-  const [discoverBusinessEditForm, setDiscoverBusinessEditForm] = useState(createDiscoverBusinessEditForm);
-  const [discoverShelterEditForm, setDiscoverShelterEditForm] = useState(createDiscoverShelterEditForm);
-  const [discoverEditSubmitting, setDiscoverEditSubmitting] = useState(false);
-  const [discoverPromotionModalVisible, setDiscoverPromotionModalVisible] = useState(false);
-  const [discoverEditingPromotion, setDiscoverEditingPromotion] = useState(null);
-  const [discoverPromotionForm, setDiscoverPromotionForm] = useState(createDiscoverPromotionForm);
-  const [discoverPromotionSubmitting, setDiscoverPromotionSubmitting] = useState(false);
-  const [discoverPromotionSavingId, setDiscoverPromotionSavingId] = useState(null);
-  const [discoverEventsLoading, setDiscoverEventsLoading] = useState(true);
-  const [discoverManagedEvents, setDiscoverManagedEvents] = useState([]);
-  const [discoverEventModalVisible, setDiscoverEventModalVisible] = useState(false);
-  const [discoverEditingEvent, setDiscoverEditingEvent] = useState(null);
-  const [discoverEventForm, setDiscoverEventForm] = useState(createDiscoverEventForm);
-  const [discoverEventSubmitting, setDiscoverEventSubmitting] = useState(false);
-  const [discoverEventSavingId, setDiscoverEventSavingId] = useState(null);
-  const [discoverAdoptablePetsLoading, setDiscoverAdoptablePetsLoading] = useState(true);
-  const [discoverAdoptablePets, setDiscoverAdoptablePets] = useState([]);
-  const [discoverAdoptablePetMedia, setDiscoverAdoptablePetMedia] = useState([]);
-  const [showDiscoverAdoptablePets, setShowDiscoverAdoptablePets] = useState(true);
-  const [discoverPetEditorVisible, setDiscoverPetEditorVisible] = useState(false);
-  const [discoverEditingPet, setDiscoverEditingPet] = useState(null);
-  const [discoverPetForm, setDiscoverPetForm] = useState(createDiscoverPetForm);
-  const [discoverPetSubmitting, setDiscoverPetSubmitting] = useState(false);
+  const [favoriteHintVisible, setFavoriteHintVisible] = useState(false);
 
   const businessCardWidth = Math.max(210, Math.min(280, Math.round(width * 0.66)));
-  const petCardWidth = Math.max(200, Math.min(260, Math.round(width * 0.62)));  
+  const petCardWidth = Math.max(200, Math.min(260, Math.round(width * 0.62)));
   const eventCardWidth = Math.max(200, Math.min(260, Math.round(width * 0.64)));
   const promoCardWidth = Math.max(230, Math.min(320, Math.round(width * 0.76)));
   const favoriteCardWidth = Math.max(210, Math.min(280, Math.round(width * 0.68)));
   const categoryCardWidth = Math.max(132, Math.min(154, Math.round(width * 0.35)));
-  const reloadDiscoverPartnerApplications = useCallback(async () => {
-    if (!authReady || !authUser?.id) {
-      setDiscoverPartnerApplications([]);
-      setDiscoverPartnerApplicationsLoading(false);
-      return [];
-    }
-
-    setDiscoverPartnerApplicationsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('partner_applications')
-        .select('id, applicant_user_id, partner_type, business_name, organization_name, contact_name, email, phone, website, category, city, state, short_description, status, reviewed_by, reviewed_at, contacted_at, notes, created_at, updated_at')
-        .eq('applicant_user_id', authUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Discover partner applications load error:', error);
-      }
-
-      const rows = data || [];
-      setDiscoverPartnerApplications(rows);
-      return rows;
-    } catch (error) {
-      console.log('Discover partner applications load error:', error);
-      return [];
-    } finally {
-      setDiscoverPartnerApplicationsLoading(false);
-    }
-  }, [authReady, authUser?.id]);
 
   useEffect(() => {
     let isActive = true;
 
     const loadDiscoverFavorites = async () => {
-      if (!authUser?.id) {
+      if (!authReady || !authUser?.id) {
         if (isActive) {
           setDiscoverFavoriteRows([]);
           setDiscoverFavoritesLoading(false);
@@ -15890,10 +15430,6 @@ function DiscoverHomeScreen() {
       isActive = false;
     };
   }, [authReady, authUser?.id]);
-
-  useEffect(() => {
-    void reloadDiscoverPartnerApplications();
-  }, [reloadDiscoverPartnerApplications]);
 
   useEffect(() => {
     let isActive = true;
@@ -16038,491 +15574,6 @@ function DiscoverHomeScreen() {
     };
   }, []);
 
-  const isDiscoverAdmin = ADMIN_EMAILS.includes(String(authUser?.email || '').trim().toLowerCase());
-
-  useEffect(() => {
-    if (isDiscoverAdmin) {
-      setShowDiscoverApprovalQueue(true);
-    }
-  }, [isDiscoverAdmin]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadDiscoverOwnedListings = async () => {
-      if (!authReady || !authUser?.id) {
-        if (isActive) {
-          setDiscoverOwnedListings([]);
-          setDiscoverOwnedListingsLoading(false);
-        }
-        return;
-      }
-
-      setDiscoverOwnedListingsLoading(true);
-
-      try {
-        const [businessResult, shelterResult] = await Promise.all([
-          supabase
-            .from('businesses')
-            .select('id, owner_user_id, category_id, name, description, phone, email, website, business_tier, verified, profile_views, service_mode, service_radius_miles, online_service_url, facebook_url, instagram_url, tiktok_url, youtube_url, address, city, state, zip, latitude, longitude, hours_json, logo_url, status, approval_notes, approved_at, approved_by, rejected_at, is_featured, featured_until, deleted_at, created_at, updated_at')
-            .eq('owner_user_id', authUser.id)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('shelters')
-            .select('id, owner_user_id, name, description, phone, email, website, donation_url, volunteer_url, wishlist_url, amazon_wishlist_url, service_mode, service_radius_miles, online_service_url, address, city, state, zip, latitude, longitude, logo_url, profile_views, verified, status, approval_notes, approved_at, approved_by, rejected_at, deleted_at, created_at, updated_at')
-            .eq('owner_user_id', authUser.id)
-            .order('created_at', { ascending: false }),
-        ]);
-
-        if (!isActive) return;
-
-        if (businessResult.error) console.log('Discover owned businesses load error:', businessResult.error);
-        if (shelterResult.error) console.log('Discover owned shelters load error:', shelterResult.error);
-
-        const ownedBusinesses = (businessResult.data || []).map((item) => ({ ...item, discoverType: 'business' }));
-        const ownedShelters = (shelterResult.data || []).map((item) => ({ ...item, discoverType: 'shelter' }));
-        const combinedOwnedListings = [...ownedBusinesses, ...ownedShelters].sort((left, right) => {
-          const leftDate = new Date(left.created_at || 0).getTime();
-          const rightDate = new Date(right.created_at || 0).getTime();
-          return rightDate - leftDate;
-        });
-
-        setDiscoverOwnedListings(combinedOwnedListings);
-      } catch (error) {
-        if (isActive) {
-          console.log('Discover owned listings load error:', error);
-        }
-      } finally {
-        if (isActive) {
-          setDiscoverOwnedListingsLoading(false);
-        }
-      }
-    };
-
-    void loadDiscoverOwnedListings();
-
-    return () => {
-      isActive = false;
-    };
-  }, [authReady, authUser?.id]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadDiscoverApprovalQueue = async () => {
-      if (!authReady || !isDiscoverAdmin) {
-        if (isActive) {
-          setDiscoverApprovalQueue([]);
-          setDiscoverApprovalQueueLoading(false);
-        }
-        return;
-      }
-
-      setDiscoverApprovalQueueLoading(true);
-
-      try {
-        const [businessResult, shelterResult] = await Promise.all([
-          supabase
-            .from('businesses')
-            .select('id, owner_user_id, name, phone, email, city, state, status, created_at, updated_at')
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true }),
-          supabase
-            .from('shelters')
-            .select('id, owner_user_id, name, phone, email, city, state, status, created_at, updated_at')
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true }),
-        ]);
-
-        if (!isActive) return;
-
-        if (businessResult.error) console.log('Discover approval businesses load error:', businessResult.error);
-        if (shelterResult.error) console.log('Discover approval shelters load error:', shelterResult.error);
-
-        const pendingBusinesses = (businessResult.data || []).map((item) => ({ ...item, discoverType: 'business' }));
-        const pendingShelters = (shelterResult.data || []).map((item) => ({ ...item, discoverType: 'shelter' }));
-        const combinedQueue = [...pendingBusinesses, ...pendingShelters].sort((left, right) => {
-          const leftDate = new Date(left.created_at || 0).getTime();
-          const rightDate = new Date(right.created_at || 0).getTime();
-          return leftDate - rightDate;
-        });
-
-        setDiscoverApprovalQueue(combinedQueue);
-      } catch (error) {
-        if (isActive) {
-          console.log('Discover approval queue load error:', error);
-        }
-      } finally {
-        if (isActive) {
-          setDiscoverApprovalQueueLoading(false);
-        }
-      }
-    };
-
-    void loadDiscoverApprovalQueue();
-
-    return () => {
-      isActive = false;
-    };
-  }, [authReady, isDiscoverAdmin]);
-
-  const ownedShelterListings = discoverOwnedListings.filter((listing) => listing.discoverType === 'shelter');
-  const ownedShelterIds = ownedShelterListings.map((listing) => listing.id);
-  const ownedShelterIdsKey = ownedShelterIds.join('|');
-  const ownedBusinessListings = discoverOwnedListings.filter((listing) => listing.discoverType === 'business');
-  const ownedBusinessIds = ownedBusinessListings.map((listing) => listing.id);
-  const ownedBusinessIdsKey = ownedBusinessIds.join('|');
-
-  const reloadDiscoverOwnedListings = async () => {
-    if (!authReady || !authUser?.id) {
-      setDiscoverOwnedListings([]);
-      setDiscoverOwnedListingsLoading(false);
-      return;
-    }
-
-    setDiscoverOwnedListingsLoading(true);
-
-    try {
-      const [businessResult, shelterResult] = await Promise.all([
-        supabase
-          .from('businesses')
-          .select('id, owner_user_id, category_id, name, description, phone, email, website, business_tier, verified, profile_views, service_mode, service_radius_miles, online_service_url, facebook_url, instagram_url, tiktok_url, youtube_url, address, city, state, zip, latitude, longitude, hours_json, logo_url, status, approval_notes, approved_at, approved_by, rejected_at, is_featured, featured_until, deleted_at, created_at, updated_at')
-          .eq('owner_user_id', authUser.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('shelters')
-          .select('id, owner_user_id, name, description, phone, email, website, donation_url, volunteer_url, wishlist_url, amazon_wishlist_url, service_mode, service_radius_miles, online_service_url, address, city, state, zip, latitude, longitude, logo_url, profile_views, verified, status, approval_notes, approved_at, approved_by, rejected_at, deleted_at, created_at, updated_at')
-          .eq('owner_user_id', authUser.id)
-          .order('created_at', { ascending: false }),
-      ]);
-
-      if (businessResult.error) console.log('Discover owned businesses load error:', businessResult.error);
-      if (shelterResult.error) console.log('Discover owned shelters load error:', shelterResult.error);
-
-      const ownedBusinesses = (businessResult.data || []).map((item) => ({ ...item, discoverType: 'business' }));
-      const ownedShelters = (shelterResult.data || []).map((item) => ({ ...item, discoverType: 'shelter' }));
-      const combinedOwnedListings = [...ownedBusinesses, ...ownedShelters].sort((left, right) => {
-        const leftDate = new Date(left.created_at || 0).getTime();
-        const rightDate = new Date(right.created_at || 0).getTime();
-        return rightDate - leftDate;
-      });
-
-      setDiscoverOwnedListings(combinedOwnedListings);
-    } catch (error) {
-      console.log('Discover owned listings load error:', error);
-    } finally {
-      setDiscoverOwnedListingsLoading(false);
-    }
-  };
-
-  const reloadDiscoverApprovalQueue = async () => {
-    if (!authReady || !isDiscoverAdmin) {
-      setDiscoverApprovalQueue([]);
-      setDiscoverApprovalQueueLoading(false);
-      return;
-    }
-
-    setDiscoverApprovalQueueLoading(true);
-
-    try {
-      const [businessResult, shelterResult] = await Promise.all([
-        supabase
-          .from('businesses')
-          .select('id, owner_user_id, name, phone, email, city, state, status, created_at, updated_at')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('shelters')
-          .select('id, owner_user_id, name, phone, email, city, state, status, created_at, updated_at')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: true }),
-      ]);
-
-      if (businessResult.error) console.log('Discover approval businesses load error:', businessResult.error);
-      if (shelterResult.error) console.log('Discover approval shelters load error:', shelterResult.error);
-
-      const pendingBusinesses = (businessResult.data || []).map((item) => ({ ...item, discoverType: 'business' }));
-      const pendingShelters = (shelterResult.data || []).map((item) => ({ ...item, discoverType: 'shelter' }));
-      const combinedQueue = [...pendingBusinesses, ...pendingShelters].sort((left, right) => {
-        const leftDate = new Date(left.created_at || 0).getTime();
-        const rightDate = new Date(right.created_at || 0).getTime();
-        return leftDate - rightDate;
-      });
-
-      setDiscoverApprovalQueue(combinedQueue);
-    } catch (error) {
-      console.log('Discover approval queue load error:', error);
-    } finally {
-      setDiscoverApprovalQueueLoading(false);
-    }
-  };
-
-  const reloadDiscoverManagedEvents = async () => {
-    if (!authReady || !isDiscoverAdmin) {
-      setDiscoverManagedEvents([]);
-      setDiscoverEventsLoading(false);
-      return;
-    }
-
-    setDiscoverEventsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('pet_events')
-        .select('id, owner_user_id, host_type, business_id, shelter_id, title, description, event_type, starts_at, ends_at, max_attendees, current_attendees, registration_required, registration_url, address, city, state, zip, latitude, longitude, image_url, status, deleted_at, created_at, updated_at')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Discover managed events load error:', error);
-      }
-
-      setDiscoverManagedEvents(data || []);
-    } catch (error) {
-      console.log('Discover managed events load error:', error);
-    } finally {
-      setDiscoverEventsLoading(false);
-    }
-  };
-
-  const reloadDiscoverAdoptablePets = async () => {
-    if (!authReady || !authUser?.id || ownedShelterIds.length === 0) {
-      setDiscoverAdoptablePets([]);
-      setDiscoverAdoptablePetMedia([]);
-      setDiscoverAdoptablePetsLoading(false);
-      return;
-    }
-
-    setDiscoverAdoptablePetsLoading(true);
-
-    try {
-      const [petsResult, mediaResult] = await Promise.all([
-        supabase
-          .from('adoptable_pets')
-          .select('id, shelter_id, name, species, breed, age_label, sex, size, weight, description, personality, good_with_kids, good_with_dogs, good_with_cats, house_trained, medical_status, adoption_fee, views, status, deleted_at, created_at, updated_at')
-          .in('shelter_id', ownedShelterIds)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('adoptable_pet_media')
-          .select('id, adoptable_pet_id, media_type, media_url, caption, sort_order, created_at, updated_at')
-          .order('sort_order', { ascending: true })
-          .order('created_at', { ascending: true }),
-      ]);
-
-      if (petsResult.error) console.log('Discover adoptable pets load error:', petsResult.error);
-      if (mediaResult.error) console.log('Discover adoptable pet media load error:', mediaResult.error);
-
-      const mediaLookup = buildDiscoverMediaLookup(mediaResult.data || []);
-      const petsWithMedia = (petsResult.data || []).map((pet) => ({
-        ...pet,
-        media: mediaLookup[pet.id] || [],
-      }));
-
-      setDiscoverAdoptablePets(petsWithMedia);
-      setDiscoverAdoptablePetMedia(mediaResult.data || []);
-      setSelectedDiscoverDetail((current) => {
-        if (!current || current.type !== 'pet') return current;
-        const nextPet = petsWithMedia.find((pet) => pet.id === current.id);
-        if (!nextPet) return null;
-        return { ...current, item: { ...nextPet, shelter: discoverShelters.find((shelter) => shelter.id === nextPet.shelter_id) || null } };
-      });
-    } catch (error) {
-      console.log('Discover adoptable pets load error:', error);
-    } finally {
-      setDiscoverAdoptablePetsLoading(false);
-    }
-  };
-
-  const reloadDiscoverOwnedPromotions = async () => {
-    if (!authReady || !isDiscoverAdmin || !authUser?.id || ownedBusinessIds.length === 0) {
-      setDiscoverOwnedPromotions([]);
-      setDiscoverOwnedPromotionsLoading(false);
-      return;
-    }
-
-    setDiscoverOwnedPromotionsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('business_promotions')
-        .select('id, business_id, title, description, promo_code, button_text, button_url, starts_at, ends_at, image_url, status, deleted_at, created_at, updated_at')
-        .in('business_id', ownedBusinessIds)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Discover owned promotions load error:', error);
-      }
-
-      setDiscoverOwnedPromotions(data || []);
-    } catch (error) {
-      console.log('Discover owned promotions load error:', error);
-    } finally {
-      setDiscoverOwnedPromotionsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadDiscoverAdoptablePets = async () => {
-      if (!authReady || !authUser?.id || ownedShelterIds.length === 0) {
-        if (isActive) {
-          setDiscoverAdoptablePets([]);
-          setDiscoverAdoptablePetMedia([]);
-          setDiscoverAdoptablePetsLoading(false);
-        }
-        return;
-      }
-
-      setDiscoverAdoptablePetsLoading(true);
-
-      try {
-        const [petsResult, mediaResult] = await Promise.all([
-          supabase
-            .from('adoptable_pets')
-            .select('id, shelter_id, name, species, breed, age_label, sex, size, weight, description, personality, good_with_kids, good_with_dogs, good_with_cats, house_trained, medical_status, adoption_fee, views, status, deleted_at, created_at, updated_at')
-            .in('shelter_id', ownedShelterIds)
-            .is('deleted_at', null)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('adoptable_pet_media')
-            .select('id, adoptable_pet_id, media_type, media_url, caption, sort_order, created_at, updated_at')
-            .order('sort_order', { ascending: true })
-            .order('created_at', { ascending: true }),
-        ]);
-
-        if (!isActive) return;
-
-        if (petsResult.error) console.log('Discover adoptable pets load error:', petsResult.error);
-        if (mediaResult.error) console.log('Discover adoptable pet media load error:', mediaResult.error);
-
-        const mediaLookup = buildDiscoverMediaLookup(mediaResult.data || []);
-        const petsWithMedia = (petsResult.data || []).map((pet) => ({
-          ...pet,
-          media: mediaLookup[pet.id] || [],
-        }));
-
-        setDiscoverAdoptablePets(petsWithMedia);
-        setDiscoverAdoptablePetMedia(mediaResult.data || []);
-        setSelectedDiscoverDetail((current) => {
-          if (!current || current.type !== 'pet') return current;
-          const nextPet = petsWithMedia.find((pet) => pet.id === current.id);
-          if (!nextPet) return null;
-          return { ...current, item: { ...nextPet, shelter: discoverShelters.find((shelter) => shelter.id === nextPet.shelter_id) || null } };
-        });
-      } catch (error) {
-        if (isActive) {
-          console.log('Discover adoptable pets load error:', error);
-        }
-      } finally {
-        if (isActive) {
-          setDiscoverAdoptablePetsLoading(false);
-        }
-      }
-    };
-
-    void loadDiscoverAdoptablePets();
-
-    return () => {
-      isActive = false;
-    };
-  }, [authReady, authUser?.id, ownedShelterIdsKey, discoverShelters]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadDiscoverOwnedPromotions = async () => {
-      if (!authReady || !authUser?.id || ownedBusinessIds.length === 0) {
-        if (isActive) {
-          setDiscoverOwnedPromotions([]);
-          setDiscoverOwnedPromotionsLoading(false);
-        }
-        return;
-      }
-
-      setDiscoverOwnedPromotionsLoading(true);
-
-      try {
-        const { data, error } = await supabase
-          .from('business_promotions')
-          .select('id, business_id, title, description, promo_code, button_text, button_url, starts_at, ends_at, image_url, status, deleted_at, created_at, updated_at')
-          .in('business_id', ownedBusinessIds)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false });
-
-        if (!isActive) return;
-
-        if (error) {
-          console.log('Discover owned promotions load error:', error);
-        }
-
-        setDiscoverOwnedPromotions(data || []);
-      } catch (error) {
-        if (isActive) {
-          console.log('Discover owned promotions load error:', error);
-        }
-      } finally {
-        if (isActive) {
-          setDiscoverOwnedPromotionsLoading(false);
-        }
-      }
-    };
-
-    void loadDiscoverOwnedPromotions();
-
-    return () => {
-      isActive = false;
-    };
-  }, [authReady, authUser?.id, ownedBusinessIdsKey]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadDiscoverManagedEvents = async () => {
-      if (!authReady || !isDiscoverAdmin) {
-        if (isActive) {
-          setDiscoverManagedEvents([]);
-          setDiscoverEventsLoading(false);
-        }
-        return;
-      }
-
-      setDiscoverEventsLoading(true);
-
-      try {
-        const { data, error } = await supabase
-          .from('pet_events')
-          .select('id, owner_user_id, host_type, business_id, shelter_id, title, description, event_type, starts_at, ends_at, max_attendees, current_attendees, registration_required, registration_url, address, city, state, zip, latitude, longitude, image_url, status, deleted_at, created_at, updated_at')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false });
-
-        if (!isActive) return;
-
-        if (error) {
-          console.log('Discover managed events load error:', error);
-        }
-
-        setDiscoverManagedEvents(data || []);
-      } catch (error) {
-        if (isActive) {
-          console.log('Discover managed events load error:', error);
-        }
-      } finally {
-        if (isActive) {
-          setDiscoverEventsLoading(false);
-        }
-      }
-    };
-
-    void loadDiscoverManagedEvents();
-
-    return () => {
-      isActive = false;
-    };
-  }, [authReady, isDiscoverAdmin]);
-
   const normalizedSearch = normalizeDiscoverSearch(searchTerm);
   const categoryCounts = discoverBusinesses.reduce((acc, business) => {
     if (!business.category_id) return acc;
@@ -16666,56 +15717,6 @@ function DiscoverHomeScreen() {
     promotion.promo_code,
   ], normalizedSearch));
 
-  const discoverOwnedPromotionCounts = discoverOwnedPromotions.reduce((acc, promotion) => {
-    const status = String(promotion.status || 'pending').toLowerCase();
-    if (status === 'active') acc.active += 1;
-    else if (status === 'paused') acc.paused += 1;
-    else if (status === 'expired') acc.expired += 1;
-    else if (status === 'pending') acc.pending += 1;
-    else acc.other += 1;
-    return acc;
-  }, {
-    active: 0,
-    pending: 0,
-    paused: 0,
-    expired: 0,
-    other: 0,
-  });
-  const ownedBusinessLookup = ownedBusinessListings.reduce((acc, business) => {
-    acc[business.id] = business;
-    return acc;
-  }, {});
-  const discoverManagedEventCounts = discoverManagedEvents.reduce((acc, event) => {
-    const status = String(event.status || 'pending').toLowerCase();
-    if (status === 'active') acc.active += 1;
-    else if (status === 'cancelled') acc.cancelled += 1;
-    else if (status === 'hidden') acc.hidden += 1;
-    else acc.pending += 1;
-    return acc;
-  }, {
-    active: 0,
-    pending: 0,
-    cancelled: 0,
-    hidden: 0,
-  });
-  const discoverManagedEventLookup = {
-    business: discoverBusinesses.reduce((acc, business) => {
-      acc[business.id] = business;
-      return acc;
-    }, {}),
-    shelter: discoverShelters.reduce((acc, shelter) => {
-      acc[shelter.id] = shelter;
-      return acc;
-    }, {}),
-  };
-
-  const discoverAdoptablePetMediaLookup = buildDiscoverMediaLookup(discoverAdoptablePetMedia);
-  const discoverAdoptablePetCounts = discoverAdoptablePets.reduce((acc, pet) => {
-    const status = String(pet.status || 'available').toLowerCase();
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {});
-
   const sectionSearchSuffix = normalizedSearch ? ' match your search' : '';
   const hasSearchTerm = Boolean(normalizedSearch);
   const hasDiscoverSearchResults = [
@@ -16755,715 +15756,6 @@ function DiscoverHomeScreen() {
   const selectedDetailPet = selectedDetailType === 'pet' ? selectedDetailItem : null;
   const selectedDetailEvent = selectedDetailType === 'event' ? selectedDetailItem : null;
   const selectedDetailPromotion = selectedDetailType === 'promotion' ? selectedDetailItem : null;
-  const discoverRegistrationEffectiveType = discoverRegistrationType || 'shelter';
-  const resetDiscoverRegistrationForm = () => {
-    setDiscoverRegistrationType(null);
-    setDiscoverPartnerApplicationForm(createDiscoverPartnerApplicationForm());
-  };
-  const closeDiscoverRegistration = () => {
-    setSelectedDiscoverDetail(null);
-    setDiscoverRegistrationSubmitting(false);
-    resetDiscoverRegistrationForm();
-  };
-  const openDiscoverRegistration = () => {
-    if (!authUser?.id) {
-      Alert.alert('Sign in required', 'Sign in to apply as a partner.');
-      return;
-    }
-    setFavoriteHintVisible(false);
-    resetDiscoverRegistrationForm();
-    setDiscoverRegistrationType('shelter');
-    setSelectedDiscoverDetail({ type: 'partner-application', id: 'discover-registration', item: null });
-  };
-  const openDiscoverBusinessRegistration = () => {
-    if (!authUser?.id) {
-      Alert.alert('Sign in required', 'Sign in to apply as a business partner.');
-      return;
-    }
-    if (!isDiscoverAdmin) {
-      Alert.alert('Business partners managed by PetSync+', 'Business partners are added by PetSync+ after partner approval.');
-      return;
-    }
-    setFavoriteHintVisible(false);
-    resetDiscoverRegistrationForm();
-    setDiscoverRegistrationType('business');
-    setSelectedDiscoverDetail({ type: 'partner-application', id: 'discover-registration', item: null });
-  };
-  const openDiscoverShelterRegistration = () => {
-    if (!authUser?.id) {
-      Alert.alert('Sign in required', 'Sign in to apply as a shelter or rescue.');
-      return;
-    }
-    setFavoriteHintVisible(false);
-    resetDiscoverRegistrationForm();
-    setDiscoverRegistrationType('shelter');
-    setSelectedDiscoverDetail({ type: 'partner-application', id: 'discover-registration', item: null });
-  };
-  const openDiscoverCommunityRegistration = () => {
-    if (!authUser?.id) {
-      Alert.alert('Sign in required', 'Sign in to apply as a community partner.');
-      return;
-    }
-    setFavoriteHintVisible(false);
-    resetDiscoverRegistrationForm();
-    setDiscoverRegistrationType('community');
-    setSelectedDiscoverDetail({ type: 'partner-application', id: 'discover-registration', item: null });
-  };
-  const renderDiscoverRegistrationField = (label, value, onChangeText, placeholder, options = {}) => (
-    <View style={s.discoverRegistrationField}>
-      <Text style={s.discoverRegistrationLabel}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#8291A7"
-        style={[
-          s.discoverRegistrationInput,
-          options.multiline && s.discoverRegistrationInputMultiline,
-        ]}
-        multiline={Boolean(options.multiline)}
-        numberOfLines={options.numberOfLines || (options.multiline ? 4 : 1)}
-        textAlignVertical={options.multiline ? 'top' : 'center'}
-        autoCapitalize={options.autoCapitalize || 'words'}
-        autoCorrect={Boolean(options.autoCorrect)}
-        keyboardType={options.keyboardType || 'default'}
-        returnKeyType={options.returnKeyType || 'next'}
-        maxLength={options.maxLength}
-        onSubmitEditing={options.onSubmitEditing}
-      />
-    </View>
-  );
-  const submitDiscoverRegistration = async () => {
-    if (!authUser?.id) {
-      Alert.alert('Sign in required', 'Sign in to apply as a partner.');
-      return;
-    }
-    if (!discoverRegistrationEffectiveType) {
-      Alert.alert('Choose a partner type', 'Select a partner application type to continue.');
-      return;
-    }
-    if (discoverRegistrationSubmitting) return;
-
-    const applicationPayload = {
-      applicant_user_id: authUser.id,
-      partner_type: discoverRegistrationEffectiveType,
-      business_name: discoverRegistrationEffectiveType === 'business'
-        ? discoverPartnerApplicationForm.business_name.trim()
-        : null,
-      organization_name: discoverRegistrationEffectiveType === 'business'
-        ? null
-        : discoverPartnerApplicationForm.organization_name.trim(),
-      contact_name: discoverPartnerApplicationForm.contact_name.trim(),
-      email: discoverPartnerApplicationForm.email.trim(),
-      phone: normalizeDiscoverSubmissionText(discoverPartnerApplicationForm.phone),
-      website: normalizeDiscoverSubmissionText(discoverPartnerApplicationForm.website),
-      category: discoverRegistrationEffectiveType === 'business'
-        ? normalizeDiscoverSubmissionText(discoverPartnerApplicationForm.category)
-        : null,
-      city: normalizeDiscoverSubmissionText(discoverPartnerApplicationForm.city),
-      state: normalizeDiscoverSubmissionText(discoverPartnerApplicationForm.state),
-      short_description: normalizeDiscoverSubmissionText(discoverPartnerApplicationForm.short_description),
-      status: 'pending',
-    };
-
-    if (discoverRegistrationEffectiveType === 'business' && !applicationPayload.business_name) {
-      Alert.alert('Business name required', 'Please enter a business name.');
-      return;
-    }
-    if (discoverRegistrationEffectiveType !== 'business' && !applicationPayload.organization_name) {
-      Alert.alert('Organization name required', 'Please enter a shelter, rescue, or community organization name.');
-      return;
-    }
-    if (!applicationPayload.contact_name) {
-      Alert.alert('Contact name required', 'Please enter a contact name.');
-      return;
-    }
-    if (!applicationPayload.email) {
-      Alert.alert('Email required', 'Please enter an email address.');
-      return;
-    }
-
-    try {
-      setDiscoverRegistrationSubmitting(true);
-      const { error } = await supabase
-        .from('partner_applications')
-        .insert([applicationPayload]);
-
-      if (error) {
-        console.log('Discover partner application submit error:', error);
-        Alert.alert('Unable to submit application', 'Please try again.');
-        return;
-      }
-
-      Alert.alert(
-        'Application submitted',
-        discoverRegistrationEffectiveType === 'business'
-          ? 'Your business partner application was submitted for review.'
-          : discoverRegistrationEffectiveType === 'community'
-            ? 'Your community partner application was submitted for review.'
-            : 'Your shelter/rescue application was submitted for review.'
-      );
-      closeDiscoverRegistration();
-      await reloadDiscoverPartnerApplications();
-    } catch (error) {
-      console.log('Discover partner application submit error:', error);
-      Alert.alert('Unable to submit application', 'Please try again.');
-    } finally {
-      setDiscoverRegistrationSubmitting(false);
-    }
-  };
-  const handleDiscoverListingModeration = async (listing, nextStatus) => {
-    if (!isDiscoverAdmin || !listing?.id || discoverModerationSavingId) return;
-
-    const tableName = listing.discoverType === 'shelter' ? 'shelters' : 'businesses';
-    try {
-      setDiscoverModerationSavingId(listing.id);
-      const { error } = await supabase
-        .from(tableName)
-        .update({ status: nextStatus })
-        .eq('id', listing.id);
-
-      if (error) {
-        console.log('Discover moderation update error:', error);
-        Alert.alert('Unable to update listing', 'Please try again.');
-        return;
-      }
-
-      await reloadDiscoverOwnedListings();
-      await reloadDiscoverApprovalQueue();
-      Alert.alert(
-        nextStatus === 'approved' ? 'Listing approved' : 'Listing rejected',
-        nextStatus === 'approved'
-          ? 'The listing is now visible in Discover.'
-          : 'The listing has been rejected.'
-      );
-    } catch (error) {
-      console.log('Discover moderation update error:', error);
-      Alert.alert('Unable to update listing', 'Please try again.');
-    } finally {
-      setDiscoverModerationSavingId(null);
-    }
-  };
-  const closeDiscoverEditModal = () => {
-    setDiscoverEditModalVisible(false);
-    setDiscoverEditingListing(null);
-    setDiscoverBusinessEditForm(createDiscoverBusinessEditForm());
-    setDiscoverShelterEditForm(createDiscoverShelterEditForm());
-  };
-  const submitDiscoverEdit = async () => {
-    if (!authUser?.id || !discoverEditingListing?.id || !discoverEditingListing?.discoverType) return;
-
-    const tableName = discoverEditingListing.discoverType === 'shelter' ? 'shelters' : 'businesses';
-    const isBusiness = discoverEditingListing.discoverType === 'business';
-    const nextStatus = discoverEditingListing.status && discoverEditingListing.status !== 'pending' ? 'pending' : discoverEditingListing.status || 'pending';
-
-    const basePayload = isBusiness
-      ? {
-          name: discoverBusinessEditForm.name.trim(),
-          description: normalizeDiscoverSubmissionText(discoverBusinessEditForm.description),
-          phone: normalizeDiscoverSubmissionText(discoverBusinessEditForm.phone),
-          email: normalizeDiscoverSubmissionText(discoverBusinessEditForm.email),
-          website: normalizeDiscoverSubmissionText(discoverBusinessEditForm.website),
-          facebook_url: normalizeDiscoverSubmissionText(discoverBusinessEditForm.facebook_url),
-          instagram_url: normalizeDiscoverSubmissionText(discoverBusinessEditForm.instagram_url),
-          tiktok_url: normalizeDiscoverSubmissionText(discoverBusinessEditForm.tiktok_url),
-          youtube_url: normalizeDiscoverSubmissionText(discoverBusinessEditForm.youtube_url),
-          service_mode: normalizeDiscoverSubmissionText(discoverBusinessEditForm.service_mode) || 'local_only',
-          online_service_url: normalizeDiscoverSubmissionText(discoverBusinessEditForm.online_service_url),
-          address: normalizeDiscoverSubmissionText(discoverBusinessEditForm.address),
-          city: normalizeDiscoverSubmissionText(discoverBusinessEditForm.city),
-          state: normalizeDiscoverSubmissionText(discoverBusinessEditForm.state),
-          zip: normalizeDiscoverSubmissionText(discoverBusinessEditForm.zip),
-          logo_url: normalizeDiscoverSubmissionText(discoverBusinessEditForm.logo_url),
-        }
-      : {
-          name: discoverShelterEditForm.name.trim(),
-          description: normalizeDiscoverSubmissionText(discoverShelterEditForm.description),
-          phone: normalizeDiscoverSubmissionText(discoverShelterEditForm.phone),
-          email: normalizeDiscoverSubmissionText(discoverShelterEditForm.email),
-          website: normalizeDiscoverSubmissionText(discoverShelterEditForm.website),
-          donation_url: normalizeDiscoverSubmissionText(discoverShelterEditForm.donation_url),
-          volunteer_url: normalizeDiscoverSubmissionText(discoverShelterEditForm.volunteer_url),
-          wishlist_url: normalizeDiscoverSubmissionText(discoverShelterEditForm.wishlist_url),
-          amazon_wishlist_url: normalizeDiscoverSubmissionText(discoverShelterEditForm.amazon_wishlist_url),
-          service_mode: normalizeDiscoverSubmissionText(discoverShelterEditForm.service_mode) || 'local_only',
-          online_service_url: normalizeDiscoverSubmissionText(discoverShelterEditForm.online_service_url),
-          address: normalizeDiscoverSubmissionText(discoverShelterEditForm.address),
-          city: normalizeDiscoverSubmissionText(discoverShelterEditForm.city),
-          state: normalizeDiscoverSubmissionText(discoverShelterEditForm.state),
-          zip: normalizeDiscoverSubmissionText(discoverShelterEditForm.zip),
-          logo_url: normalizeDiscoverSubmissionText(discoverShelterEditForm.logo_url),
-        };
-
-    if (!basePayload.name) {
-      Alert.alert('Name required', `Please enter a ${isBusiness ? 'business' : 'shelter'} name.`);
-      return;
-    }
-
-    if (isBusiness) {
-      const hoursText = String(discoverBusinessEditForm.hours_json || '').trim();
-      if (hoursText) {
-        try {
-          basePayload.hours_json = JSON.parse(hoursText);
-        } catch (error) {
-          Alert.alert('Hours JSON invalid', 'Please paste valid JSON or leave it blank.');
-          return;
-        }
-      } else {
-        basePayload.hours_json = {};
-      }
-    }
-
-    if (nextStatus === 'pending') {
-      basePayload.approval_notes = null;
-      basePayload.approved_at = null;
-      basePayload.approved_by = null;
-      basePayload.rejected_at = null;
-    }
-    basePayload.status = nextStatus;
-
-    try {
-      setDiscoverEditSubmitting(true);
-      const { error } = await supabase
-        .from(tableName)
-        .update(basePayload)
-        .eq('id', discoverEditingListing.id)
-        .eq('owner_user_id', authUser.id);
-
-      if (error) {
-        console.log('Discover listing edit error:', error);
-        Alert.alert('Unable to save changes', 'Please try again.');
-        return;
-      }
-
-      Alert.alert('Changes saved', 'Changes submitted for review.');
-      closeDiscoverEditModal();
-      await reloadDiscoverOwnedListings();
-      await reloadDiscoverApprovalQueue();
-    } catch (error) {
-      console.log('Discover listing edit error:', error);
-      Alert.alert('Unable to save changes', 'Please try again.');
-    } finally {
-      setDiscoverEditSubmitting(false);
-    }
-  };
-  const closeDiscoverPromotionModal = () => {
-    setDiscoverPromotionModalVisible(false);
-    setDiscoverEditingPromotion(null);
-    setDiscoverPromotionForm(createDiscoverPromotionForm());
-  };
-  const openDiscoverPromotionModal = (promotion = null) => {
-    if (!authUser?.id) {
-      Alert.alert('Sign in required', 'Sign in to manage promotions.');
-      return;
-    }
-    if (!isDiscoverAdmin) {
-      Alert.alert('Admin only', 'Promotions & Offers is available to PetSync+ admins only.');
-      return;
-    }
-    if (ownedBusinessListings.length === 0) {
-      Alert.alert('No business available', 'Add or claim a business listing first.');
-      return;
-    }
-
-    const nextPromotion = promotion || { id: null, business_id: '', status: 'pending' };
-    if (promotion && !ownedBusinessLookup[promotion.business_id]) {
-      Alert.alert('Not allowed', 'This promotion does not belong to one of your businesses.');
-      return;
-    }
-
-    const initialBusinessId = nextPromotion.business_id || ownedBusinessListings[0]?.id || '';
-    setDiscoverEditingPromotion(nextPromotion);
-    setDiscoverPromotionForm(createDiscoverPromotionForm({
-      ...nextPromotion,
-      business_id: initialBusinessId,
-      status: nextPromotion?.status || 'pending',
-    }));
-    setDiscoverPromotionModalVisible(true);
-  };
-  const persistDiscoverPromotion = async () => {
-    if (!authUser?.id || !isDiscoverAdmin || discoverPromotionSubmitting) return;
-
-    const promotionId = discoverEditingPromotion?.id || null;
-    const businessId = String(discoverPromotionForm.business_id || '').trim();
-    if (!businessId || !ownedBusinessLookup[businessId]) {
-      Alert.alert('Business required', 'Choose one of your owned businesses.');
-      return;
-    }
-
-    const title = String(discoverPromotionForm.title || '').trim();
-    if (!title) {
-      Alert.alert('Title required', 'Please enter a promotion title.');
-      return;
-    }
-
-    const status = String(discoverPromotionForm.status || 'pending').trim().toLowerCase();
-    const allowedStatuses = new Set(['pending', 'active', 'paused', 'expired', 'rejected']);
-    const nextStatus = allowedStatuses.has(status) ? status : 'pending';
-    const payload = {
-      business_id: businessId,
-      title,
-      description: normalizeDiscoverSubmissionText(discoverPromotionForm.description),
-      promo_code: normalizeDiscoverSubmissionText(discoverPromotionForm.promo_code),
-      button_text: normalizeDiscoverSubmissionText(discoverPromotionForm.button_text),
-      button_url: normalizeDiscoverSubmissionText(discoverPromotionForm.button_url),
-      starts_at: normalizeDiscoverSubmissionText(discoverPromotionForm.starts_at),
-      ends_at: normalizeDiscoverSubmissionText(discoverPromotionForm.ends_at),
-      image_url: normalizeDiscoverSubmissionText(discoverPromotionForm.image_url),
-      status: nextStatus,
-    };
-
-    try {
-      setDiscoverPromotionSubmitting(true);
-      const query = supabase.from('business_promotions');
-      const { error } = promotionId
-        ? await query.update(payload).eq('id', promotionId).eq('business_id', businessId)
-        : await query.insert([payload]);
-
-      if (error) {
-        console.log('Discover promotion save error:', error);
-        Alert.alert('Unable to save promotion', 'Please try again.');
-        return;
-      }
-
-      Alert.alert(
-        promotionId ? 'Promotion updated' : 'Promotion added',
-        promotionId ? 'The promotion was updated successfully.' : 'The new promotion was created.'
-      );
-      closeDiscoverPromotionModal();
-      await reloadDiscoverOwnedPromotions();
-    } catch (error) {
-      console.log('Discover promotion save error:', error);
-      Alert.alert('Unable to save promotion', 'Please try again.');
-    } finally {
-      setDiscoverPromotionSubmitting(false);
-    }
-  };
-  const updateDiscoverPromotionStatus = async (promotion, nextStatus) => {
-    if (!authUser?.id || !isDiscoverAdmin || !promotion?.id || discoverPromotionSavingId) return;
-    const businessId = String(promotion.business_id || '').trim();
-    if (!businessId || !ownedBusinessLookup[businessId]) {
-      Alert.alert('Not allowed', 'This promotion does not belong to one of your businesses.');
-      return;
-    }
-
-    try {
-      setDiscoverPromotionSavingId(promotion.id);
-      const { error } = await supabase
-        .from('business_promotions')
-        .update({ status: nextStatus })
-        .eq('id', promotion.id)
-        .eq('business_id', businessId);
-
-      if (error) {
-        console.log('Discover promotion status update error:', error);
-        Alert.alert('Unable to update promotion', 'Please try again.');
-        return;
-      }
-
-      await reloadDiscoverOwnedPromotions();
-    } catch (error) {
-      console.log('Discover promotion status update error:', error);
-      Alert.alert('Unable to update promotion', 'Please try again.');
-    } finally {
-      setDiscoverPromotionSavingId(null);
-    }
-  };
-  const closeDiscoverEventModal = () => {
-    setDiscoverEventModalVisible(false);
-    setDiscoverEditingEvent(null);
-    setDiscoverEventForm(createDiscoverEventForm());
-  };
-  const openDiscoverEventModal = (event = null) => {
-    if (!authUser?.id) {
-      Alert.alert('Sign in required', 'Sign in to manage events.');
-      return;
-    }
-    if (!isDiscoverAdmin) {
-      Alert.alert('Admin only', 'Events Manager is available to PetSync+ admins only.');
-      return;
-    }
-
-    const nextEvent = event || { id: null, host_type: 'community', status: 'pending' };
-    const initialHostType = String(nextEvent.host_type || 'community').trim().toLowerCase();
-    setDiscoverEditingEvent(nextEvent);
-    setDiscoverEventForm(createDiscoverEventForm({
-      ...nextEvent,
-      host_type: initialHostType,
-      business_id: nextEvent.business_id || '',
-      shelter_id: nextEvent.shelter_id || '',
-      status: nextEvent?.status || 'pending',
-    }));
-    setDiscoverEventModalVisible(true);
-  };
-  const persistDiscoverEvent = async () => {
-    if (!authUser?.id || !isDiscoverAdmin || discoverEventSubmitting) return;
-
-    const eventId = discoverEditingEvent?.id || null;
-    const hostType = String(discoverEventForm.host_type || 'community').trim().toLowerCase();
-    const allowedHostTypes = new Set(['business', 'shelter', 'community']);
-    if (!allowedHostTypes.has(hostType)) {
-      Alert.alert('Host type required', 'Choose business, shelter, or community.');
-      return;
-    }
-
-    const title = String(discoverEventForm.title || '').trim();
-    if (!title) {
-      Alert.alert('Title required', 'Please enter an event title.');
-      return;
-    }
-
-    const startsAt = String(discoverEventForm.starts_at || '').trim();
-    if (!startsAt) {
-      Alert.alert('Start date required', 'Please enter when the event starts.');
-      return;
-    }
-
-    const businessId = hostType === 'business' ? String(discoverEventForm.business_id || '').trim() : '';
-    const shelterId = hostType === 'shelter' ? String(discoverEventForm.shelter_id || '').trim() : '';
-    if (hostType === 'business' && !businessId) {
-      Alert.alert('Business required', 'Choose a business host.');
-      return;
-    }
-    if (hostType === 'shelter' && !shelterId) {
-      Alert.alert('Shelter required', 'Choose a shelter host.');
-      return;
-    }
-
-    const businessAllowed = hostType === 'business' ? discoverBusinesses.some((business) => business.id === businessId) : true;
-    const shelterAllowed = hostType === 'shelter' ? discoverShelters.some((shelter) => shelter.id === shelterId) : true;
-    if (!businessAllowed) {
-      Alert.alert('Not allowed', 'Choose a valid business host.');
-      return;
-    }
-    if (!shelterAllowed) {
-      Alert.alert('Not allowed', 'Choose a valid shelter host.');
-      return;
-    }
-
-    const maxAttendeesText = String(discoverEventForm.max_attendees || '').trim();
-    const maxAttendees = maxAttendeesText ? Number(maxAttendeesText) : null;
-    if (maxAttendees != null && Number.isNaN(maxAttendees)) {
-      Alert.alert('Max attendees invalid', 'Please enter a valid number or leave it blank.');
-      return;
-    }
-
-    const payload = {
-      owner_user_id: authUser.id,
-      host_type: hostType,
-      business_id: hostType === 'business' ? businessId : null,
-      shelter_id: hostType === 'shelter' ? shelterId : null,
-      title,
-      description: normalizeDiscoverSubmissionText(discoverEventForm.description),
-      event_type: normalizeDiscoverSubmissionText(discoverEventForm.event_type),
-      starts_at: startsAt,
-      ends_at: normalizeDiscoverSubmissionText(discoverEventForm.ends_at),
-      max_attendees: maxAttendees,
-      registration_required: Boolean(discoverEventForm.registration_required),
-      registration_url: normalizeDiscoverSubmissionText(discoverEventForm.registration_url),
-      address: normalizeDiscoverSubmissionText(discoverEventForm.address),
-      city: normalizeDiscoverSubmissionText(discoverEventForm.city),
-      state: normalizeDiscoverSubmissionText(discoverEventForm.state),
-      zip: normalizeDiscoverSubmissionText(discoverEventForm.zip),
-      image_url: normalizeDiscoverSubmissionText(discoverEventForm.image_url),
-      status: String(discoverEventForm.status || 'pending').trim().toLowerCase(),
-    };
-
-    const allowedStatuses = new Set(['pending', 'active', 'cancelled', 'hidden']);
-    if (!allowedStatuses.has(payload.status)) {
-      payload.status = 'pending';
-    }
-
-    try {
-      setDiscoverEventSubmitting(true);
-      const query = supabase.from('pet_events');
-      const { error } = eventId
-        ? await query.update({
-            host_type: payload.host_type,
-            business_id: payload.business_id,
-            shelter_id: payload.shelter_id,
-            title: payload.title,
-            description: payload.description,
-            event_type: payload.event_type,
-            starts_at: payload.starts_at,
-            ends_at: payload.ends_at,
-            max_attendees: payload.max_attendees,
-            registration_required: payload.registration_required,
-            registration_url: payload.registration_url,
-            address: payload.address,
-            city: payload.city,
-            state: payload.state,
-            zip: payload.zip,
-            image_url: payload.image_url,
-            status: payload.status,
-          }).eq('id', eventId)
-        : await query.insert([payload]);
-
-      if (error) {
-        console.log('Discover event save error:', error);
-        Alert.alert('Unable to save event', 'Please try again.');
-        return;
-      }
-
-      Alert.alert(
-        eventId ? 'Event updated' : 'Event added',
-        eventId ? 'The event was updated successfully.' : 'The new event was created.'
-      );
-      closeDiscoverEventModal();
-      await reloadDiscoverManagedEvents();
-    } catch (error) {
-      console.log('Discover event save error:', error);
-      Alert.alert('Unable to save event', 'Please try again.');
-    } finally {
-      setDiscoverEventSubmitting(false);
-    }
-  };
-  const updateDiscoverEventStatus = async (event, nextStatus) => {
-    if (!authUser?.id || !isDiscoverAdmin || !event?.id || discoverEventSavingId) return;
-
-    const allowedStatuses = new Set(['active', 'cancelled', 'hidden']);
-    if (!allowedStatuses.has(nextStatus)) return;
-
-    try {
-      setDiscoverEventSavingId(event.id);
-      const { error } = await supabase
-        .from('pet_events')
-        .update({ status: nextStatus })
-        .eq('id', event.id);
-
-      if (error) {
-        console.log('Discover event status update error:', error);
-        Alert.alert('Unable to update event', 'Please try again.');
-        return;
-      }
-
-      await reloadDiscoverManagedEvents();
-    } catch (error) {
-      console.log('Discover event status update error:', error);
-      Alert.alert('Unable to update event', 'Please try again.');
-    } finally {
-      setDiscoverEventSavingId(null);
-    }
-  };
-  const closeDiscoverPetEditor = () => {
-    setDiscoverPetEditorVisible(false);
-    setDiscoverEditingPet(null);
-    setDiscoverPetForm(createDiscoverPetForm());
-  };
-  const openDiscoverPetEditor = (pet = null) => {
-    if (!authUser?.id || ownedShelterListings.length === 0) {
-      Alert.alert('No shelter available', 'Add or claim a shelter listing first.');
-      return;
-    }
-    const nextPet = pet || { shelter_id: ownedShelterListings[0]?.id || '', status: 'available' };
-    setDiscoverEditingPet(nextPet.id ? nextPet : null);
-    setDiscoverPetForm(createDiscoverPetForm({
-      ...nextPet,
-      shelter_id: nextPet.shelter_id || ownedShelterListings[0]?.id || '',
-      status: nextPet.status || 'available',
-    }));
-    setDiscoverPetEditorVisible(true);
-  };
-  const submitDiscoverPet = async () => {
-    if (!authUser?.id || ownedShelterListings.length === 0) return;
-    const shelterId = String(discoverPetForm.shelter_id || '').trim();
-    if (!shelterId || !ownedShelterIds.includes(shelterId)) {
-      Alert.alert('Shelter required', 'Choose one of your shelters.');
-      return;
-    }
-    if (!String(discoverPetForm.name || '').trim()) {
-      Alert.alert('Pet name required', 'Please enter a pet name.');
-      return;
-    }
-    if (!String(discoverPetForm.species || '').trim()) {
-      Alert.alert('Species required', 'Please enter a species.');
-      return;
-    }
-
-    const payload = {
-      shelter_id: shelterId,
-      name: String(discoverPetForm.name || '').trim(),
-      species: String(discoverPetForm.species || '').trim(),
-      breed: normalizeDiscoverSubmissionText(discoverPetForm.breed),
-      age_label: normalizeDiscoverSubmissionText(discoverPetForm.age_label),
-      sex: normalizeDiscoverSubmissionText(discoverPetForm.sex),
-      size: normalizeDiscoverSubmissionText(discoverPetForm.size),
-      weight: normalizeDiscoverSubmissionText(discoverPetForm.weight),
-      description: normalizeDiscoverSubmissionText(discoverPetForm.description),
-      personality: normalizeDiscoverSubmissionText(discoverPetForm.personality),
-      good_with_kids: discoverPetForm.good_with_kids,
-      good_with_dogs: discoverPetForm.good_with_dogs,
-      good_with_cats: discoverPetForm.good_with_cats,
-      house_trained: discoverPetForm.house_trained,
-      medical_status: normalizeDiscoverSubmissionText(discoverPetForm.medical_status),
-      adoption_fee: String(discoverPetForm.adoption_fee || '').trim() ? Number(discoverPetForm.adoption_fee) : null,
-      status: String(discoverPetForm.status || 'available').trim(),
-    };
-
-    if (payload.adoption_fee != null && Number.isNaN(payload.adoption_fee)) {
-      Alert.alert('Adoption fee invalid', 'Enter a valid number or leave it blank.');
-      return;
-    }
-
-    if (!['available', 'pending', 'adopted', 'hidden'].includes(payload.status)) {
-      payload.status = 'available';
-    }
-
-    try {
-      setDiscoverPetSubmitting(true);
-      const query = discoverEditingPet?.id
-        ? supabase.from('adoptable_pets').update(payload).eq('id', discoverEditingPet.id).in('shelter_id', ownedShelterIds)
-        : supabase.from('adoptable_pets').insert([payload]);
-      const { error } = await query;
-
-      if (error) {
-        console.log('Discover pet save error:', error);
-        Alert.alert('Unable to save pet', 'Please try again.');
-        return;
-      }
-
-      Alert.alert('Pet saved', 'Adoptable pet updated.');
-      closeDiscoverPetEditor();
-      await reloadDiscoverAdoptablePets();
-    } catch (error) {
-      console.log('Discover pet save error:', error);
-      Alert.alert('Unable to save pet', 'Please try again.');
-    } finally {
-      setDiscoverPetSubmitting(false);
-    }
-  };
-  const updateDiscoverPetStatus = async (pet, nextStatus) => {
-    if (!authUser?.id || !pet?.id || !ownedShelterIds.includes(pet.shelter_id)) return;
-    try {
-      setDiscoverPetSubmitting(true);
-      const { error } = await supabase
-        .from('adoptable_pets')
-        .update({ status: nextStatus })
-        .eq('id', pet.id)
-        .in('shelter_id', ownedShelterIds);
-
-      if (error) {
-        console.log('Discover pet status update error:', error);
-        Alert.alert('Unable to update pet', 'Please try again.');
-        return;
-      }
-
-      await reloadDiscoverAdoptablePets();
-      Alert.alert(
-        'Pet updated',
-        nextStatus === 'adopted'
-          ? 'The pet was marked adopted.'
-          : nextStatus === 'hidden'
-            ? 'The pet was hidden.'
-            : 'The pet was reactivated.'
-      );
-    } catch (error) {
-      console.log('Discover pet status update error:', error);
-      Alert.alert('Unable to update pet', 'Please try again.');
-    } finally {
-      setDiscoverPetSubmitting(false);
-    }
-  };
 
   return (
     <PetSyncBackground>
@@ -17501,85 +15793,6 @@ function DiscoverHomeScreen() {
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={s.discoverListingEntryCard}
-                activeOpacity={0.88}
-                onPress={openDiscoverRegistration}
-              >
-                <View style={s.discoverListingEntryIconWrap}>
-                  <MaterialCommunityIcons name="paw-outline" size={22} color={C.primaryActionBg} />
-                </View>
-                <View style={s.flex}>
-                  <Text style={s.discoverListingEntryTitle}>Become a PetSync+ Partner</Text>
-                  <Text style={s.discoverListingEntrySubtitle}>
-                    Apply as a business, shelter / rescue, or community partner.
-                  </Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={22} color={C.primaryActionBg} />
-              </TouchableOpacity>
-
-              {authUser?.id ? (
-                <DiscoverSection
-                  title="My Partner Applications"
-                  subtitle="Track the status of your submitted partner applications."
-                  items={discoverPartnerApplications}
-                  loading={discoverPartnerApplicationsLoading}
-                  emptyTitle="No applications submitted yet."
-                  emptyText="Submit a business, shelter / rescue, or community partner application to see it here."
-                  renderItem={(application) => {
-                    const displayName = application.partner_type === 'business'
-                      ? application.business_name
-                      : application.organization_name;
-                    const typeLabel = application.partner_type === 'business'
-                      ? 'Business Partner'
-                      : application.partner_type === 'community'
-                        ? 'Community Partner'
-                        : 'Shelter / Rescue';
-                    return (
-                      <View key={application.id} style={[s.discoverFavoriteCard, { width: favoriteCardWidth }]}>
-                        <View style={s.discoverFavoriteHeader}>
-                          <View style={s.discoverFavoriteAvatar}>
-                            <Text style={s.discoverFavoriteAvatarText}>{getDiscoverInitial(displayName)}</Text>
-                          </View>
-                          <View style={s.flex}>
-                            <Text style={s.discoverCardTitle}>{displayName || 'Partner Application'}</Text>
-                            <Text style={s.discoverCardMeta}>{typeLabel}</Text>
-                          </View>
-                        </View>
-                        <View style={s.discoverFavoriteMetaRow}>
-                          <Text style={s.discoverCardMeta}>{application.city || 'City not listed'}{application.state ? `, ${application.state}` : ''}</Text>
-                          <View style={s.discoverChipAlt}>
-                            <Text style={s.discoverChipAltText}>{String(application.status || 'pending').toUpperCase()}</Text>
-                          </View>
-                        </View>
-                        <Text style={s.discoverDetailEmptyText}>
-                          Submitted {formatDiscoverListingDate(application.created_at) || 'recently'}
-                        </Text>
-                      </View>
-                    );
-                  }}
-                />
-              ) : null}
-
-              {isDiscoverAdmin ? (
-                <TouchableOpacity
-                  style={s.discoverListingEntryCard}
-                  activeOpacity={0.88}
-                  onPress={openDiscoverBusinessRegistration}
-                >
-                  <View style={s.discoverListingEntryIconWrap}>
-                    <MaterialCommunityIcons name="office-building-outline" size={22} color={C.primaryActionBg} />
-                  </View>
-                  <View style={s.flex}>
-                    <Text style={s.discoverListingEntryTitle}>Business listings</Text>
-                    <Text style={s.discoverListingEntrySubtitle}>
-                      Business listings are added by PetSync+ after partner approval.
-                    </Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={22} color={C.primaryActionBg} />
-                </TouchableOpacity>
-              ) : null}
-
               {hasSearchTerm && !hasDiscoverSearchResults ? (
                 <DiscoverSearchEmptyState
                   title="No Discover results found."
@@ -17606,7 +15819,7 @@ function DiscoverHomeScreen() {
                       : favorite.favorite_type === 'shelter'
                         ? [item.city, item.state].filter(Boolean).join(', ') || 'Saved shelter'
                         : favorite.favorite_type === 'adoptable_pet'
-                          ? [item.species, item.breed].filter(Boolean).join(' � ') || 'Saved pet'
+                          ? [item.species, item.breed].filter(Boolean).join(' • ') || 'Saved pet'
                           : item.event_type || 'Saved event';
                     return (
                       <TouchableOpacity
@@ -17651,681 +15864,6 @@ function DiscoverHomeScreen() {
                   title="Sign in to save Discover favorites."
                   body="Use your account to save businesses, shelters, pets, and events."
                 />
-              ) : null}
-
-              {isDiscoverAdmin ? (
-                <>
-                  <TouchableOpacity
-                    style={s.discoverListingEntryCard}
-                    activeOpacity={0.88}
-                    onPress={() => setShowDiscoverSubmittedListings((current) => !current)}
-                  >
-                    <View style={s.discoverListingEntryIconWrap}>
-                      <MaterialCommunityIcons name="file-document-outline" size={22} color={C.primaryActionBg} />
-                    </View>
-                    <View style={s.flex}>
-                      <Text style={s.discoverListingEntryTitle}>My Submitted Listings</Text>
-                      <Text style={s.discoverListingEntrySubtitle}>
-                        {authUser?.id
-                          ? `${discoverOwnedListings.length} submission${discoverOwnedListings.length === 1 ? '' : 's'} waiting in your queue.`
-                          : 'Sign in to view the listings you submit.'}
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name={showDiscoverSubmittedListings ? 'chevron-up' : 'chevron-down'}
-                      size={22}
-                      color={C.primaryActionBg}
-                    />
-                  </TouchableOpacity>
-
-                  {showDiscoverSubmittedListings ? (
-                    <DiscoverDetailSection title="My Submitted Listings">
-                      {!authUser?.id ? (
-                        <Text style={s.discoverDetailEmptyText}>Sign in to submit and track listings.</Text>
-                      ) : discoverOwnedListingsLoading ? (
-                        <View style={s.discoverLoadingCard}>
-                          <ActivityIndicator color={C.primaryActionBg} />
-                          <Text style={s.discoverLoadingText}>Loading your submitted listings...</Text>
-                        </View>
-                      ) : discoverOwnedListings.length > 0 ? (
-                        discoverOwnedListings.map((listing) => (
-                          <View key={`${listing.discoverType}:${listing.id}`} style={s.discoverOwnedListingCard}>
-                            <View style={s.discoverOwnedListingHeader}>
-                              <View style={s.flex}>
-                                <Text style={s.discoverCardTitle}>{listing.name}</Text>
-                                <Text style={s.discoverCardMeta}>
-                                  {listing.discoverType === 'business' ? 'Business' : 'Shelter'}
-                                </Text>
-                              </View>
-                              <View style={s.discoverChipAlt}>
-                                <Text style={s.discoverChipAltText}>{formatDiscoverListingStatus(listing.status)}</Text>
-                              </View>
-                            </View>
-                            <Text style={s.discoverDetailLine}>
-                              {[listing.city, listing.state].filter(Boolean).join(', ') || 'Location not listed'}
-                            </Text>
-                            <Text style={s.discoverDetailEmptyText}>
-                              Submitted {formatDiscoverListingDate(listing.created_at) || 'recently'}
-                            </Text>
-                          </View>
-                        ))
-                      ) : (
-                        <Text style={s.discoverDetailEmptyText}>No submitted listings yet.</Text>
-                      )}
-                    </DiscoverDetailSection>
-                  ) : null}
-                  <TouchableOpacity
-                    style={s.discoverListingEntryCard}
-                    activeOpacity={0.88}
-                    onPress={() => setShowDiscoverOwnerDashboard((current) => !current)}
-                  >
-                    <View style={s.discoverListingEntryIconWrap}>
-                      <MaterialCommunityIcons name="office-building-cog-outline" size={22} color={C.primaryActionBg} />
-                    </View>
-                    <View style={s.flex}>
-                      <Text style={s.discoverListingEntryTitle}>My Business & Shelter Dashboard</Text>
-                      <Text style={s.discoverListingEntrySubtitle}>
-                        {authUser?.id
-                          ? 'Manage the listings you own.'
-                          : 'Sign in to manage your business or shelter listings.'}
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name={showDiscoverOwnerDashboard ? 'chevron-up' : 'chevron-down'}
-                      size={22}
-                      color={C.primaryActionBg}
-                    />
-                  </TouchableOpacity>
-
-                  {showDiscoverOwnerDashboard ? (
-                    <DiscoverDetailSection title="My Business & Shelter Dashboard">
-                      {!authUser?.id ? (
-                        <Text style={s.discoverDetailEmptyText}>Sign in to manage your business or shelter listings.</Text>
-                      ) : discoverOwnedListingsLoading ? (
-                        <View style={s.discoverLoadingCard}>
-                          <ActivityIndicator color={C.primaryActionBg} />
-                          <Text style={s.discoverLoadingText}>Loading your dashboard...</Text>
-                        </View>
-                      ) : discoverOwnedListings.length > 0 ? (
-                        discoverOwnedListings.map((listing) => {
-                          const reviewDate = listing.approved_at || listing.rejected_at;
-                          const reviewLabel = listing.status === 'approved'
-                            ? 'Approved on'
-                            : listing.status === 'rejected'
-                              ? 'Rejected on'
-                              : listing.status === 'suspended'
-                                ? 'Suspended'
-                                : 'Submitted on';
-                          return (
-                            <View key={`dashboard:${listing.discoverType}:${listing.id}`} style={s.discoverOwnedListingCard}>
-                              <View style={s.discoverOwnedListingHeader}>
-                                <View style={s.flex}>
-                                  <Text style={s.discoverCardTitle}>{listing.name}</Text>
-                                  <Text style={s.discoverCardMeta}>
-                                    {listing.discoverType === 'business' ? 'Business' : 'Shelter'}
-                                  </Text>
-                                </View>
-                                <View style={s.discoverChipAlt}>
-                                  <Text style={s.discoverChipAltText}>{formatDiscoverListingStatus(listing.status)}</Text>
-                                </View>
-                              </View>
-
-                              <Text style={s.discoverDetailLine}>
-                                {[listing.city, listing.state].filter(Boolean).join(', ') || 'Location not listed'}
-                              </Text>
-
-                              {listing.approval_notes ? (
-                                <Text style={s.discoverDetailBodyText}>
-                                  Approval notes: {listing.approval_notes}
-                                </Text>
-                              ) : null}
-
-                              {reviewDate ? (
-                                <Text style={s.discoverDetailEmptyText}>
-                                  {reviewLabel} {formatDiscoverListingDate(reviewDate)}
-                                </Text>
-                              ) : null}
-
-                              <TouchableOpacity
-                                style={s.discoverOwnerEditBtn}
-                                activeOpacity={0.88}
-                                onPress={() => {
-                                  setDiscoverEditingListing(listing);
-                                  if (listing.discoverType === 'business') {
-                                    setDiscoverBusinessEditForm(createDiscoverBusinessEditForm(listing));
-                                    setDiscoverShelterEditForm(createDiscoverShelterEditForm());
-                                  } else {
-                                    setDiscoverShelterEditForm(createDiscoverShelterEditForm(listing));
-                                    setDiscoverBusinessEditForm(createDiscoverBusinessEditForm());
-                                  }
-                                  setDiscoverEditModalVisible(true);
-                                }}
-                              >
-                                <Text style={s.discoverOwnerEditBtnText}>Edit</Text>
-                              </TouchableOpacity>
-                            </View>
-                          );
-                        })
-                      ) : (
-                        <Text style={s.discoverDetailEmptyText}>No owned business or shelter listings yet.</Text>
-                      )}
-                    </DiscoverDetailSection>
-                  ) : null}
-
-                  {isDiscoverAdmin ? (
-                    <>
-                      <TouchableOpacity
-                        style={s.discoverListingEntryCard}
-                        activeOpacity={0.88}
-                        onPress={() => setShowDiscoverEventsManager((current) => !current)}
-                      >
-                        <View style={s.discoverListingEntryIconWrap}>
-                          <MaterialCommunityIcons name="calendar-month-outline" size={22} color={C.primaryActionBg} />
-                        </View>
-                        <View style={s.flex}>
-                          <Text style={s.discoverListingEntryTitle}>Events Manager</Text>
-                          <Text style={s.discoverListingEntrySubtitle}>
-                            {discoverManagedEvents.length > 0
-                              ? `${discoverManagedEvents.length} event${discoverManagedEvents.length === 1 ? '' : 's'} in your admin queue.`
-                              : 'Create and manage Discover events.'}
-                          </Text>
-                        </View>
-                        <MaterialCommunityIcons
-                          name={showDiscoverEventsManager ? 'chevron-up' : 'chevron-down'}
-                          size={22}
-                          color={C.primaryActionBg}
-                        />
-                      </TouchableOpacity>
-
-                      {showDiscoverEventsManager ? (
-                        <DiscoverDetailSection title="Events Manager">
-                          {discoverEventsLoading ? (
-                            <View style={s.discoverLoadingCard}>
-                              <ActivityIndicator color={C.primaryActionBg} />
-                              <Text style={s.discoverLoadingText}>Loading events...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <View style={s.discoverChipRow}>
-                                <DiscoverDetailPill label={`Active ${discoverManagedEventCounts.active}`} />
-                                <DiscoverDetailPill label={`Pending ${discoverManagedEventCounts.pending}`} />
-                                <DiscoverDetailPill label={`Cancelled ${discoverManagedEventCounts.cancelled}`} />
-                                <DiscoverDetailPill label={`Hidden ${discoverManagedEventCounts.hidden}`} />
-                              </View>
-
-                              <TouchableOpacity
-                                style={s.discoverOwnerEditBtn}
-                                activeOpacity={0.88}
-                                onPress={() => openDiscoverEventModal()}
-                              >
-                                <Text style={s.discoverOwnerEditBtnText}>Add Event</Text>
-                              </TouchableOpacity>
-
-                              {discoverManagedEvents.length > 0 ? (
-                                discoverManagedEvents.map((event) => {
-                                  const businessName = event.host_type === 'business'
-                                    ? discoverManagedEventLookup.business[event.business_id]?.name || 'Business host'
-                                    : '';
-                                  const shelterName = event.host_type === 'shelter'
-                                    ? discoverManagedEventLookup.shelter[event.shelter_id]?.name || 'Shelter host'
-                                    : '';
-                                  const hostLabel = event.host_type === 'business'
-                                    ? 'Business'
-                                    : event.host_type === 'shelter'
-                                      ? 'Shelter'
-                                      : 'Community';
-                                  const locationLabel = [event.city, event.state].filter(Boolean).join(', ') || 'Location not listed';
-                                  return (
-                                    <View key={event.id} style={s.discoverPromotionCard}>
-                                      <View style={s.discoverPromotionHeader}>
-                                        <View style={s.flex}>
-                                          <Text style={s.discoverCardTitle}>{event.title}</Text>
-                                          <Text style={s.discoverCardMeta}>
-                                            {businessName || shelterName || hostLabel}
-                                          </Text>
-                                        </View>
-                                        <View style={s.discoverChipAlt}>
-                                          <Text style={s.discoverChipAltText}>{formatDiscoverEventStatus(event.status)}</Text>
-                                        </View>
-                                      </View>
-
-                                      <Text style={s.discoverDetailLine}>
-                                        {event.host_type ? `Host: ${hostLabel}` : 'Host not listed'}
-                                      </Text>
-                                      <Text style={s.discoverDetailLine}>
-                                        {event.event_type ? `Type: ${event.event_type}` : 'Event type not listed'}
-                                      </Text>
-                                      <Text style={s.discoverDetailLine}>
-                                        {event.starts_at ? `Starts: ${formatDiscoverDateTime(event.starts_at) || event.starts_at}` : 'Starts: Not set'}
-                                      </Text>
-                                      <Text style={s.discoverDetailLine}>
-                                        {event.ends_at ? `Ends: ${formatDiscoverDateTime(event.ends_at) || event.ends_at}` : 'Ends: Not set'}
-                                      </Text>
-                                      <Text style={s.discoverDetailLine}>{locationLabel}</Text>
-
-                                      <View style={s.discoverPromotionActionRow}>
-                                        <TouchableOpacity
-                                          style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnPrimary]}
-                                          activeOpacity={0.88}
-                                          onPress={() => openDiscoverEventModal(event)}
-                                        >
-                                          <Text style={s.discoverPromotionActionBtnText}>Edit</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                          style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnSecondary]}
-                                          activeOpacity={0.88}
-                                          disabled={discoverEventSavingId === event.id}
-                                          onPress={() => updateDiscoverEventStatus(event, 'active')}
-                                        >
-                                          <Text style={s.discoverPromotionActionBtnSecondaryText}>Activate</Text>
-                                        </TouchableOpacity>
-                                      </View>
-
-                                      <View style={s.discoverPromotionActionRow}>
-                                        <TouchableOpacity
-                                          style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnSecondary]}
-                                          activeOpacity={0.88}
-                                          disabled={discoverEventSavingId === event.id}
-                                          onPress={() => updateDiscoverEventStatus(event, 'cancelled')}
-                                        >
-                                          <Text style={s.discoverPromotionActionBtnSecondaryText}>Cancel</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                          style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnDanger]}
-                                          activeOpacity={0.88}
-                                          disabled={discoverEventSavingId === event.id}
-                                          onPress={() => updateDiscoverEventStatus(event, 'hidden')}
-                                        >
-                                          <Text style={s.discoverPromotionActionBtnDangerText}>Hide</Text>
-                                        </TouchableOpacity>
-                                      </View>
-                                    </View>
-                                  );
-                                })
-                              ) : (
-                                <Text style={s.discoverDetailEmptyText}>No events added yet.</Text>
-                              )}
-                            </>
-                          )}
-                        </DiscoverDetailSection>
-                      ) : null}
-
-                      {ownedBusinessListings.length > 0 || discoverOwnedPromotionsLoading || discoverOwnedPromotions.length > 0 ? (
-                        <>
-                          <TouchableOpacity
-                            style={s.discoverListingEntryCard}
-                            activeOpacity={0.88}
-                            onPress={() => setShowDiscoverPromotionsManager((current) => !current)}
-                          >
-                            <View style={s.discoverListingEntryIconWrap}>
-                              <MaterialCommunityIcons name="tag-multiple-outline" size={22} color={C.primaryActionBg} />
-                            </View>
-                            <View style={s.flex}>
-                              <Text style={s.discoverListingEntryTitle}>Promotions & Offers</Text>
-                              <Text style={s.discoverListingEntrySubtitle}>
-                                {ownedBusinessListings.length > 0
-                                  ? `${discoverOwnedPromotions.length} promotion${discoverOwnedPromotions.length === 1 ? '' : 's'} across ${ownedBusinessListings.length} business${ownedBusinessListings.length === 1 ? '' : 's'}.`
-                                  : 'Add or claim a business listing to manage promotions.'}
-                              </Text>
-                            </View>
-                            <MaterialCommunityIcons
-                              name={showDiscoverPromotionsManager ? 'chevron-up' : 'chevron-down'}
-                              size={22}
-                              color={C.primaryActionBg}
-                            />
-                          </TouchableOpacity>
-
-                          {showDiscoverPromotionsManager ? (
-                            <DiscoverDetailSection title="Promotions & Offers">
-                              {!authUser?.id ? (
-                                <Text style={s.discoverDetailEmptyText}>Sign in to manage promotions.</Text>
-                              ) : ownedBusinessListings.length === 0 ? (
-                                <Text style={s.discoverDetailEmptyText}>Add or claim a business listing first.</Text>
-                              ) : discoverOwnedPromotionsLoading ? (
-                                <View style={s.discoverLoadingCard}>
-                                  <ActivityIndicator color={C.primaryActionBg} />
-                                  <Text style={s.discoverLoadingText}>Loading promotions...</Text>
-                                </View>
-                              ) : (
-                                <>
-                                  <View style={s.discoverChipRow}>
-                                    <DiscoverDetailPill label={`Active ${discoverOwnedPromotionCounts.active}`} />
-                                    <DiscoverDetailPill label={`Pending ${discoverOwnedPromotionCounts.pending}`} />
-                                    <DiscoverDetailPill label={`Paused ${discoverOwnedPromotionCounts.paused}`} />
-                                    <DiscoverDetailPill label={`Expired ${discoverOwnedPromotionCounts.expired}`} />
-                                  </View>
-
-                                  <TouchableOpacity
-                                    style={s.discoverOwnerEditBtn}
-                                    activeOpacity={0.88}
-                                    onPress={() => openDiscoverPromotionModal()}
-                                  >
-                                    <Text style={s.discoverOwnerEditBtnText}>Add Promotion</Text>
-                                  </TouchableOpacity>
-
-                                  {discoverOwnedPromotions.length > 0 ? (
-                                    discoverOwnedPromotions.map((promotion) => {
-                                      const businessName = ownedBusinessLookup[promotion.business_id]?.name || 'Business';
-                                      const promotionStatus = String(promotion.status || 'pending').toLowerCase();
-                                      return (
-                                        <View key={promotion.id} style={s.discoverPromotionCard}>
-                                          <View style={s.discoverPromotionHeader}>
-                                            <View style={s.flex}>
-                                              <Text style={s.discoverCardTitle}>{promotion.title}</Text>
-                                              <Text style={s.discoverCardMeta}>{businessName}</Text>
-                                            </View>
-                                            <View style={s.discoverChipAlt}>
-                                              <Text style={s.discoverChipAltText}>{formatDiscoverPromotionStatus(promotion.status)}</Text>
-                                            </View>
-                                          </View>
-
-                                          <Text style={s.discoverDetailLine}>
-                                            {promotion.promo_code ? `Code: ${promotion.promo_code}` : 'No promo code provided'}
-                                          </Text>
-                                          <Text style={s.discoverDetailLine}>
-                                            {promotion.starts_at ? `Starts: ${formatDiscoverDateTime(promotion.starts_at) || promotion.starts_at}` : 'Starts: Not set'}
-                                          </Text>
-                                          <Text style={s.discoverDetailLine}>
-                                            {promotion.ends_at ? `Ends: ${formatDiscoverDateTime(promotion.ends_at) || promotion.ends_at}` : 'Ends: Not set'}
-                                          </Text>
-
-                                          <View style={s.discoverPromotionActionRow}>
-                                            <TouchableOpacity
-                                              style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnPrimary]}
-                                              activeOpacity={0.88}
-                                              onPress={() => openDiscoverPromotionModal(promotion)}
-                                            >
-                                              <Text style={s.discoverPromotionActionBtnText}>Edit</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity
-                                              style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnSecondary]}
-                                              activeOpacity={0.88}
-                                              disabled={discoverPromotionSavingId === promotion.id}
-                                              onPress={() => updateDiscoverPromotionStatus(promotion, 'paused')}
-                                            >
-                                              <Text style={s.discoverPromotionActionBtnSecondaryText}>Pause</Text>
-                                            </TouchableOpacity>
-                                          </View>
-
-                                          <View style={s.discoverPromotionActionRow}>
-                                            <TouchableOpacity
-                                              style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnPrimary]}
-                                              activeOpacity={0.88}
-                                              disabled={discoverPromotionSavingId === promotion.id}
-                                              onPress={() => updateDiscoverPromotionStatus(promotion, 'pending')}
-                                            >
-                                              <Text style={s.discoverPromotionActionBtnText}>Reactivate</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity
-                                              style={[s.discoverPromotionActionBtn, s.discoverPromotionActionBtnDanger]}
-                                              activeOpacity={0.88}
-                                              disabled={discoverPromotionSavingId === promotion.id || promotionStatus === 'expired'}
-                                              onPress={() => updateDiscoverPromotionStatus(promotion, 'expired')}
-                                            >
-                                              <Text style={s.discoverPromotionActionBtnDangerText}>Expire</Text>
-                                            </TouchableOpacity>
-                                          </View>
-                                        </View>
-                                      );
-                                    })
-                                  ) : (
-                                    <Text style={s.discoverDetailEmptyText}>No promotions added yet.</Text>
-                                  )}
-                                </>
-                              )}
-                            </DiscoverDetailSection>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </>
-                  ) : null}
-                </>
-              ) : null}
-
-              {(authUser?.id && ownedShelterListings.length > 0) || discoverAdoptablePets.length > 0 || discoverAdoptablePetsLoading ? (
-                <>
-                  <TouchableOpacity
-                    style={s.discoverListingEntryCard}
-                    activeOpacity={0.88}
-                    onPress={() => setShowDiscoverAdoptablePets((current) => !current)}
-                  >
-                    <View style={s.discoverListingEntryIconWrap}>
-                      <MaterialCommunityIcons name="paw-outline" size={22} color={C.primaryActionBg} />
-                    </View>
-                    <View style={s.flex}>
-                      <Text style={s.discoverListingEntryTitle}>Adoptable Pets</Text>
-                      <Text style={s.discoverListingEntrySubtitle}>
-                        {authUser?.id && ownedShelterListings.length > 0
-                          ? `${discoverAdoptablePets.length} pet${discoverAdoptablePets.length === 1 ? '' : 's'} across ${ownedShelterListings.length} shelter${ownedShelterListings.length === 1 ? '' : 's'}.`
-                          : 'Add or claim a shelter listing to manage adoptable pets.'}
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name={showDiscoverAdoptablePets ? 'chevron-up' : 'chevron-down'}
-                      size={22}
-                      color={C.primaryActionBg}
-                    />
-                  </TouchableOpacity>
-
-                  {showDiscoverAdoptablePets ? (
-                    <DiscoverDetailSection title="Adoptable Pets">
-                      {!authUser?.id ? (
-                        <Text style={s.discoverDetailEmptyText}>Sign in to manage adoptable pets.</Text>
-                      ) : ownedShelterListings.length === 0 ? (
-                        <Text style={s.discoverDetailEmptyText}>Add or claim a shelter listing first.</Text>
-                      ) : discoverAdoptablePetsLoading ? (
-                        <View style={s.discoverLoadingCard}>
-                          <ActivityIndicator color={C.primaryActionBg} />
-                          <Text style={s.discoverLoadingText}>Loading adoptable pets...</Text>
-                        </View>
-                      ) : (
-                        <>
-                          <View style={s.discoverChipRow}>
-                            <DiscoverDetailPill label={`Available ${discoverAdoptablePetCounts.available || 0}`} />
-                            <DiscoverDetailPill label={`Pending ${discoverAdoptablePetCounts.pending || 0}`} />
-                            <DiscoverDetailPill label={`Adopted ${discoverAdoptablePetCounts.adopted || 0}`} />
-                            <DiscoverDetailPill label={`Hidden ${discoverAdoptablePetCounts.hidden || 0}`} />
-                          </View>
-
-                          <TouchableOpacity
-                            style={s.discoverOwnerEditBtn}
-                            activeOpacity={0.88}
-                            onPress={() => openDiscoverPetEditor()}
-                          >
-                            <Text style={s.discoverOwnerEditBtnText}>Add Pet</Text>
-                          </TouchableOpacity>
-
-                          <Text style={s.discoverDetailEmptyText}>
-                            Photo upload coming in the media manager.
-                          </Text>
-
-                          {discoverAdoptablePets.length > 0 ? (
-                            discoverAdoptablePets.map((pet) => {
-                              const petMedia = discoverAdoptablePetMediaLookup[pet.id] || pet.media || [];
-                              return (
-                                <View key={pet.id} style={s.discoverAdoptablePetCard}>
-                                  <View style={s.discoverAdoptablePetHeader}>
-                                    <View style={s.flex}>
-                                      <Text style={s.discoverCardTitle}>{pet.name}</Text>
-                                      <Text style={s.discoverCardMeta}>
-                                        {[pet.species, pet.breed].filter(Boolean).join(' · ') || 'Adoptable pet'}
-                                      </Text>
-                                    </View>
-                                    <View style={s.discoverChipAlt}>
-                                      <Text style={s.discoverChipAltText}>{formatDiscoverPetStatus(pet.status)}</Text>
-                                    </View>
-                                  </View>
-
-                                  <Text style={s.discoverDetailLine}>
-                                    {pet.age_label || 'Age not listed'} · {pet.sex || 'Sex not listed'}
-                                  </Text>
-                                  <Text style={s.discoverDetailLine}>
-                                    {pet.adoption_fee != null ? `Adoption fee: $${Number(pet.adoption_fee).toFixed(0)}` : 'Adoption fee not listed'}
-                                  </Text>
-                                  <Text style={s.discoverDetailEmptyText}>
-                                    Added {formatDiscoverListingDate(pet.created_at) || 'recently'}
-                                  </Text>
-
-                                  {petMedia.length > 0 ? (
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.discoverPetMediaRow}>
-                                      {petMedia.map((mediaItem) => (
-                                        <View key={mediaItem.id} style={s.discoverPetMediaThumbWrap}>
-                                          {mediaItem.media_type === 'video' ? (
-                                            <View style={s.discoverPetMediaThumbVideo}>
-                                              <MaterialCommunityIcons name="play-circle-outline" size={18} color="#fff" />
-                                              <Text style={s.discoverPetMediaThumbVideoText}>Video</Text>
-                                            </View>
-                                          ) : (
-                                            <Image source={{ uri: mediaItem.media_url }} style={s.discoverPetMediaThumb} />
-                                          )}
-                                        </View>
-                                      ))}
-                                    </ScrollView>
-                                  ) : (
-                                    <Text style={s.discoverDetailEmptyText}>No media yet. Photo upload coming in the media manager.</Text>
-                                  )}
-
-                                  <View style={s.discoverModerationButtonRow}>
-                                    <TouchableOpacity
-                                      style={s.discoverOwnerEditBtn}
-                                      activeOpacity={0.88}
-                                      onPress={() => openDiscoverPetEditor(pet)}
-                                    >
-                                      <Text style={s.discoverOwnerEditBtnText}>Edit</Text>
-                                    </TouchableOpacity>
-                                    {pet.status !== 'adopted' ? (
-                                      <TouchableOpacity
-                                        style={[s.discoverModerationApproveBtn, s.discoverPetActionBtn]}
-                                        activeOpacity={0.88}
-                                        onPress={() => updateDiscoverPetStatus(pet, 'adopted')}
-                                      >
-                                        <Text style={s.discoverPetActionText}>Mark Adopted</Text>
-                                      </TouchableOpacity>
-                                    ) : (
-                                      <TouchableOpacity
-                                        style={[s.discoverModerationApproveBtn, s.discoverPetActionBtn]}
-                                        activeOpacity={0.88}
-                                        onPress={() => updateDiscoverPetStatus(pet, 'available')}
-                                      >
-                                        <Text style={s.discoverPetActionText}>Reactivate</Text>
-                                      </TouchableOpacity>
-                                    )}
-                                  </View>
-
-                                  <View style={s.discoverModerationButtonRow}>
-                                    {pet.status !== 'hidden' ? (
-                                      <TouchableOpacity
-                                        style={[s.discoverModerationRejectBtn, s.discoverPetArchiveBtn]}
-                                        activeOpacity={0.88}
-                                        onPress={() => updateDiscoverPetStatus(pet, 'hidden')}
-                                      >
-                                        <Text style={s.discoverPetArchiveText}>Hide / Archive</Text>
-                                      </TouchableOpacity>
-                                    ) : (
-                                      <TouchableOpacity
-                                        style={[s.discoverModerationApproveBtn, s.discoverPetActionBtn]}
-                                        activeOpacity={0.88}
-                                        onPress={() => updateDiscoverPetStatus(pet, 'available')}
-                                      >
-                                        <Text style={s.discoverPetActionText}>Reactivate</Text>
-                                      </TouchableOpacity>
-                                    )}
-                                  </View>
-                                </View>
-                              );
-                            })
-                          ) : (
-                            <Text style={s.discoverDetailEmptyText}>No adoptable pets added yet.</Text>
-                          )}
-                        </>
-                      )}
-                    </DiscoverDetailSection>
-                  ) : null}
-                </>
-              ) : null}
-
-              {isDiscoverAdmin ? (
-                <>
-                  <TouchableOpacity
-                    style={s.discoverListingEntryCard}
-                    activeOpacity={0.88}
-                    onPress={() => setShowDiscoverApprovalQueue((current) => !current)}
-                  >
-                    <View style={s.discoverListingEntryIconWrap}>
-                      <MaterialCommunityIcons name="shield-account-outline" size={22} color={C.primaryActionBg} />
-                    </View>
-                    <View style={s.flex}>
-                      <Text style={s.discoverListingEntryTitle}>Listing Approval Queue</Text>
-                      <Text style={s.discoverListingEntrySubtitle}>
-                        {discoverApprovalQueue.length} pending listing{discoverApprovalQueue.length === 1 ? '' : 's'} to review.
-                      </Text>
-                      <Text style={s.discoverDetailEmptyText}>
-                        Approval notifications will go to {APPROVAL_NOTIFICATION_EMAIL}.
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name={showDiscoverApprovalQueue ? 'chevron-up' : 'chevron-down'}
-                      size={22}
-                      color={C.primaryActionBg}
-                    />
-                  </TouchableOpacity>
-
-                  {showDiscoverApprovalQueue ? (
-                    <DiscoverDetailSection title="Listing Approval Queue">
-                      {discoverApprovalQueueLoading ? (
-                        <View style={s.discoverLoadingCard}>
-                          <ActivityIndicator color={C.primaryActionBg} />
-                          <Text style={s.discoverLoadingText}>Loading approval queue...</Text>
-                        </View>
-                      ) : discoverApprovalQueue.length > 0 ? (
-                        discoverApprovalQueue.map((listing) => (
-                          <View key={`${listing.discoverType}:${listing.id}`} style={s.discoverApprovalCard}>
-                            <View style={s.discoverApprovalCardHeader}>
-                              <View style={s.flex}>
-                                <Text style={s.discoverCardTitle}>{listing.name}</Text>
-                                <Text style={s.discoverCardMeta}>
-                                  {listing.discoverType === 'business' ? 'Business' : 'Shelter'}
-                                </Text>
-                              </View>
-                              <View style={s.discoverChipAlt}>
-                                <Text style={s.discoverChipAltText}>Pending</Text>
-                              </View>
-                            </View>
-                            <Text style={s.discoverDetailLine}>Owner: {listing.owner_user_id || 'Unknown'}</Text>
-                            <Text style={s.discoverDetailLine}>{listing.phone || 'Phone not listed'}</Text>
-                            <Text style={s.discoverDetailLine}>{listing.email || 'Email not listed'}</Text>
-                            <Text style={s.discoverDetailLine}>
-                              {[listing.city, listing.state].filter(Boolean).join(', ') || 'Location not listed'}
-                            </Text>
-                            <Text style={s.discoverDetailEmptyText}>
-                              Submitted {formatDiscoverListingDate(listing.created_at) || 'recently'}
-                            </Text>
-                            <View style={s.discoverModerationButtonRow}>
-                              <TouchableOpacity
-                                style={[s.discoverRegistrationSubmitBtn, s.discoverModerationApproveBtn, discoverModerationSavingId === listing.id && s.discoverRegistrationSubmitBtnDisabled]}
-                                activeOpacity={0.88}
-                                disabled={discoverModerationSavingId === listing.id}
-                                onPress={() => handleDiscoverListingModeration(listing, 'approved')}
-                              >
-                                <Text style={s.discoverRegistrationSubmitBtnText}>Approve</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[s.discoverModerationRejectBtn, discoverModerationSavingId === listing.id && s.discoverRegistrationSubmitBtnDisabled]}
-                                activeOpacity={0.88}
-                                disabled={discoverModerationSavingId === listing.id}
-                                onPress={() => handleDiscoverListingModeration(listing, 'rejected')}
-                              >
-                                <Text style={s.discoverModerationRejectText}>Reject</Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        ))
-                      ) : (
-                        <Text style={s.discoverDetailEmptyText}>No pending listings in the approval queue.</Text>
-                      )}
-                    </DiscoverDetailSection>
-                  ) : null}
-                </>
               ) : null}
 
               <DiscoverSection
@@ -18508,7 +16046,7 @@ function DiscoverHomeScreen() {
                           <View style={s.flex}>
                             <Text numberOfLines={1} style={s.discoverCardTitle}>{pet.name}</Text>
                             <Text numberOfLines={1} style={s.discoverCardMeta}>
-                              {[pet.species, pet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
+                              {[pet.species, pet.breed].filter(Boolean).join(' • ') || 'Adoptable pet'}
                             </Text>
                           </View>
                           <DiscoverFavoriteButton
@@ -18595,7 +16133,7 @@ function DiscoverHomeScreen() {
                         {event.description || 'Active community event.'}
                       </Text>
                       <Text numberOfLines={1} style={s.discoverCardFootnote}>
-                        {[formatDiscoverDateTime(event.starts_at), [event.city, event.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Event details will appear here when available.'}
+                        {[formatDiscoverDateTime(event.starts_at), [event.city, event.state].filter(Boolean).join(', ')].filter(Boolean).join(' • ') || 'Event details will appear here when available.'}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -18774,7 +16312,7 @@ function DiscoverHomeScreen() {
 
                             <DiscoverDetailSection title="Location">
                               <Text style={s.discoverDetailLine}>
-                                {[selectedDetailShelter.address, [selectedDetailShelter.city, selectedDetailShelter.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Location not listed'}
+                                {[selectedDetailShelter.address, [selectedDetailShelter.city, selectedDetailShelter.state].filter(Boolean).join(', ')].filter(Boolean).join(' • ') || 'Location not listed'}
                               </Text>
                             </DiscoverDetailSection>
 
@@ -18791,7 +16329,7 @@ function DiscoverHomeScreen() {
                                     >
                                       <Text style={s.discoverDetailCardTitle}>{pet.name}</Text>
                                       <Text style={s.discoverDetailBodyText}>
-                                        {[pet.species, pet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
+                                        {[pet.species, pet.breed].filter(Boolean).join(' • ') || 'Adoptable pet'}
                                       </Text>
                                     </TouchableOpacity>
                                   ))
@@ -18851,7 +16389,7 @@ function DiscoverHomeScreen() {
 
                             <DiscoverDetailSection title="Location">
                               <Text style={s.discoverDetailLine}>
-                                {[selectedDetailBusiness.address, [selectedDetailBusiness.city, selectedDetailBusiness.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Location not listed'}
+                                {[selectedDetailBusiness.address, [selectedDetailBusiness.city, selectedDetailBusiness.state].filter(Boolean).join(', ')].filter(Boolean).join(' • ') || 'Location not listed'}
                               </Text>
                             </DiscoverDetailSection>
 
@@ -18916,7 +16454,7 @@ function DiscoverHomeScreen() {
                                 <View style={s.flex}>
                                   <Text style={s.discoverDetailTitle}>{selectedDetailPet.name}</Text>
                                   <Text style={s.discoverDetailSubtitle}>
-                                    {[selectedDetailPet.species, selectedDetailPet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
+                                    {[selectedDetailPet.species, selectedDetailPet.breed].filter(Boolean).join(' • ') || 'Adoptable pet'}
                                   </Text>
                                 </View>
                                 <DiscoverFavoriteButton
@@ -18996,7 +16534,7 @@ function DiscoverHomeScreen() {
 
                             <DiscoverDetailSection title="Location">
                               <Text style={s.discoverDetailLine}>
-                                {[selectedDetailEvent.address, [selectedDetailEvent.city, selectedDetailEvent.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Location not listed'}
+                                {[selectedDetailEvent.address, [selectedDetailEvent.city, selectedDetailEvent.state].filter(Boolean).join(', ')].filter(Boolean).join(' • ') || 'Location not listed'}
                               </Text>
                             </DiscoverDetailSection>
 
@@ -19047,223 +16585,6 @@ function DiscoverHomeScreen() {
                               ) : null}
                             </DiscoverDetailSection>
                           </>
-                        ) : selectedDetailType === 'partner-application' ? (
-                          <>
-                            {!authUser?.id ? (
-                              <DiscoverDetailSection title="Sign in required">
-                                <Text style={s.discoverDetailBodyText}>Sign in to apply as a partner.</Text>
-                              </DiscoverDetailSection>
-                            ) : (
-                              <>
-                                <View style={s.discoverDetailHero}>
-                                  <View style={s.discoverDetailHeroBody}>
-                                    <View style={s.discoverDetailHeroTitleRow}>
-                                      <View style={s.flex}>
-                                        <Text style={s.discoverDetailTitle}>
-                                          Become a PetSync+ Partner
-                                        </Text>
-                                        <Text style={s.discoverDetailSubtitle}>
-                                          Apply as a business partner, shelter / rescue, or community partner.
-                                        </Text>
-                                      </View>
-                                      <View style={s.discoverSectionPill}>
-                                        <Text style={s.discoverSectionPillText}>
-                                          {discoverRegistrationEffectiveType === 'business'
-                                            ? 'Business'
-                                            : discoverRegistrationEffectiveType === 'community'
-                                              ? 'Community'
-                                              : 'Free'}
-                                        </Text>
-                                      </View>
-                                    </View>
-                                    <Text style={s.discoverDetailBodyText}>
-                                      {discoverRegistrationEffectiveType === 'business'
-                                        ? 'Business partner applications are reviewed by PetSync+ before follow-up.'
-                                        : discoverRegistrationEffectiveType === 'community'
-                                          ? 'Community partner applications are reviewed by PetSync+ before follow-up.'
-                                          : 'Shelter and rescue applications are free and reviewed by PetSync+.'}
-                                    </Text>
-                                  </View>
-                                </View>
-
-                                <DiscoverDetailSection title="Application type">
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {[
-                                      { type: 'business', title: 'Business Partner', body: 'Paid partner application.' },
-                                      { type: 'shelter', title: 'Shelter / Rescue', body: 'Free adoptable pet application.' },
-                                      { type: 'community', title: 'Community Partner', body: 'Simple community application.' },
-                                    ].map((choice) => {
-                                      const isSelected = discoverRegistrationType === choice.type;
-                                      return (
-                                        <TouchableOpacity
-                                          key={choice.type}
-                                          style={[s.discoverRegistrationChoiceCard, isSelected && s.discoverRegistrationChoiceCardActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => {
-                                            setDiscoverRegistrationType(choice.type);
-                                            setDiscoverPartnerApplicationForm((current) => ({
-                                              ...current,
-                                              partner_type: choice.type,
-                                            }));
-                                          }}
-                                        >
-                                          <Text style={[s.discoverRegistrationChoiceTitle, isSelected && s.discoverRegistrationChoiceTitleActive]}>{choice.title}</Text>
-                                          <Text style={s.discoverRegistrationChoiceText}>{choice.body}</Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </DiscoverDetailSection>
-
-                                {discoverRegistrationEffectiveType === 'business' ? (
-                                  <DiscoverDetailSection title="Business Partner Details">
-                                    {renderDiscoverRegistrationField(
-                                      'Business name',
-                                      discoverPartnerApplicationForm.business_name,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, business_name: value })),
-                                      'Enter business name',
-                                      { autoCapitalize: 'words' }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Contact name',
-                                      discoverPartnerApplicationForm.contact_name,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, contact_name: value })),
-                                      'Primary contact name',
-                                      { autoCapitalize: 'words' }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Email',
-                                      discoverPartnerApplicationForm.email,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, email: value })),
-                                      'Email address',
-                                      { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Phone',
-                                      discoverPartnerApplicationForm.phone,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, phone: value })),
-                                      'Phone number',
-                                      { keyboardType: 'phone-pad', autoCapitalize: 'none', autoCorrect: false }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Website',
-                                      discoverPartnerApplicationForm.website,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, website: value })),
-                                      'Website URL',
-                                      { autoCapitalize: 'none', autoCorrect: false }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Category',
-                                      discoverPartnerApplicationForm.category,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, category: value })),
-                                      'Business category',
-                                      { autoCapitalize: 'words' }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'City',
-                                      discoverPartnerApplicationForm.city,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, city: value })),
-                                      'City',
-                                      { autoCapitalize: 'words' }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'State',
-                                      discoverPartnerApplicationForm.state,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, state: value })),
-                                      'State',
-                                      { autoCapitalize: 'characters', maxLength: 2 }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Short description',
-                                      discoverPartnerApplicationForm.short_description,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, short_description: value })),
-                                      'Tell us about your business',
-                                      { multiline: true, numberOfLines: 4 }
-                                    )}
-                                  </DiscoverDetailSection>
-                                ) : (
-                                  <DiscoverDetailSection title={discoverRegistrationEffectiveType === 'community' ? 'Community Partner Details' : 'Shelter / Rescue Details'}>
-                                    {renderDiscoverRegistrationField(
-                                      discoverRegistrationEffectiveType === 'community' ? 'Organization name' : 'Shelter / Rescue name',
-                                      discoverPartnerApplicationForm.organization_name,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, organization_name: value })),
-                                      discoverRegistrationEffectiveType === 'community' ? 'Enter community organization name' : 'Enter shelter or rescue name',
-                                      { autoCapitalize: 'words' }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Contact name',
-                                      discoverPartnerApplicationForm.contact_name,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, contact_name: value })),
-                                      'Primary contact name',
-                                      { autoCapitalize: 'words' }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Email',
-                                      discoverPartnerApplicationForm.email,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, email: value })),
-                                      'Email address',
-                                      { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Phone',
-                                      discoverPartnerApplicationForm.phone,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, phone: value })),
-                                      'Phone number',
-                                      { keyboardType: 'phone-pad', autoCapitalize: 'none', autoCorrect: false }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Website',
-                                      discoverPartnerApplicationForm.website,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, website: value })),
-                                      'Website URL',
-                                      { autoCapitalize: 'none', autoCorrect: false }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'City',
-                                      discoverPartnerApplicationForm.city,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, city: value })),
-                                      'City',
-                                      { autoCapitalize: 'words' }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'State',
-                                      discoverPartnerApplicationForm.state,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, state: value })),
-                                      'State',
-                                      { autoCapitalize: 'characters', maxLength: 2 }
-                                    )}
-                                    {renderDiscoverRegistrationField(
-                                      'Short description',
-                                      discoverPartnerApplicationForm.short_description,
-                                      (value) => setDiscoverPartnerApplicationForm((current) => ({ ...current, short_description: value })),
-                                      discoverRegistrationEffectiveType === 'community'
-                                        ? 'Tell us about your community partner'
-                                        : 'Tell us about your shelter or rescue',
-                                      { multiline: true, numberOfLines: 4 }
-                                    )}
-                                  </DiscoverDetailSection>
-                                )}
-
-                                <TouchableOpacity
-                                  style={[
-                                    s.discoverRegistrationSubmitBtn,
-                                    discoverRegistrationSubmitting && s.discoverRegistrationSubmitBtnDisabled,
-                                  ]}
-                                  activeOpacity={0.88}
-                                  onPress={submitDiscoverRegistration}
-                                  disabled={discoverRegistrationSubmitting}
-                                >
-                                  {discoverRegistrationSubmitting ? (
-                                    <ActivityIndicator color="#FFFFFF" />
-                                  ) : (
-                                    <Text style={s.discoverRegistrationSubmitBtnText}>
-                                      Submit application
-                                    </Text>
-                                  )}
-                                </TouchableOpacity>
-                              </>
-                            )}
-                          </>
                         ) : (
                           <View style={s.discoverDetailEmptyState}>
                             <Text style={s.discoverDetailEmptyTitle}>Details unavailable</Text>
@@ -19275,840 +16596,6 @@ function DiscoverHomeScreen() {
                   </SafeAreaView>
                 </View>
               </Modal>
-
-              <Modal
-                visible={discoverEditModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={closeDiscoverEditModal}
-              >
-                <View style={s.discoverDetailModalBackdrop}>
-                  <SafeAreaView style={s.flex}>
-                    <View style={s.discoverDetailModalShell}>
-                      <View style={s.discoverDetailModalHeader}>
-                        <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeDiscoverEditModal} activeOpacity={0.88}>
-                          <MaterialCommunityIcons name="chevron-left" size={24} color="#101828" />
-                          <Text style={s.discoverDetailCloseText}>Back</Text>
-                        </TouchableOpacity>
-                        <View style={s.discoverDetailHeaderSpacer} />
-                        <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeDiscoverEditModal} activeOpacity={0.88}>
-                          <Text style={s.discoverDetailCloseText}>Close</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <KeyboardAvoidingView behavior={KEYBOARD_AVOIDING_BEHAVIOR} style={s.flex}>
-                        <ScrollView
-                          keyboardShouldPersistTaps="handled"
-                          showsVerticalScrollIndicator={false}
-                          contentContainerStyle={s.discoverRegistrationScrollContent}
-                        >
-                          {!discoverEditingListing ? (
-                            <DiscoverDetailSection title="Listing unavailable">
-                              <Text style={s.discoverDetailEmptyText}>This listing could not be loaded.</Text>
-                            </DiscoverDetailSection>
-                          ) : discoverEditingListing.discoverType === 'business' ? (
-                            <>
-                              <View style={s.discoverDetailHero}>
-                                <View style={s.discoverDetailHeroBody}>
-                                  <View style={s.discoverDetailHeroTitleRow}>
-                                    <View style={s.flex}>
-                                      <Text style={s.discoverDetailTitle}>Edit Business Listing</Text>
-                                      <Text style={s.discoverDetailSubtitle}>{discoverEditingListing.name}</Text>
-                                    </View>
-                                    <View style={s.discoverSectionPill}>
-                                      <Text style={s.discoverSectionPillText}>{formatDiscoverListingStatus(discoverEditingListing.status)}</Text>
-                                    </View>
-                                  </View>
-                                  <Text style={s.discoverDetailBodyText}>
-                                    Approved changes return this listing to review before it appears publicly again.
-                                  </Text>
-                                </View>
-                              </View>
-
-                              <DiscoverDetailSection title="Business Details">
-                                {renderDiscoverRegistrationField(
-                                  'Business name',
-                                  discoverBusinessEditForm.name,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, name: value })),
-                                  'Enter business name',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Description',
-                                  discoverBusinessEditForm.description,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, description: value })),
-                                  'Describe the business',
-                                  { multiline: true, numberOfLines: 4 }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Phone',
-                                  discoverBusinessEditForm.phone,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, phone: value })),
-                                  'Phone number',
-                                  { keyboardType: 'phone-pad', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Email',
-                                  discoverBusinessEditForm.email,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, email: value })),
-                                  'Email address',
-                                  { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Website',
-                                  discoverBusinessEditForm.website,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, website: value })),
-                                  'Website URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                <View style={s.discoverRegistrationField}>
-                                  <Text style={s.discoverRegistrationLabel}>Service mode</Text>
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {[
-                                      { value: 'local_only', label: 'Local only' },
-                                      { value: 'online_only', label: 'Online only' },
-                                      { value: 'hybrid', label: 'Hybrid' },
-                                    ].map((option) => {
-                                      const isSelected = discoverBusinessEditForm.service_mode === option.value;
-                                      return (
-                                        <TouchableOpacity
-                                          key={option.value}
-                                          style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => setDiscoverBusinessEditForm((current) => ({ ...current, service_mode: option.value }))}
-                                        >
-                                          <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                            {option.label}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </View>
-                                {renderDiscoverRegistrationField(
-                                  'Online service URL',
-                                  discoverBusinessEditForm.online_service_url,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, online_service_url: value })),
-                                  'Online booking or service URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Facebook',
-                                  discoverBusinessEditForm.facebook_url,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, facebook_url: value })),
-                                  'Facebook URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Instagram',
-                                  discoverBusinessEditForm.instagram_url,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, instagram_url: value })),
-                                  'Instagram URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'TikTok',
-                                  discoverBusinessEditForm.tiktok_url,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, tiktok_url: value })),
-                                  'TikTok URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'YouTube',
-                                  discoverBusinessEditForm.youtube_url,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, youtube_url: value })),
-                                  'YouTube URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Address',
-                                  discoverBusinessEditForm.address,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, address: value })),
-                                  'Street address',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'City',
-                                  discoverBusinessEditForm.city,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, city: value })),
-                                  'City',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'State',
-                                  discoverBusinessEditForm.state,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, state: value })),
-                                  'State',
-                                  { autoCapitalize: 'characters', maxLength: 2 }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'ZIP',
-                                  discoverBusinessEditForm.zip,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, zip: value })),
-                                  'ZIP code',
-                                  { keyboardType: 'number-pad', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Hours JSON',
-                                  discoverBusinessEditForm.hours_json,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, hours_json: value })),
-                                  'Paste hours JSON',
-                                  { multiline: true, numberOfLines: 5, autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Logo URL',
-                                  discoverBusinessEditForm.logo_url,
-                                  (value) => setDiscoverBusinessEditForm((current) => ({ ...current, logo_url: value })),
-                                  'Logo image URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                              </DiscoverDetailSection>
-                            </>
-                          ) : (
-                            <>
-                              <View style={s.discoverDetailHero}>
-                                <View style={s.discoverDetailHeroBody}>
-                                  <View style={s.discoverDetailHeroTitleRow}>
-                                    <View style={s.flex}>
-                                      <Text style={s.discoverDetailTitle}>Edit Shelter Listing</Text>
-                                      <Text style={s.discoverDetailSubtitle}>{discoverEditingListing.name}</Text>
-                                    </View>
-                                    <View style={s.discoverSectionPill}>
-                                      <Text style={s.discoverSectionPillText}>{formatDiscoverListingStatus(discoverEditingListing.status)}</Text>
-                                    </View>
-                                  </View>
-                                  <Text style={s.discoverDetailBodyText}>
-                                    Approved changes return this listing to review before it appears publicly again.
-                                  </Text>
-                                </View>
-                              </View>
-
-                              <DiscoverDetailSection title="Shelter Details">
-                                {renderDiscoverRegistrationField(
-                                  'Shelter / Rescue name',
-                                  discoverShelterEditForm.name,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, name: value })),
-                                  'Enter shelter or rescue name',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Description',
-                                  discoverShelterEditForm.description,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, description: value })),
-                                  'Describe the shelter or rescue',
-                                  { multiline: true, numberOfLines: 4 }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Phone',
-                                  discoverShelterEditForm.phone,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, phone: value })),
-                                  'Phone number',
-                                  { keyboardType: 'phone-pad', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Email',
-                                  discoverShelterEditForm.email,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, email: value })),
-                                  'Email address',
-                                  { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Website',
-                                  discoverShelterEditForm.website,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, website: value })),
-                                  'Website URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Donation URL',
-                                  discoverShelterEditForm.donation_url,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, donation_url: value })),
-                                  'Donation page URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Volunteer URL',
-                                  discoverShelterEditForm.volunteer_url,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, volunteer_url: value })),
-                                  'Volunteer page URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Wishlist URL',
-                                  discoverShelterEditForm.wishlist_url,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, wishlist_url: value })),
-                                  'Wishlist URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Amazon Wishlist URL',
-                                  discoverShelterEditForm.amazon_wishlist_url,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, amazon_wishlist_url: value })),
-                                  'Amazon wishlist URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                <View style={s.discoverRegistrationField}>
-                                  <Text style={s.discoverRegistrationLabel}>Service mode</Text>
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {[
-                                      { value: 'local_only', label: 'Local only' },
-                                      { value: 'online_only', label: 'Online only' },
-                                      { value: 'hybrid', label: 'Hybrid' },
-                                    ].map((option) => {
-                                      const isSelected = discoverShelterEditForm.service_mode === option.value;
-                                      return (
-                                        <TouchableOpacity
-                                          key={option.value}
-                                          style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => setDiscoverShelterEditForm((current) => ({ ...current, service_mode: option.value }))}
-                                        >
-                                          <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                            {option.label}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </View>
-                                {renderDiscoverRegistrationField(
-                                  'Online service URL',
-                                  discoverShelterEditForm.online_service_url,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, online_service_url: value })),
-                                  'Online service URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Address',
-                                  discoverShelterEditForm.address,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, address: value })),
-                                  'Street address',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'City',
-                                  discoverShelterEditForm.city,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, city: value })),
-                                  'City',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'State',
-                                  discoverShelterEditForm.state,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, state: value })),
-                                  'State',
-                                  { autoCapitalize: 'characters', maxLength: 2 }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'ZIP',
-                                  discoverShelterEditForm.zip,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, zip: value })),
-                                  'ZIP code',
-                                  { keyboardType: 'number-pad', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Logo URL',
-                                  discoverShelterEditForm.logo_url,
-                                  (value) => setDiscoverShelterEditForm((current) => ({ ...current, logo_url: value })),
-                                  'Logo image URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                              </DiscoverDetailSection>
-                            </>
-                          )}
-
-                          {discoverEditingListing ? (
-                            <TouchableOpacity
-                              style={[
-                                s.discoverRegistrationSubmitBtn,
-                                discoverEditSubmitting && s.discoverRegistrationSubmitBtnDisabled,
-                              ]}
-                              activeOpacity={0.88}
-                              onPress={submitDiscoverEdit}
-                              disabled={discoverEditSubmitting}
-                            >
-                              {discoverEditSubmitting ? (
-                                <ActivityIndicator color="#FFFFFF" />
-                              ) : (
-                                <Text style={s.discoverRegistrationSubmitBtnText}>Save changes</Text>
-                              )}
-                            </TouchableOpacity>
-                          ) : null}
-                        </ScrollView>
-                      </KeyboardAvoidingView>
-                    </View>
-                  </SafeAreaView>
-                </View>
-              </Modal>
-
-              <Modal
-                visible={discoverEventModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={closeDiscoverEventModal}
-              >
-                <View style={s.discoverDetailModalBackdrop}>
-                  <SafeAreaView style={s.flex}>
-                    <View style={s.discoverDetailModalShell}>
-                      <View style={s.discoverDetailModalHeader}>
-                        <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeDiscoverEventModal} activeOpacity={0.88}>
-                          <MaterialCommunityIcons name="chevron-left" size={24} color="#101828" />
-                          <Text style={s.discoverDetailCloseText}>Back</Text>
-                        </TouchableOpacity>
-                        <View style={s.discoverDetailHeaderSpacer} />
-                        <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeDiscoverEventModal} activeOpacity={0.88}>
-                          <Text style={s.discoverDetailCloseText}>Close</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <KeyboardAvoidingView behavior={KEYBOARD_AVOIDING_BEHAVIOR} style={s.flex}>
-                        <ScrollView
-                          keyboardShouldPersistTaps="handled"
-                          showsVerticalScrollIndicator={false}
-                          contentContainerStyle={s.discoverRegistrationScrollContent}
-                        >
-                          {!discoverEditingEvent ? (
-                            <DiscoverDetailSection title="Event unavailable">
-                              <Text style={s.discoverDetailEmptyText}>This event could not be loaded.</Text>
-                            </DiscoverDetailSection>
-                          ) : (
-                            <>
-                              <View style={s.discoverDetailHero}>
-                                <View style={s.discoverDetailHeroBody}>
-                                  <View style={s.discoverDetailHeroTitleRow}>
-                                    <View style={s.flex}>
-                                      <Text style={s.discoverDetailTitle}>
-                                        {discoverEditingEvent.id ? 'Edit Event' : 'Add Event'}
-                                      </Text>
-                                      <Text style={s.discoverDetailSubtitle}>
-                                        {discoverEventForm.host_type === 'business'
-                                          ? discoverManagedEventLookup.business[discoverEventForm.business_id]?.name || 'Choose a business'
-                                          : discoverEventForm.host_type === 'shelter'
-                                            ? discoverManagedEventLookup.shelter[discoverEventForm.shelter_id]?.name || 'Choose a shelter'
-                                            : 'Community event'}
-                                      </Text>
-                                    </View>
-                                    <View style={s.discoverSectionPill}>
-                                      <Text style={s.discoverSectionPillText}>
-                                        {formatDiscoverEventStatus(discoverEventForm.status)}
-                                      </Text>
-                                    </View>
-                                  </View>
-                                  <Text style={s.discoverDetailBodyText}>
-                                    Create or update an event using only the existing `pet_events` columns.
-                                  </Text>
-                                </View>
-                              </View>
-
-                              <DiscoverDetailSection title="Host Type">
-                                <View style={s.discoverRegistrationChoiceRow}>
-                                  {[
-                                    { value: 'business', label: 'Business' },
-                                    { value: 'shelter', label: 'Shelter' },
-                                    { value: 'community', label: 'Community' },
-                                  ].map((option) => {
-                                    const isSelected = discoverEventForm.host_type === option.value;
-                                    return (
-                                      <TouchableOpacity
-                                        key={option.value}
-                                        style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                        activeOpacity={0.88}
-                                        onPress={() => setDiscoverEventForm((current) => ({
-                                          ...current,
-                                          host_type: option.value,
-                                          business_id: option.value === 'business' ? current.business_id : '',
-                                          shelter_id: option.value === 'shelter' ? current.shelter_id : '',
-                                        }))}
-                                      >
-                                        <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                          {option.label}
-                                        </Text>
-                                      </TouchableOpacity>
-                                    );
-                                  })}
-                                </View>
-                              </DiscoverDetailSection>
-
-                              {discoverEventForm.host_type === 'business' ? (
-                                <DiscoverDetailSection title="Business Host">
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {discoverBusinesses.map((business) => {
-                                      const isSelected = discoverEventForm.business_id === business.id;
-                                      return (
-                                        <TouchableOpacity
-                                          key={business.id}
-                                          style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => setDiscoverEventForm((current) => ({ ...current, business_id: business.id }))}
-                                        >
-                                          <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                            {business.name}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </DiscoverDetailSection>
-                              ) : null}
-
-                              {discoverEventForm.host_type === 'shelter' ? (
-                                <DiscoverDetailSection title="Shelter Host">
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {discoverShelters.map((shelter) => {
-                                      const isSelected = discoverEventForm.shelter_id === shelter.id;
-                                      return (
-                                        <TouchableOpacity
-                                          key={shelter.id}
-                                          style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => setDiscoverEventForm((current) => ({ ...current, shelter_id: shelter.id }))}
-                                        >
-                                          <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                            {shelter.name}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </DiscoverDetailSection>
-                              ) : null}
-
-                              <DiscoverDetailSection title="Event Details">
-                                {renderDiscoverRegistrationField(
-                                  'Title',
-                                  discoverEventForm.title,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, title: value })),
-                                  'Event title',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Description',
-                                  discoverEventForm.description,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, description: value })),
-                                  'Describe the event',
-                                  { multiline: true, numberOfLines: 4 }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Event type',
-                                  discoverEventForm.event_type,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, event_type: value })),
-                                  'Adoption fair, fundraiser, etc.',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Starts at',
-                                  discoverEventForm.starts_at,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, starts_at: value })),
-                                  'YYYY-MM-DD HH:MM',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Ends at',
-                                  discoverEventForm.ends_at,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, ends_at: value })),
-                                  'YYYY-MM-DD HH:MM',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Max attendees',
-                                  discoverEventForm.max_attendees,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, max_attendees: value })),
-                                  'Optional capacity',
-                                  { keyboardType: 'number-pad', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                <View style={s.discoverRegistrationField}>
-                                  <Text style={s.discoverRegistrationLabel}>Registration required</Text>
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {[
-                                      { value: true, label: 'Required' },
-                                      { value: false, label: 'Optional' },
-                                    ].map((option) => {
-                                      const isSelected = Boolean(discoverEventForm.registration_required) === option.value;
-                                      return (
-                                        <TouchableOpacity
-                                          key={String(option.value)}
-                                          style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => setDiscoverEventForm((current) => ({ ...current, registration_required: option.value }))}
-                                        >
-                                          <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                            {option.label}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </View>
-                                {renderDiscoverRegistrationField(
-                                  'Registration URL',
-                                  discoverEventForm.registration_url,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, registration_url: value })),
-                                  'Registration page URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Address',
-                                  discoverEventForm.address,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, address: value })),
-                                  'Street address',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'City',
-                                  discoverEventForm.city,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, city: value })),
-                                  'City',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'State',
-                                  discoverEventForm.state,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, state: value })),
-                                  'State',
-                                  { autoCapitalize: 'characters', maxLength: 2 }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'ZIP',
-                                  discoverEventForm.zip,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, zip: value })),
-                                  'ZIP code',
-                                  { keyboardType: 'number-pad', autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Image URL',
-                                  discoverEventForm.image_url,
-                                  (value) => setDiscoverEventForm((current) => ({ ...current, image_url: value })),
-                                  'Event image URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                <View style={s.discoverRegistrationField}>
-                                  <Text style={s.discoverRegistrationLabel}>Status</Text>
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {['pending', 'active', 'cancelled', 'hidden'].map((option) => {
-                                      const isSelected = discoverEventForm.status === option;
-                                      return (
-                                        <TouchableOpacity
-                                          key={option}
-                                          style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => setDiscoverEventForm((current) => ({ ...current, status: option }))}
-                                        >
-                                          <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                            {formatDiscoverEventStatus(option)}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </View>
-                              </DiscoverDetailSection>
-
-                              <TouchableOpacity
-                                style={[
-                                  s.discoverRegistrationSubmitBtn,
-                                  discoverEventSubmitting && s.discoverRegistrationSubmitBtnDisabled,
-                                ]}
-                                activeOpacity={0.88}
-                                onPress={persistDiscoverEvent}
-                                disabled={discoverEventSubmitting}
-                              >
-                                {discoverEventSubmitting ? (
-                                  <ActivityIndicator color="#FFFFFF" />
-                                ) : (
-                                  <Text style={s.discoverRegistrationSubmitBtnText}>
-                                    {discoverEditingEvent.id ? 'Save changes' : 'Add Event'}
-                                  </Text>
-                                )}
-                              </TouchableOpacity>
-                            </>
-                          )}
-                        </ScrollView>
-                      </KeyboardAvoidingView>
-                    </View>
-                  </SafeAreaView>
-                </View>
-              </Modal>
-
-              <Modal
-                visible={discoverPromotionModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={closeDiscoverPromotionModal}
-              >
-                <View style={s.discoverDetailModalBackdrop}>
-                  <SafeAreaView style={s.flex}>
-                    <View style={s.discoverDetailModalShell}>
-                      <View style={s.discoverDetailModalHeader}>
-                        <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeDiscoverPromotionModal} activeOpacity={0.88}>
-                          <MaterialCommunityIcons name="chevron-left" size={24} color="#101828" />
-                          <Text style={s.discoverDetailCloseText}>Back</Text>
-                        </TouchableOpacity>
-                        <View style={s.discoverDetailHeaderSpacer} />
-                        <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeDiscoverPromotionModal} activeOpacity={0.88}>
-                          <Text style={s.discoverDetailCloseText}>Close</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <KeyboardAvoidingView behavior={KEYBOARD_AVOIDING_BEHAVIOR} style={s.flex}>
-                        <ScrollView
-                          keyboardShouldPersistTaps="handled"
-                          showsVerticalScrollIndicator={false}
-                          contentContainerStyle={s.discoverRegistrationScrollContent}
-                        >
-                          {!discoverEditingPromotion ? (
-                            <DiscoverDetailSection title="Promotion unavailable">
-                              <Text style={s.discoverDetailEmptyText}>This promotion could not be loaded.</Text>
-                            </DiscoverDetailSection>
-                          ) : (
-                            <>
-                              <View style={s.discoverDetailHero}>
-                                <View style={s.discoverDetailHeroBody}>
-                                  <View style={s.discoverDetailHeroTitleRow}>
-                                    <View style={s.flex}>
-                                      <Text style={s.discoverDetailTitle}>
-                                        {discoverEditingPromotion.id ? 'Edit Promotion' : 'Add Promotion'}
-                                      </Text>
-                                      <Text style={s.discoverDetailSubtitle}>
-                                        {ownedBusinessLookup[discoverPromotionForm.business_id]?.name || 'Choose one of your businesses'}
-                                      </Text>
-                                    </View>
-                                    <View style={s.discoverSectionPill}>
-                                      <Text style={s.discoverSectionPillText}>
-                                        {formatDiscoverPromotionStatus(discoverPromotionForm.status)}
-                                      </Text>
-                                    </View>
-                                  </View>
-                                  <Text style={s.discoverDetailBodyText}>
-                                    Create or update a promotion using only the existing business promotion columns.
-                                  </Text>
-                                </View>
-                              </View>
-
-                              <DiscoverDetailSection title="Business">
-                                <View style={s.discoverRegistrationChoiceRow}>
-                                  {ownedBusinessListings.map((business) => {
-                                    const isSelected = discoverPromotionForm.business_id === business.id;
-                                    return (
-                                      <TouchableOpacity
-                                        key={business.id}
-                                        style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                        activeOpacity={0.88}
-                                        onPress={() => setDiscoverPromotionForm((current) => ({ ...current, business_id: business.id }))}
-                                      >
-                                        <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                          {business.name}
-                                        </Text>
-                                      </TouchableOpacity>
-                                    );
-                                  })}
-                                </View>
-                              </DiscoverDetailSection>
-
-                              <DiscoverDetailSection title="Promotion Details">
-                                {renderDiscoverRegistrationField(
-                                  'Title',
-                                  discoverPromotionForm.title,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, title: value })),
-                                  'Promotion title',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Description',
-                                  discoverPromotionForm.description,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, description: value })),
-                                  'Describe the promotion',
-                                  { multiline: true, numberOfLines: 4 }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Promo code',
-                                  discoverPromotionForm.promo_code,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, promo_code: value })),
-                                  'Promo code',
-                                  { autoCapitalize: 'characters', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Button text',
-                                  discoverPromotionForm.button_text,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, button_text: value })),
-                                  'Call-to-action text',
-                                  { autoCapitalize: 'words' }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Button URL',
-                                  discoverPromotionForm.button_url,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, button_url: value })),
-                                  'https://example.com',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Starts at',
-                                  discoverPromotionForm.starts_at,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, starts_at: value })),
-                                  'YYYY-MM-DD HH:MM',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Ends at',
-                                  discoverPromotionForm.ends_at,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, ends_at: value })),
-                                  'YYYY-MM-DD HH:MM',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                {renderDiscoverRegistrationField(
-                                  'Image URL',
-                                  discoverPromotionForm.image_url,
-                                  (value) => setDiscoverPromotionForm((current) => ({ ...current, image_url: value })),
-                                  'Image URL',
-                                  { autoCapitalize: 'none', autoCorrect: false }
-                                )}
-                                <View style={s.discoverRegistrationField}>
-                                  <Text style={s.discoverRegistrationLabel}>Status</Text>
-                                  <View style={s.discoverRegistrationChoiceRow}>
-                                    {['pending', 'active', 'paused', 'expired'].map((option) => {
-                                      const isSelected = discoverPromotionForm.status === option;
-                                      return (
-                                        <TouchableOpacity
-                                          key={option}
-                                          style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                          activeOpacity={0.88}
-                                          onPress={() => setDiscoverPromotionForm((current) => ({ ...current, status: option }))}
-                                        >
-                                          <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                            {formatDiscoverPromotionStatus(option)}
-                                          </Text>
-                                        </TouchableOpacity>
-                                      );
-                                    })}
-                                  </View>
-                                </View>
-                              </DiscoverDetailSection>
-
-                              <TouchableOpacity
-                                style={[
-                                  s.discoverRegistrationSubmitBtn,
-                                  discoverPromotionSubmitting && s.discoverRegistrationSubmitBtnDisabled,
-                                ]}
-                                activeOpacity={0.88}
-                                onPress={persistDiscoverPromotion}
-                                disabled={discoverPromotionSubmitting}
-                              >
-                                {discoverPromotionSubmitting ? (
-                                  <ActivityIndicator color="#FFFFFF" />
-                                ) : (
-                                  <Text style={s.discoverRegistrationSubmitBtnText}>
-                                    {discoverEditingPromotion.id ? 'Save changes' : 'Add Promotion'}
-                                  </Text>
-                                )}
-                              </TouchableOpacity>
-                            </>
-                          )}
-                        </ScrollView>
-                      </KeyboardAvoidingView>
-                    </View>
-                  </SafeAreaView>
-                </View>
-              </Modal>
-
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -20416,11 +16903,11 @@ function AIVetScreen({ navigation, route }) {
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <View style={s.modalHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: C.linkText, fontSize: 16 }}>Back</Text>
+          <Text style={{ color: C.linkText, fontSize: 16 }}>← Back</Text>
         </TouchableOpacity>
         <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 12 }}>
           <Text style={s.modalTitle}>AI Vet</Text>
-          <Text style={{ color: C.aiVetMutedText, fontSize: 12, fontWeight: '700', marginTop: 2 }}>General guidance only - Not a real vet</Text>
+          <Text style={{ color: C.aiVetMutedText, fontSize: 12, fontWeight: '700', marginTop: 2 }}>General guidance only · Not a real vet</Text>
         </View>
         {messages.length > 0 ? (
           <TouchableOpacity onPress={resetChat} style={{ backgroundColor: C.modalCard, borderWidth: 1, borderColor: C.modalCardBorder, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 }}>
@@ -20487,10 +16974,7 @@ function AIVetScreen({ navigation, route }) {
                 'Severe bleeding',
                 'Unable to walk',
               ].map((item) => (
-                <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
-                  <MaterialCommunityIcons name="alert-circle-outline" size={14} color={C.aiVetBodyText} style={{ marginTop: 2 }} />
-                  <Text style={{ color: C.aiVetBodyText, fontSize: 13, lineHeight: 19, flex: 1 }}>{item}</Text>
-                </View>
+                <Text key={item} style={{ color: C.aiVetBodyText, fontSize: 13, lineHeight: 19, marginBottom: 4 }}>• {item}</Text>
               ))}
               <TouchableOpacity style={[s.accentBtn, { marginTop: 12 }]} onPress={() => Linking.openURL('tel:8884264435')}>
                 <Text style={s.accentBtnText}>ASPCA Poison Control</Text>
@@ -20526,7 +17010,7 @@ function AIVetScreen({ navigation, route }) {
                   : { alignSelf: 'flex-start', marginRight: 36 },
               ]}
             >
-              {msg.role === 'assistant' && <MaterialCommunityIcons name="stethoscope" size={22} color={C.aiVetTitleText} style={{ marginBottom: 4 }} />}
+              {msg.role === 'assistant' && <Text style={{ fontSize: 24, marginBottom: 4 }}>🩺</Text>}
               {msg.emergency && (
                 <View style={{
                   marginBottom: 8,
@@ -20571,7 +17055,7 @@ function AIVetScreen({ navigation, route }) {
 
         {isTyping && (
           <View style={[s.chatBubbleWrap, { alignSelf: 'flex-start', marginRight: 36 }]}>
-            <MaterialCommunityIcons name="stethoscope" size={22} color={C.aiVetTitleText} />
+            <Text style={{ fontSize: 24 }}>🩺</Text>
             <View style={s.chatBubbleAIBg}>
               <Text style={s.typingText}>AI Vet is typing...</Text>
             </View>
@@ -20599,7 +17083,7 @@ function AIVetScreen({ navigation, route }) {
             multiline
           />
           <TouchableOpacity style={[s.sendBtn, !input.trim() && { backgroundColor: C.aiVetDisabledButtonBg }]} onPress={() => send()} disabled={!input.trim() || isTyping}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>?</Text>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>➤</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -20607,9 +17091,9 @@ function AIVetScreen({ navigation, route }) {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // MODAL: LOST PET MODE
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 function LostPetScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
   const { lostPetAlerts, setLostPetAlerts } = useContext(LostPetAlertsContext);
@@ -20926,7 +17410,7 @@ function LostPetScreen({ navigation }) {
               </Text>
             </View>
           <TouchableOpacity onPress={closePetActionPicker} style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: C.sosCard, borderWidth: 1, borderColor: C.sosCardBorder }}>
-              <MaterialCommunityIcons name="close" size={16} color={C.text} />
+              <Text style={{ color: C.text, fontSize: 16, fontWeight: '900' }}>✕</Text>
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ paddingBottom: 6 }}>
@@ -20952,13 +17436,13 @@ function LostPetScreen({ navigation }) {
                 }}
               >
                 <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.sosCard, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  <PetSpeciesIcon species={pet.species} size={22} color={C.sosAccent} />
+                  <Text style={{ fontSize: 24 }}>{pet.emoji || '🐾'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.sosTitleText, fontSize: 15, fontWeight: '900' }}>{pet.name}</Text>
                   <Text style={{ color: C.sosMutedText, fontSize: 12, marginTop: 2 }}>{pet.breed || pet.species || 'Pet profile'}</Text>
                 </View>
-                <MaterialCommunityIcons name="chevron-right" size={18} color={C.sosAccent} />
+                <Text style={{ color: C.sosAccent, fontSize: 16, fontWeight: '900' }}>›</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -21069,7 +17553,7 @@ function LostPetScreen({ navigation }) {
               }}
             >
               <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.sosCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.sosCardBorder }}>
-                <PetSpeciesIcon species={reportPet.species} size={22} color={C.sosAccent} />
+                <Text style={{ fontSize: 24 }}>{reportPet.emoji || '🐾'}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.sosTitleText, fontSize: 15, fontWeight: '900' }}>{reportPet.name}</Text>
@@ -21092,7 +17576,7 @@ function LostPetScreen({ navigation }) {
                 {photoUri ? (
                   <Image source={{ uri: photoUri }} style={{ width: 84, height: 84, borderRadius: 42 }} />
                 ) : (
-                  <PetSpeciesIcon species={reportPet.species} size={30} color={C.sosAccent} />
+                  <Text style={{ fontSize: 36 }}>{reportPet.emoji || '🐾'}</Text>
                 )}
               </View>
               <TouchableOpacity style={s.accentBtn} onPress={pickPetPhoto} activeOpacity={0.9}>
@@ -21180,7 +17664,7 @@ function LostPetScreen({ navigation }) {
                       {avatarImage ? (
                         <Image source={{ uri: avatarImage }} style={{ width: 52, height: 52, borderRadius: 26 }} />
                       ) : (
-                        <PetSpeciesIcon species={pet?.species} size={24} color={C.sosBodyText} />
+                        <Text style={{ fontSize: 24 }}>{pet?.emoji || '🐾'}</Text>
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
@@ -21238,7 +17722,7 @@ function LostPetScreen({ navigation }) {
               'Search at dawn and dusk',
             ].map((tip) => (
               <View key={tip} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
-                <MaterialCommunityIcons name="check-circle-outline" size={16} color={C.sosAccent} />
+                <Text style={{ color: C.sosAccent, fontSize: 16, fontWeight: '900', lineHeight: 20 }}>•</Text>
                 <Text style={{ flex: 1, color: C.sosBodyText, fontSize: 13, lineHeight: 19, fontWeight: '600' }}>{tip}</Text>
               </View>
             ))}
@@ -21251,3663 +17735,47 @@ function LostPetScreen({ navigation }) {
   );
 }
 
-function ControlCenterScreen() {
-  const { authUser, signOut } = useContext(AuthContext);
-  const controlCenterScrollRef = useRef(null);
-  const [loading, setLoading] = useState(true);
-  const [activeControlCenterNav, setActiveControlCenterNav] = useState('dashboard');
-  const [businessesSectionY, setBusinessesSectionY] = useState(0);
-  const [sheltersSectionY, setSheltersSectionY] = useState(0);
-  const [adoptablePetsSectionY, setAdoptablePetsSectionY] = useState(0);
-  const [eventsSectionY, setEventsSectionY] = useState(0);
-  const [promotionsSectionY, setPromotionsSectionY] = useState(0);
-  const [partnerApplicationsSectionY, setPartnerApplicationsSectionY] = useState(0);
-  const [analyticsSectionY, setAnalyticsSectionY] = useState(0);
-  const [settingsSectionY, setSettingsSectionY] = useState(0);
-  const [launchCenterSectionY, setLaunchCenterSectionY] = useState(0);
-  const [businessesLoading, setBusinessesLoading] = useState(true);
-  const [sheltersLoading, setSheltersLoading] = useState(true);
-  const [adoptablePetsLoading, setAdoptablePetsLoading] = useState(true);
-  const [eventsLoading, setEventsLoading] = useState(true);
-  const [promotionsLoading, setPromotionsLoading] = useState(true);
-  const [controlCenterBusinesses, setControlCenterBusinesses] = useState([]);
-  const [controlCenterBusinessCategories, setControlCenterBusinessCategories] = useState([]);
-  const [controlCenterShelters, setControlCenterShelters] = useState([]);
-  const [controlCenterAdoptablePets, setControlCenterAdoptablePets] = useState([]);
-  const [controlCenterEvents, setControlCenterEvents] = useState([]);
-  const [controlCenterPromotions, setControlCenterPromotions] = useState([]);
-  const [businessSearchTerm, setBusinessSearchTerm] = useState('');
-  const [businessStatusFilter, setBusinessStatusFilter] = useState('all');
-  const [shelterSearchTerm, setShelterSearchTerm] = useState('');
-  const [shelterStatusFilter, setShelterStatusFilter] = useState('all');
-  const [adoptablePetSearchTerm, setAdoptablePetSearchTerm] = useState('');
-  const [adoptablePetStatusFilter, setAdoptablePetStatusFilter] = useState('all');
-  const [eventSearchTerm, setEventSearchTerm] = useState('');
-  const [eventStatusFilter, setEventStatusFilter] = useState('all');
-  const [promotionSearchTerm, setPromotionSearchTerm] = useState('');
-  const [promotionStatusFilter, setPromotionStatusFilter] = useState('all');
-  const [businessModalVisible, setBusinessModalVisible] = useState(false);
-  const [shelterModalVisible, setShelterModalVisible] = useState(false);
-  const [editingBusiness, setEditingBusiness] = useState(null);
-  const [editingShelter, setEditingShelter] = useState(null);
-  const [businessForm, setBusinessForm] = useState(createDefaultDiscoverBusinessRegistration);
-  const [shelterForm, setShelterForm] = useState(createDefaultDiscoverShelterRegistration);
-  const [businessSubmitting, setBusinessSubmitting] = useState(false);
-  const [shelterSubmitting, setShelterSubmitting] = useState(false);
-  const [businessSavingId, setBusinessSavingId] = useState(null);
-  const [shelterSavingId, setShelterSavingId] = useState(null);
-  const [adoptablePetSavingId, setAdoptablePetSavingId] = useState(null);
-  const [eventSavingId, setEventSavingId] = useState(null);
-  const [promotionSavingId, setPromotionSavingId] = useState(null);
-  const [dashboard, setDashboard] = useState({
-    pendingPartnerApplications: 0,
-    pendingShelters: 0,
-    partnersTotal: 0,
-    partnersApproved: 0,
-    partnersPending: 0,
-    sheltersTotal: 0,
-    sheltersApproved: 0,
-    sheltersPending: 0,
-    adoptableAvailable: 0,
-    adoptableAdopted: 0,
-    adoptableHidden: 0,
-    promotionsActive: 0,
-    promotionsPending: 0,
-    promotionsPaused: 0,
-    eventsActive: 0,
-    eventsPending: 0,
-    eventsCancelled: 0,
-    totalUsers: 0,
-    premiumUsers: 0,
-    freeUsers: 0,
-    partnerApplicationsTotal: 0,
-    partnerApplicationsApproved: 0,
-    partnerApplicationsRejected: 0,
-    partnerApplicationsContacted: 0,
-  });
-  const handleControlCenterLogout = () => {
-    void signOut?.();
-  };
-  const scrollToDashboard = () => {
-    setActiveControlCenterNav('dashboard');
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: 0,
-      animated: true,
-    });
-  };
-  const scrollToDirectory = () => {
-    setActiveControlCenterNav('directory');
-    scrollToBusinesses();
-  };
-  const scrollToMarketplace = () => {
-    setActiveControlCenterNav('marketplace');
-    scrollToPromotions();
-  };
-  const [partnerApplications, setPartnerApplications] = useState([]);
-  const [partnerApplicationsLoading, setPartnerApplicationsLoading] = useState(true);
-  const [controlCenterUsers, setControlCenterUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(true);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [userPlanFilter, setUserPlanFilter] = useState('all');
-  const [usersSectionY, setUsersSectionY] = useState(0);
-  const businessLookupById = useMemo(() => controlCenterBusinesses.reduce((acc, business) => {
-    acc[business.id] = business;
-    return acc;
-  }, {}), [controlCenterBusinesses]);
-  const businessCategoryLookup = useMemo(() => controlCenterBusinessCategories.reduce((acc, category) => {
-    acc[category.id] = category;
-    return acc;
-  }, {}), [controlCenterBusinessCategories]);
-  const controlCenterBusinessesSearch = String(businessSearchTerm || '').trim().toLowerCase();
-  const controlCenterBusinessStatusCounts = controlCenterBusinesses.reduce((acc, business) => {
-    const status = String(business.status || 'pending').trim().toLowerCase();
-    acc.total += 1;
-    if (status === 'approved') acc.approved += 1;
-    else if (status === 'rejected') acc.rejected += 1;
-    else if (status === 'suspended') acc.suspended += 1;
-    else acc.pending += 1;
-    return acc;
-  }, { total: 0, pending: 0, approved: 0, rejected: 0, suspended: 0 });
-  const filteredControlCenterBusinesses = controlCenterBusinesses.filter((business) => {
-    const status = String(business.status || 'pending').trim().toLowerCase();
-    if (businessStatusFilter !== 'all' && status !== businessStatusFilter) {
-      return false;
-    }
-
-    if (!controlCenterBusinessesSearch) {
-      return true;
-    }
-
-    const categoryName = businessCategoryLookup[business.category_id]?.name || '';
-    const categorySlug = businessCategoryLookup[business.category_id]?.slug || '';
-    return [
-      business.name,
-      business.city,
-      business.state,
-      business.email,
-      business.phone,
-      business.description,
-      business.business_tier,
-      categoryName,
-      categorySlug,
-    ].some((value) => String(value || '').toLowerCase().includes(controlCenterBusinessesSearch));
-  });
-  const controlCenterSheltersSearch = String(shelterSearchTerm || '').trim().toLowerCase();
-  const controlCenterShelterStatusCounts = controlCenterShelters.reduce((acc, shelter) => {
-    const status = String(shelter.status || 'pending').trim().toLowerCase();
-    acc.total += 1;
-    if (status === 'approved') acc.approved += 1;
-    else if (status === 'rejected') acc.rejected += 1;
-    else if (status === 'suspended') acc.suspended += 1;
-    else acc.pending += 1;
-    return acc;
-  }, { total: 0, pending: 0, approved: 0, rejected: 0, suspended: 0 });
-  const filteredControlCenterShelters = controlCenterShelters.filter((shelter) => {
-    const status = String(shelter.status || 'pending').trim().toLowerCase();
-    if (shelterStatusFilter !== 'all' && status !== shelterStatusFilter) {
-      return false;
-    }
-
-    if (!controlCenterSheltersSearch) {
-      return true;
-    }
-
-    return [
-      shelter.name,
-      shelter.city,
-      shelter.state,
-      shelter.email,
-      shelter.phone,
-      shelter.website,
-      shelter.donation_url,
-      shelter.description,
-    ].some((value) => String(value || '').toLowerCase().includes(controlCenterSheltersSearch));
-  });
-  const shelterLookupById = useMemo(() => controlCenterShelters.reduce((acc, shelter) => {
-    acc[shelter.id] = shelter;
-    return acc;
-  }, {}), [controlCenterShelters]);
-  const controlCenterAdoptablePetsSearch = String(adoptablePetSearchTerm || '').trim().toLowerCase();
-  const controlCenterAdoptablePetStatusCounts = controlCenterAdoptablePets.reduce((acc, pet) => {
-    const status = String(pet.status || 'available').trim().toLowerCase();
-    acc.total += 1;
-    if (status === 'available') acc.available += 1;
-    else if (status === 'pending') acc.pending += 1;
-    else if (status === 'adopted') acc.adopted += 1;
-    else if (status === 'hidden') acc.hidden += 1;
-    return acc;
-  }, { total: 0, available: 0, pending: 0, adopted: 0, hidden: 0 });
-  const filteredControlCenterAdoptablePets = controlCenterAdoptablePets.filter((pet) => {
-    const status = String(pet.status || 'available').trim().toLowerCase();
-    if (adoptablePetStatusFilter !== 'all' && status !== adoptablePetStatusFilter) {
-      return false;
-    }
-
-    if (!controlCenterAdoptablePetsSearch) {
-      return true;
-    }
-
-    const shelterName = shelterLookupById[pet.shelter_id]?.name || '';
-    return [
-      pet.name,
-      pet.species,
-      pet.breed,
-      shelterName,
-    ].some((value) => String(value || '').toLowerCase().includes(controlCenterAdoptablePetsSearch));
-  });
-  const controlCenterEventsSearch = String(eventSearchTerm || '').trim().toLowerCase();
-  const controlCenterEventStatusCounts = controlCenterEvents.reduce((acc, event) => {
-    const status = String(event.status || 'pending').trim().toLowerCase();
-    acc.total += 1;
-    if (status === 'active') acc.active += 1;
-    else if (status === 'pending') acc.pending += 1;
-    else if (status === 'cancelled') acc.cancelled += 1;
-    else if (status === 'hidden') acc.hidden += 1;
-    return acc;
-  }, { total: 0, active: 0, pending: 0, cancelled: 0, hidden: 0 });
-  const filteredControlCenterEvents = controlCenterEvents.filter((event) => {
-    const status = String(event.status || 'pending').trim().toLowerCase();
-    if (eventStatusFilter !== 'all' && status !== eventStatusFilter) {
-      return false;
-    }
-
-    if (!controlCenterEventsSearch) {
-      return true;
-    }
-
-    const hostName = event.host_type === 'business'
-      ? businessLookupById?.[event.business_id]?.name || ''
-      : event.host_type === 'shelter'
-        ? shelterLookupById?.[event.shelter_id]?.name || ''
-        : 'Community';
-    return [
-      event.title,
-      event.event_type,
-      event.city,
-      event.state,
-      hostName,
-    ].some((value) => String(value || '').toLowerCase().includes(controlCenterEventsSearch));
-  });
-  const controlCenterPromotionsSearch = String(promotionSearchTerm || '').trim().toLowerCase();
-  const controlCenterPromotionStatusCounts = controlCenterPromotions.reduce((acc, promotion) => {
-    const status = String(promotion.status || 'pending').trim().toLowerCase();
-    acc.total += 1;
-    if (status === 'active') acc.active += 1;
-    else if (status === 'pending') acc.pending += 1;
-    else if (status === 'paused') acc.paused += 1;
-    else if (status === 'expired') acc.expired += 1;
-    else if (status === 'rejected') acc.rejected += 1;
-    return acc;
-  }, { total: 0, active: 0, pending: 0, paused: 0, expired: 0, rejected: 0 });
-  const filteredControlCenterPromotions = controlCenterPromotions.filter((promotion) => {
-    const status = String(promotion.status || 'pending').trim().toLowerCase();
-    if (promotionStatusFilter !== 'all' && status !== promotionStatusFilter) {
-      return false;
-    }
-
-    if (!controlCenterPromotionsSearch) {
-      return true;
-    }
-
-    const businessName = businessLookupById[promotion.business_id]?.name || '';
-    return [
-      promotion.title,
-      promotion.description,
-      promotion.promo_code,
-      businessName,
-    ].some((value) => String(value || '').toLowerCase().includes(controlCenterPromotionsSearch));
-  });
-  const controlCenterUsersSearch = String(userSearchTerm || '').trim().toLowerCase();
-  const controlCenterUserStatusCounts = controlCenterUsers.reduce((acc, user) => {
-    const planValue = String(
-      user.plan
-      || user.subscription_plan
-      || user.billing_plan
-      || (user.revenueCatPremiumActive || user.revenuecat_premium_active ? 'premium' : '')
-      || ''
-    ).trim().toLowerCase();
-    const isPremium = planValue.includes('premium') || planValue === 'pro' || planValue === 'plus' || planValue === 'paid';
-    acc.total += 1;
-    if (isPremium) acc.premium += 1;
-    else acc.free += 1;
-    return acc;
-  }, { total: 0, premium: 0, free: 0 });
-  const filteredControlCenterUsers = controlCenterUsers.filter((user) => {
-    const planValue = String(
-      user.plan
-      || user.subscription_plan
-      || user.billing_plan
-      || (user.revenueCatPremiumActive || user.revenuecat_premium_active ? 'premium' : '')
-      || ''
-    ).trim().toLowerCase();
-    const isPremium = planValue.includes('premium') || planValue === 'pro' || planValue === 'plus' || planValue === 'paid';
-
-    if (userPlanFilter === 'premium' && !isPremium) {
-      return false;
-    }
-
-    if (userPlanFilter === 'free' && isPremium) {
-      return false;
-    }
-
-    if (!controlCenterUsersSearch) {
-      return true;
-    }
-
-    return [
-      user.display_name,
-      user.full_name,
-      user.name,
-      user.email,
-      user.created_at,
-      user.plan,
-      user.subscription_plan,
-      user.billing_plan,
-    ].some((value) => String(value || '').toLowerCase().includes(controlCenterUsersSearch));
-  });
-  const analyticsRecentActivity = useMemo(() => {
-    const entries = [
-      ...partnerApplications.map((item) => ({
-        id: `partner-application:${item.id}`,
-        title: item.partner_type === 'business'
-          ? item.business_name || 'Business partner application'
-          : item.organization_name || 'Partner application',
-        subtitle: `${String(item.partner_type || 'partner').toUpperCase()} · ${String(item.status || 'pending').toUpperCase()}`,
-        meta: item.short_description || 'Partner application submitted.',
-        created_at: item.created_at,
-      })),
-      ...controlCenterBusinesses.map((item) => ({
-        id: `business:${item.id}`,
-        title: item.name || 'Business',
-        subtitle: `BUSINESS · ${String(item.status || 'pending').toUpperCase()}`,
-        meta: item.city || item.state ? [item.city, item.state].filter(Boolean).join(', ') : 'Business added.',
-        created_at: item.created_at,
-      })),
-      ...controlCenterShelters.map((item) => ({
-        id: `shelter:${item.id}`,
-        title: item.name || 'Shelter',
-        subtitle: `SHELTER · ${String(item.status || 'pending').toUpperCase()}`,
-        meta: item.city || item.state ? [item.city, item.state].filter(Boolean).join(', ') : 'Shelter added.',
-        created_at: item.created_at,
-      })),
-      ...controlCenterPromotions.map((item) => ({
-        id: `promotion:${item.id}`,
-        title: item.title || 'Promotion',
-        subtitle: `PROMOTION · ${String(item.status || 'pending').toUpperCase()}`,
-        meta: item.promo_code ? `Code: ${item.promo_code}` : 'Promotion created.',
-        created_at: item.created_at,
-      })),
-      ...controlCenterEvents.map((item) => {
-        const hostName = item.host_type === 'business'
-          ? businessLookupById[item.business_id]?.name || 'Business host'
-          : item.host_type === 'shelter'
-            ? shelterLookupById[item.shelter_id]?.name || 'Shelter host'
-            : 'Community';
-        return {
-          id: `event:${item.id}`,
-          title: item.title || 'Event',
-          subtitle: `EVENT · ${String(item.status || 'pending').toUpperCase()}`,
-          meta: hostName,
-          created_at: item.created_at,
-        };
-      }),
-    ];
-
-    return entries
-      .filter((item) => item.created_at)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 6);
-  }, [partnerApplications, controlCenterBusinesses, controlCenterShelters, controlCenterPromotions, controlCenterEvents, businessLookupById, shelterLookupById]);
-  const sortedBusinessCategories = useMemo(() => {
-    return [...controlCenterBusinessCategories].sort((a, b) => {
-      const sortA = Number(a.sort_order ?? 0);
-      const sortB = Number(b.sort_order ?? 0);
-      if (sortA !== sortB) return sortA - sortB;
-      return String(a.name || '').localeCompare(String(b.name || ''));
-    });
-  }, [controlCenterBusinessCategories]);
-
-  const launchCenterSummary = useMemo(() => {
-    const now = new Date();
-    const approvedBusinesses = controlCenterBusinesses.filter((business) => String(business.status || '').toLowerCase() === 'approved').length;
-    const approvedShelters = controlCenterShelters.filter((shelter) => String(shelter.status || '').toLowerCase() === 'approved').length;
-    const availablePets = controlCenterAdoptablePets.filter((pet) => String(pet.status || 'available').toLowerCase() === 'available').length;
-    const activePromotions = controlCenterPromotions.filter((promotion) => String(promotion.status || '').toLowerCase() === 'active').length;
-    const activeFutureEvents = controlCenterEvents.filter((event) => {
-      const status = String(event.status || '').toLowerCase();
-      if (status !== 'active') return false;
-      const startValue = event.starts_at || event.start_at || event.start_date;
-      const startDate = startValue ? new Date(startValue) : null;
-      if (!startDate || Number.isNaN(startDate.getTime())) return false;
-      return startDate.getTime() >= now.getTime();
-    }).length;
-    const pendingPartnerApplications = partnerApplications.filter((application) => String(application.status || 'pending').toLowerCase() === 'pending').length;
-    return {
-      approvedBusinesses,
-      approvedShelters,
-      availablePets,
-      activePromotions,
-      activeFutureEvents,
-      pendingPartnerApplications,
-      checklist: [
-        { key: 'businesses', label: 'Businesses ready', ready: approvedBusinesses > 0 },
-        { key: 'shelters', label: 'Shelters ready', ready: approvedShelters > 0 },
-        { key: 'pets', label: 'Adoptable pets ready', ready: availablePets > 0 },
-        { key: 'promotions', label: 'Promotions ready', ready: activePromotions > 0 },
-        { key: 'events', label: 'Events ready', ready: activeFutureEvents > 0 },
-        { key: 'applications', label: 'Partner applications reviewed', ready: pendingPartnerApplications === 0 },
-      ],
-    };
-  }, [controlCenterBusinesses, controlCenterShelters, controlCenterAdoptablePets, controlCenterPromotions, controlCenterEvents, partnerApplications]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadControlCenterUsers = async () => {
-      if (!authReady || !authUser?.id) {
-        if (isActive) {
-          setControlCenterUsers([]);
-          setUsersLoading(false);
-        }
-        return;
-      }
-
-      setUsersLoading(true);
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (!isActive) return;
-
-        if (error) {
-          console.log('Control Center users load error:', error);
-          setControlCenterUsers([]);
-          setDashboard((prev) => ({
-            ...prev,
-            totalUsers: 0,
-            premiumUsers: 0,
-            freeUsers: 0,
-          }));
-          return;
-        }
-
-        const users = data || [];
-        setControlCenterUsers(users);
-        setDashboard((prev) => ({
-          ...prev,
-          totalUsers: users.length,
-          premiumUsers: users.reduce((count, user) => {
-            const planValue = String(
-              user.plan
-              || user.subscription_plan
-              || user.billing_plan
-              || (user.revenueCatPremiumActive || user.revenuecat_premium_active ? 'premium' : '')
-              || ''
-            ).trim().toLowerCase();
-            const isPremium = planValue.includes('premium') || planValue === 'pro' || planValue === 'plus' || planValue === 'paid';
-            return isPremium ? count + 1 : count;
-          }, 0),
-          freeUsers: users.reduce((count, user) => {
-            const planValue = String(
-              user.plan
-              || user.subscription_plan
-              || user.billing_plan
-              || (user.revenueCatPremiumActive || user.revenuecat_premium_active ? 'premium' : '')
-              || ''
-            ).trim().toLowerCase();
-            const isPremium = planValue.includes('premium') || planValue === 'pro' || planValue === 'plus' || planValue === 'paid';
-            return isPremium ? count : count + 1;
-          }, 0),
-        }));
-      } catch (error) {
-        console.log('Control Center users load error:', error);
-        if (isActive) {
-          setControlCenterUsers([]);
-          setDashboard((prev) => ({
-            ...prev,
-            totalUsers: 0,
-            premiumUsers: 0,
-            freeUsers: 0,
-          }));
-        }
-      } finally {
-        if (isActive) {
-          setUsersLoading(false);
-        }
-      }
-    };
-
-    void loadControlCenterUsers();
-
-    return () => {
-      isActive = false;
-    };
-  }, [authUser?.id]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadControlCenter = async () => {
-      setLoading(true);
-      setBusinessesLoading(true);
-      setPartnerApplicationsLoading(true);
-      setUsersLoading(true);
-      setAdoptablePetsLoading(true);
-      setPromotionsLoading(true);
-
-      try {
-        const [
-          businessCategoriesResult,
-          businessesResult,
-          sheltersResult,
-          petsResult,
-          promotionsResult,
-          eventsResult,
-          partnerApplicationsResult,
-          usersResult,
-        ] = await Promise.all([
-          supabase.from('business_categories').select('id, name, slug, icon, sort_order, active').eq('active', true).order('sort_order', { ascending: true }).order('name', { ascending: true }),
-          supabase.from('businesses').select('id, owner_user_id, category_id, name, description, phone, email, website, business_tier, verified, service_mode, address, city, state, zip, logo_url, status, is_featured, featured_until, approved_at, approved_by, rejected_at, deleted_at, created_at, updated_at').is('deleted_at', null).order('created_at', { ascending: false }),
-          supabase.from('shelters').select('id, owner_user_id, name, description, phone, email, website, donation_url, volunteer_url, wishlist_url, amazon_wishlist_url, service_mode, service_radius_miles, online_service_url, address, city, state, zip, logo_url, profile_views, verified, status, approved_at, approved_by, rejected_at, deleted_at, created_at, updated_at').is('deleted_at', null).order('created_at', { ascending: false }),
-          supabase.from('adoptable_pets').select('id, shelter_id, status, deleted_at').is('deleted_at', null),
-          supabase.from('business_promotions').select('id, business_id, title, description, promo_code, button_text, button_url, starts_at, ends_at, image_url, status, deleted_at, created_at, updated_at').is('deleted_at', null).order('created_at', { ascending: false }),
-          supabase.from('pet_events').select('id, owner_user_id, host_type, business_id, shelter_id, title, description, event_type, starts_at, ends_at, max_attendees, current_attendees, registration_required, registration_url, address, city, state, zip, latitude, longitude, image_url, status, deleted_at, created_at, updated_at').is('deleted_at', null).order('created_at', { ascending: false }),
-          supabase.from('partner_applications').select('id, applicant_user_id, partner_type, business_name, organization_name, contact_name, email, phone, website, category, city, state, short_description, status, reviewed_by, reviewed_at, contacted_at, notes, created_at, updated_at').order('created_at', { ascending: false }),
-          supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        ]);
-
-        if (!isActive) return;
-
-        const businessCategories = businessCategoriesResult.data || [];
-        const businesses = businessesResult.data || [];
-        const shelters = sheltersResult.data || [];
-        const pets = petsResult.data || [];
-        const promotions = promotionsResult.data || [];
-        const events = eventsResult.data || [];
-        const partnerApps = partnerApplicationsResult.data || [];
-
-        if (businessCategoriesResult.error) console.log('Control Center business categories load error:', businessCategoriesResult.error);
-        if (businessesResult.error) console.log('Control Center businesses load error:', businessesResult.error);
-        if (sheltersResult.error) console.log('Control Center shelters load error:', sheltersResult.error);
-        if (petsResult.error) console.log('Control Center adoptable pets load error:', petsResult.error);
-        if (promotionsResult.error) console.log('Control Center promotions load error:', promotionsResult.error);
-        if (eventsResult.error) console.log('Control Center events load error:', eventsResult.error);
-
-        const businessStatusCounts = businesses.reduce((acc, row) => {
-          const status = String(row.status || 'pending').toLowerCase();
-          acc.total += 1;
-          if (status === 'approved') acc.approved += 1;
-          if (status === 'pending') acc.pending += 1;
-          return acc;
-        }, { total: 0, approved: 0, pending: 0 });
-
-        const shelterStatusCounts = shelters.reduce((acc, row) => {
-          const status = String(row.status || 'pending').toLowerCase();
-          acc.total += 1;
-          if (status === 'approved') acc.approved += 1;
-          else if (status === 'rejected') acc.rejected += 1;
-          else if (status === 'suspended') acc.suspended += 1;
-          if (status === 'pending') acc.pending += 1;
-          return acc;
-        }, { total: 0, approved: 0, pending: 0, rejected: 0, suspended: 0 });
-
-        const petCounts = pets.reduce((acc, row) => {
-          const status = String(row.status || 'available').toLowerCase();
-          if (status === 'adopted') acc.adopted += 1;
-          else if (status === 'hidden') acc.hidden += 1;
-          else acc.available += 1;
-          return acc;
-        }, { available: 0, adopted: 0, hidden: 0 });
-
-        const promotionCounts = promotions.reduce((acc, row) => {
-          const status = String(row.status || 'pending').toLowerCase();
-          if (status === 'active') acc.active += 1;
-          else if (status === 'paused') acc.paused += 1;
-          else acc.pending += 1;
-          return acc;
-        }, { active: 0, pending: 0, paused: 0 });
-
-        const eventCounts = events.reduce((acc, row) => {
-          const status = String(row.status || 'pending').toLowerCase();
-          if (status === 'active') acc.active += 1;
-          else if (status === 'cancelled') acc.cancelled += 1;
-          else acc.pending += 1;
-          return acc;
-        }, { active: 0, pending: 0, cancelled: 0 });
-
-        const partnerApplicationCounts = partnerApps.reduce((acc, row) => {
-          const status = String(row.status || 'pending').toLowerCase();
-          acc.total += 1;
-          if (status === 'approved') acc.approved += 1;
-          else if (status === 'rejected') acc.rejected += 1;
-          else if (status === 'contacted') acc.contacted += 1;
-          else acc.pending += 1;
-          return acc;
-        }, { total: 0, pending: 0, approved: 0, rejected: 0, contacted: 0 });
-
-        const ownerIds = new Set([
-          ...businesses.map((row) => row.owner_user_id).filter(Boolean),        
-          ...shelters.map((row) => row.owner_user_id).filter(Boolean),
-          ...partnerApps.map((row) => row.applicant_user_id).filter(Boolean),
-        ]);
-
-        setDashboard({
-          pendingPartnerApplications: partnerApplicationCounts.pending,
-          pendingShelters: shelterStatusCounts.pending,
-          partnersTotal: businessStatusCounts.total,
-          partnersApproved: businessStatusCounts.approved,
-          partnersPending: businessStatusCounts.pending,
-          sheltersTotal: shelterStatusCounts.total,
-          sheltersApproved: shelterStatusCounts.approved,
-          sheltersPending: shelterStatusCounts.pending,
-          adoptableAvailable: petCounts.available,
-          adoptableAdopted: petCounts.adopted,
-          adoptableHidden: petCounts.hidden,
-          promotionsActive: promotionCounts.active,
-          promotionsPending: promotionCounts.pending,
-          promotionsPaused: promotionCounts.paused,
-          eventsActive: eventCounts.active,
-          eventsPending: eventCounts.pending,
-          eventsCancelled: eventCounts.cancelled,
-          totalUsers: ownerIds.size,
-          partnerApplicationsTotal: partnerApplicationCounts.total,
-          partnerApplicationsApproved: partnerApplicationCounts.approved,
-          partnerApplicationsRejected: partnerApplicationCounts.rejected,
-          partnerApplicationsContacted: partnerApplicationCounts.contacted,
-        });
-        setControlCenterBusinessCategories(businessCategories);
-        setControlCenterBusinesses(businesses);
-        setControlCenterShelters(shelters);
-        setControlCenterAdoptablePets(pets);
-        setControlCenterPromotions(promotions);
-        setControlCenterEvents(events);
-        setPartnerApplications(partnerApps);
-      } catch (error) {
-        console.log('Control Center load error:', error);
-      } finally {
-        if (isActive) {
-          setLoading(false);
-          setBusinessesLoading(false);
-          setSheltersLoading(false);
-          setAdoptablePetsLoading(false);
-          setPromotionsLoading(false);
-          setPartnerApplicationsLoading(false);
-        }
-      }
-    };
-
-    void loadControlCenter();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  const cards = [
-    {
-      key: 'pending-approvals',
-      title: 'Pending Approvals',
-      subtitle: 'Review queue',
-      body: [
-        { label: 'Pending Partner Applications', value: dashboard.pendingPartnerApplications },    
-        { label: 'Pending Shelters', value: dashboard.pendingShelters },        
-      ],
-      accent: false,
-    },
-    {
-      key: 'businesses',
-      title: 'Businesses',
-      subtitle: 'Live listing counts',
-      body: [
-        { label: 'Total Businesses', value: dashboard.partnersTotal },        
-        { label: 'Approved', value: dashboard.partnersApproved },
-        { label: 'Pending', value: dashboard.partnersPending },
-      ],
-      accent: false,
-    },
-    {
-      key: 'shelters',
-      title: 'Shelters',
-      subtitle: 'Live listing counts',
-      body: [
-        { label: 'Total Shelters', value: dashboard.sheltersTotal },
-        { label: 'Approved', value: dashboard.sheltersApproved },
-        { label: 'Pending', value: dashboard.sheltersPending },
-      ],
-      accent: false,
-    },
-    {
-      key: 'adoptable-pets',
-      title: 'Adoptable Pets',
-      subtitle: 'Live pet counts',
-      body: [
-        { label: 'Available', value: dashboard.adoptableAvailable },
-        { label: 'Adopted', value: dashboard.adoptableAdopted },
-        { label: 'Hidden', value: dashboard.adoptableHidden },
-      ],
-      accent: false,
-    },
-    {
-      key: 'promotions',
-      title: 'Promotions',
-      subtitle: 'Live promotion counts',
-      body: [
-        { label: 'Active', value: dashboard.promotionsActive },
-        { label: 'Pending', value: dashboard.promotionsPending },
-        { label: 'Paused', value: dashboard.promotionsPaused },
-      ],
-      accent: false,
-    },
-    {
-      key: 'events',
-      title: 'Events',
-      subtitle: 'Live event counts',
-      body: [
-        { label: 'Active', value: dashboard.eventsActive },
-        { label: 'Pending', value: dashboard.eventsPending },
-        { label: 'Cancelled', value: dashboard.eventsCancelled },
-      ],
-      accent: false,
-    },
-    {
-      key: 'partner-applications',
-      title: 'Partner Applications',
-      subtitle: 'Live application counts',
-      body: [
-        { label: 'Pending', value: dashboard.pendingPartnerApplications },
-        { label: 'Contacted', value: dashboard.partnerApplicationsContacted },
-        { label: 'Approved', value: dashboard.partnerApplicationsApproved },
-        { label: 'Rejected', value: dashboard.partnerApplicationsRejected },
-        { label: 'Total', value: dashboard.partnerApplicationsTotal },
-      ],
-      accent: false,
-    },
-    {
-      key: 'users',
-      title: 'Users',
-      subtitle: 'Live owner-linked user count',
-      body: [
-        { label: 'Total Users', value: dashboard.totalUsers },
-      ],
-      accent: true,
-    },
-    {
-      key: 'analytics',
-      title: 'Analytics',
-      subtitle: 'Read-only platform summary',
-      body: [
-        { label: 'Total Users', value: dashboard.totalUsers },
-        { label: 'Active Events', value: dashboard.eventsActive },
-      ],
-      accent: false,
-    },
-    {
-      key: 'settings',
-      title: 'Settings',
-      subtitle: 'Read-only platform configuration',
-      body: [
-        { label: 'Admin Email', value: 'petsyncplus@gmail.com' },
-        { label: 'Business Categories', value: controlCenterBusinessCategories.length },
-      ],
-      accent: false,
-    },
-  ];
-
-  const handleCardPress = (title) => {
-    Alert.alert(title, 'Coming in the next phase.');
-  };
-
-  const scrollToBusinesses = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, businessesSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToShelters = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, sheltersSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToAdoptablePets = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, adoptablePetsSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToEvents = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, eventsSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToPromotions = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, promotionsSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToPartnerApplications = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, partnerApplicationsSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToAnalytics = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, analyticsSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToSettings = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, settingsSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const scrollToLaunchCenter = () => {
-    if (!controlCenterScrollRef.current) return;
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, launchCenterSectionY - 16),
-      animated: true,
-    });
-  };
-
-  const reloadControlCenterBusinesses = async () => {
-    setBusinessesLoading(true);
-
-    try {
-      const [
-        businessCategoriesResult,
-        businessesResult,
-      ] = await Promise.all([
-        supabase.from('business_categories').select('id, name, slug, icon, sort_order, active').eq('active', true).order('sort_order', { ascending: true }).order('name', { ascending: true }),
-        supabase.from('businesses').select('id, owner_user_id, category_id, name, description, phone, email, website, business_tier, verified, service_mode, address, city, state, zip, logo_url, status, is_featured, featured_until, approved_at, approved_by, rejected_at, deleted_at, created_at, updated_at').is('deleted_at', null).order('created_at', { ascending: false }),
-      ]);
-
-      const businessCategories = businessCategoriesResult.data || [];
-      const businesses = businessesResult.data || [];
-
-      const businessStatusCounts = businesses.reduce((acc, row) => {
-        const status = String(row.status || 'pending').toLowerCase();
-        acc.total += 1;
-        if (status === 'approved') acc.approved += 1;
-        else if (status === 'rejected') acc.rejected += 1;
-        else if (status === 'suspended') acc.suspended += 1;
-        else acc.pending += 1;
-        return acc;
-      }, { total: 0, approved: 0, pending: 0, rejected: 0, suspended: 0 });
-
-      setControlCenterBusinessCategories(businessCategories);
-      setControlCenterBusinesses(businesses);
-      setDashboard((current) => ({
-        ...current,
-        partnersTotal: businessStatusCounts.total,
-        partnersApproved: businessStatusCounts.approved,
-        partnersPending: businessStatusCounts.pending,
-      }));
-    } catch (error) {
-      console.log('Control Center businesses reload error:', error);
-    } finally {
-      setBusinessesLoading(false);
-    }
-  };
-
-  const reloadControlCenterShelters = async () => {
-    setSheltersLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('shelters')
-        .select('id, owner_user_id, name, description, phone, email, website, donation_url, volunteer_url, wishlist_url, amazon_wishlist_url, service_mode, service_radius_miles, online_service_url, address, city, state, zip, logo_url, profile_views, verified, status, approved_at, approved_by, rejected_at, deleted_at, created_at, updated_at')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Control Center shelters reload error:', error);
-      }
-
-      const rows = data || [];
-      const shelterStatusCounts = rows.reduce((acc, row) => {
-        const status = String(row.status || 'pending').toLowerCase();
-        acc.total += 1;
-        if (status === 'approved') acc.approved += 1;
-        else if (status === 'rejected') acc.rejected += 1;
-        else if (status === 'suspended') acc.suspended += 1;
-        else acc.pending += 1;
-        return acc;
-      }, { total: 0, pending: 0, approved: 0, rejected: 0, suspended: 0 });
-
-      setControlCenterShelters(rows);
-      setDashboard((current) => ({
-        ...current,
-        sheltersTotal: shelterStatusCounts.total,
-        sheltersApproved: shelterStatusCounts.approved,
-        sheltersPending: shelterStatusCounts.pending,
-      }));
-    } catch (error) {
-      console.log('Control Center shelters reload error:', error);
-    } finally {
-      setSheltersLoading(false);
-    }
-  };
-
-  const reloadControlCenterAdoptablePets = async () => {
-    setAdoptablePetsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('adoptable_pets')
-        .select('id, shelter_id, name, species, breed, age_label, sex, size, weight, description, personality, good_with_kids, good_with_dogs, good_with_cats, house_trained, medical_status, adoption_fee, views, status, deleted_at, created_at, updated_at')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Control Center adoptable pets reload error:', error);
-      }
-
-      const rows = data || [];
-      const petCounts = rows.reduce((acc, row) => {
-        const status = String(row.status || 'available').trim().toLowerCase();
-        if (status === 'available') acc.available += 1;
-        else if (status === 'pending') acc.pending += 1;
-        else if (status === 'adopted') acc.adopted += 1;
-        else if (status === 'hidden') acc.hidden += 1;
-        return acc;
-      }, { available: 0, pending: 0, adopted: 0, hidden: 0 });
-
-      setControlCenterAdoptablePets(rows);
-      setDashboard((current) => ({
-        ...current,
-        adoptableAvailable: petCounts.available,
-        adoptableAdopted: petCounts.adopted,
-        adoptableHidden: petCounts.hidden,
-      }));
-    } catch (error) {
-      console.log('Control Center adoptable pets reload error:', error);
-    } finally {
-      setAdoptablePetsLoading(false);
-    }
-  };
-
-  const reloadControlCenterEvents = async () => {
-    setEventsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('pet_events')
-        .select('id, owner_user_id, host_type, business_id, shelter_id, title, description, event_type, starts_at, ends_at, max_attendees, current_attendees, registration_required, registration_url, address, city, state, zip, latitude, longitude, image_url, status, deleted_at, created_at, updated_at')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Control Center events reload error:', error);
-      }
-
-      const rows = data || [];
-      const eventCounts = rows.reduce((acc, row) => {
-        const status = String(row.status || 'pending').trim().toLowerCase();
-        acc.total += 1;
-        if (status === 'active') acc.active += 1;
-        else if (status === 'pending') acc.pending += 1;
-        else if (status === 'cancelled') acc.cancelled += 1;
-        else if (status === 'hidden') acc.hidden += 1;
-        return acc;
-      }, { total: 0, active: 0, pending: 0, cancelled: 0, hidden: 0 });
-
-      setControlCenterEvents(rows);
-      setDashboard((current) => ({
-        ...current,
-        eventsActive: eventCounts.active,
-        eventsPending: eventCounts.pending,
-        eventsCancelled: eventCounts.cancelled,
-      }));
-    } catch (error) {
-      console.log('Control Center events reload error:', error);
-    } finally {
-      setEventsLoading(false);
-    }
-  };
-
-  const reloadControlCenterPromotions = async () => {
-    setPromotionsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('business_promotions')
-        .select('id, business_id, title, description, promo_code, button_text, button_url, starts_at, ends_at, image_url, status, deleted_at, created_at, updated_at')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.log('Control Center promotions reload error:', error);
-      }
-
-      const rows = data || [];
-      const counts = rows.reduce((acc, promotion) => {
-        const status = String(promotion.status || 'pending').trim().toLowerCase();
-        acc.total += 1;
-        if (status === 'active') acc.active += 1;
-        else if (status === 'pending') acc.pending += 1;
-        else if (status === 'paused') acc.paused += 1;
-        else if (status === 'expired') acc.expired += 1;
-        else if (status === 'rejected') acc.rejected += 1;
-        return acc;
-      }, { total: 0, active: 0, pending: 0, paused: 0, expired: 0, rejected: 0 });
-
-      setControlCenterPromotions(rows);
-      setDashboard((current) => ({
-        ...current,
-        promotionsActive: counts.active,
-        promotionsPending: counts.pending,
-        promotionsPaused: counts.paused,
-      }));
-    } catch (error) {
-      console.log('Control Center promotions reload error:', error);
-    } finally {
-      setPromotionsLoading(false);
-    }
-  };
-
-  const closeControlCenterBusinessModal = () => {
-    setBusinessModalVisible(false);
-    setEditingBusiness(null);
-    setBusinessForm(createDefaultDiscoverBusinessRegistration());
-  };
-
-  const openControlCenterBusinessModal = (business = null) => {
-    if (!isDiscoverAdmin) {
-      Alert.alert('Admin only', 'Businesses are managed by PetSync+ admins only.');
-      return;
-    }
-
-    const initialBusiness = business || {
-      id: null,
-      name: '',
-      category_id: '',
-      description: '',
-      phone: '',
-      email: '',
-      website: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-    };
-
-    setEditingBusiness(initialBusiness);
-    setBusinessForm({
-      name: String(initialBusiness.name || ''),
-      category_id: String(initialBusiness.category_id || ''),
-      description: String(initialBusiness.description || ''),
-      phone: String(initialBusiness.phone || ''),
-      email: String(initialBusiness.email || ''),
-      website: String(initialBusiness.website || ''),
-      address: String(initialBusiness.address || ''),
-      city: String(initialBusiness.city || ''),
-      state: String(initialBusiness.state || ''),
-      zip: String(initialBusiness.zip || ''),
-    });
-    setBusinessModalVisible(true);
-  };
-
-  const persistControlCenterBusiness = async () => {
-    if (!authUser?.id || !isDiscoverAdmin || businessSubmitting) return;
-
-    const name = String(businessForm.name || '').trim();
-    if (!name) {
-      Alert.alert('Name required', 'Please enter a business name.');
-      return;
-    }
-
-    const payload = {
-      owner_user_id: authUser.id,
-      category_id: String(businessForm.category_id || '').trim() || null,
-      name,
-      description: normalizeDiscoverSubmissionText(businessForm.description),
-      phone: normalizeDiscoverSubmissionText(businessForm.phone),
-      email: normalizeDiscoverSubmissionText(businessForm.email),
-      website: normalizeDiscoverSubmissionText(businessForm.website),
-      address: normalizeDiscoverSubmissionText(businessForm.address),
-      city: normalizeDiscoverSubmissionText(businessForm.city),
-      state: normalizeDiscoverSubmissionText(businessForm.state),
-      zip: normalizeDiscoverSubmissionText(businessForm.zip),
-      status: 'pending',
-    };
-
-    try {
-      setBusinessSubmitting(true);
-      const { error } = await supabase
-        .from('businesses')
-        .insert([payload]);
-
-      if (error) {
-        console.log('Control Center business insert error:', error);
-        Alert.alert('Unable to add business', 'Please try again.');
-        return;
-      }
-
-      Alert.alert('Business added', 'The business partner was added for review.');
-      closeControlCenterBusinessModal();
-      await reloadControlCenterBusinesses();
-    } catch (error) {
-      console.log('Control Center business insert error:', error);
-      Alert.alert('Unable to add business', 'Please try again.');
-    } finally {
-      setBusinessSubmitting(false);
-    }
-  };
-
-  const closeControlCenterShelterModal = () => {
-    setShelterModalVisible(false);
-    setEditingShelter(null);
-    setShelterForm(createDefaultDiscoverShelterRegistration());
-  };
-
-  const openControlCenterShelterModal = (shelter = null) => {
-    if (!isDiscoverAdmin) {
-      Alert.alert('Admin only', 'Shelters are managed by PetSync+ admins only.');
-      return;
-    }
-
-    const initialShelter = shelter || {
-      id: null,
-      name: '',
-      description: '',
-      phone: '',
-      email: '',
-      website: '',
-      donation_url: '',
-      volunteer_url: '',
-      wishlist_url: '',
-      amazon_wishlist_url: '',
-      service_mode: 'local_only',
-      service_radius_miles: '',
-      online_service_url: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-      logo_url: '',
-    };
-
-    setEditingShelter(initialShelter);
-    setShelterForm({
-      name: String(initialShelter.name || ''),
-      description: String(initialShelter.description || ''),
-      phone: String(initialShelter.phone || ''),
-      email: String(initialShelter.email || ''),
-      website: String(initialShelter.website || ''),
-      donation_url: String(initialShelter.donation_url || ''),
-      volunteer_url: String(initialShelter.volunteer_url || ''),
-      wishlist_url: String(initialShelter.wishlist_url || ''),
-      amazon_wishlist_url: String(initialShelter.amazon_wishlist_url || ''),
-      service_mode: String(initialShelter.service_mode || 'local_only'),
-      online_service_url: String(initialShelter.online_service_url || ''),
-      address: String(initialShelter.address || ''),
-      city: String(initialShelter.city || ''),
-      state: String(initialShelter.state || ''),
-      zip: String(initialShelter.zip || ''),
-      logo_url: String(initialShelter.logo_url || ''),
-    });
-    setShelterModalVisible(true);
-  };
-
-  const persistControlCenterShelter = async () => {
-    if (!authUser?.id || !isDiscoverAdmin || shelterSubmitting) return;
-
-    const name = String(shelterForm.name || '').trim();
-    if (!name) {
-      Alert.alert('Name required', 'Please enter a shelter or rescue name.');
-      return;
-    }
-
-    const payload = {
-      owner_user_id: authUser.id,
-      name,
-      description: normalizeDiscoverSubmissionText(shelterForm.description),
-      phone: normalizeDiscoverSubmissionText(shelterForm.phone),
-      email: normalizeDiscoverSubmissionText(shelterForm.email),
-      website: normalizeDiscoverSubmissionText(shelterForm.website),
-      donation_url: normalizeDiscoverSubmissionText(shelterForm.donation_url),
-      volunteer_url: normalizeDiscoverSubmissionText(shelterForm.volunteer_url),
-      wishlist_url: normalizeDiscoverSubmissionText(shelterForm.wishlist_url),
-      amazon_wishlist_url: normalizeDiscoverSubmissionText(shelterForm.amazon_wishlist_url),
-      service_mode: normalizeDiscoverSubmissionText(shelterForm.service_mode) || 'local_only',
-      online_service_url: normalizeDiscoverSubmissionText(shelterForm.online_service_url),
-      address: normalizeDiscoverSubmissionText(shelterForm.address),
-      city: normalizeDiscoverSubmissionText(shelterForm.city),
-      state: normalizeDiscoverSubmissionText(shelterForm.state),
-      zip: normalizeDiscoverSubmissionText(shelterForm.zip),
-      logo_url: normalizeDiscoverSubmissionText(shelterForm.logo_url),
-      status: 'pending',
-      verified: false,
-    };
-
-    try {
-      setShelterSubmitting(true);
-      const { error } = await supabase
-        .from('shelters')
-        .insert([payload]);
-
-      if (error) {
-        console.log('Control Center shelter insert error:', error);
-        Alert.alert('Unable to add shelter', 'Please try again.');
-        return;
-      }
-
-      Alert.alert('Shelter added', 'The shelter / rescue was added for review.');
-      closeControlCenterShelterModal();
-      await reloadControlCenterShelters();
-    } catch (error) {
-      console.log('Control Center shelter insert error:', error);
-      Alert.alert('Unable to add shelter', 'Please try again.');
-    } finally {
-      setShelterSubmitting(false);
-    }
-  };
-
-  const updateControlCenterShelter = async (shelter, payload, successTitle, successBody) => {
-    if (!authUser?.id || !isDiscoverAdmin || !shelter?.id || shelterSavingId) return;
-
-    try {
-      setShelterSavingId(shelter.id);
-      const { error } = await supabase
-        .from('shelters')
-        .update(payload)
-        .eq('id', shelter.id);
-
-      if (error) {
-        console.log('Control Center shelter update error:', error);
-        Alert.alert('Unable to update shelter', 'Please try again.');
-        return;
-      }
-
-      await reloadControlCenterShelters();
-      Alert.alert(successTitle, successBody);
-    } catch (error) {
-      console.log('Control Center shelter update error:', error);
-      Alert.alert('Unable to update shelter', 'Please try again.');
-    } finally {
-      setShelterSavingId(null);
-    }
-  };
-
-  const handleControlCenterShelterAction = (shelter, action) => {
-    if (!shelter?.id) return;
-
-    if (action === 'approve') {
-      void updateControlCenterShelter(
-        shelter,
-        {
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: authUser?.id || null,
-          rejected_at: null,
-        },
-        'Shelter approved',
-        'The shelter is now approved.'
-      );
-      return;
-    }
-
-    if (action === 'reject') {
-      void updateControlCenterShelter(
-        shelter,
-        {
-          status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          approved_at: null,
-          approved_by: null,
-        },
-        'Shelter rejected',
-        'The shelter was rejected.'
-      );
-      return;
-    }
-
-    if (action === 'suspend') {
-      void updateControlCenterShelter(
-        shelter,
-        {
-          status: 'suspended',
-          approved_at: null,
-          approved_by: null,
-        },
-        'Shelter suspended',
-        'The shelter was suspended.'
-      );
-      return;
-    }
-
-    if (action === 'verify') {
-      void updateControlCenterShelter(
-        shelter,
-        { verified: true },
-        'Shelter verified',
-        'The shelter was marked verified.'
-      );
-      return;
-    }
-
-    if (action === 'unverify') {
-      void updateControlCenterShelter(
-        shelter,
-        { verified: false },
-        'Verification removed',
-        'The shelter is no longer verified.'
-      );
-    }
-  };
-
-  const updateControlCenterAdoptablePetStatus = async (pet, nextStatus) => {
-    if (!authUser?.id || !pet?.id || adoptablePetSavingId) return;
-
-    const allowedStatuses = new Set(['available', 'pending', 'adopted', 'hidden']);
-    if (!allowedStatuses.has(nextStatus)) return;
-
-    try {
-      setAdoptablePetSavingId(pet.id);
-      const { error } = await supabase
-        .from('adoptable_pets')
-        .update({ status: nextStatus })
-        .eq('id', pet.id)
-        .is('deleted_at', null);
-
-      if (error) {
-        console.log('Control Center adoptable pet update error:', error);
-        Alert.alert('Unable to update pet', 'Please try again.');
-        return;
-      }
-
-      await reloadControlCenterAdoptablePets();
-      Alert.alert(
-        'Pet updated',
-        nextStatus === 'available'
-          ? 'The pet was marked available.'
-          : nextStatus === 'pending'
-            ? 'The pet was marked pending.'
-            : nextStatus === 'adopted'
-              ? 'The pet was marked adopted.'
-              : 'The pet was hidden.'
-      );
-    } catch (error) {
-      console.log('Control Center adoptable pet update error:', error);
-      Alert.alert('Unable to update pet', 'Please try again.');
-    } finally {
-      setAdoptablePetSavingId(null);
-    }
-  };
-
-  const updateControlCenterEventStatus = async (event, nextStatus) => {
-    if (!authUser?.id || !event?.id || eventSavingId) return;
-
-    const allowedStatuses = new Set(['active', 'pending', 'cancelled', 'hidden']);
-    if (!allowedStatuses.has(nextStatus)) return;
-
-    try {
-      setEventSavingId(event.id);
-      const { error } = await supabase
-        .from('pet_events')
-        .update({ status: nextStatus })
-        .eq('id', event.id)
-        .is('deleted_at', null);
-
-      if (error) {
-        console.log('Control Center event update error:', error);
-        Alert.alert('Unable to update event', 'Please try again.');
-        return;
-      }
-
-      await reloadControlCenterEvents();
-      Alert.alert(
-        'Event updated',
-        nextStatus === 'active'
-          ? 'The event was activated.'
-          : nextStatus === 'pending'
-            ? 'The event was marked pending.'
-            : nextStatus === 'cancelled'
-              ? 'The event was cancelled.'
-              : 'The event was hidden.'
-      );
-    } catch (error) {
-      console.log('Control Center event update error:', error);
-      Alert.alert('Unable to update event', 'Please try again.');
-    } finally {
-      setEventSavingId(null);
-    }
-  };
-
-  const updateControlCenterPromotionStatus = async (promotion, nextStatus) => {
-    if (!authUser?.id || !promotion?.id || promotionSavingId) return;
-
-    const allowedStatuses = new Set(['active', 'pending', 'paused', 'expired', 'rejected']);
-    if (!allowedStatuses.has(nextStatus)) return;
-
-    try {
-      setPromotionSavingId(promotion.id);
-      const { error } = await supabase
-        .from('business_promotions')
-        .update({ status: nextStatus })
-        .eq('id', promotion.id)
-        .is('deleted_at', null);
-
-      if (error) {
-        console.log('Control Center promotion update error:', error);
-        Alert.alert('Unable to update promotion', 'Please try again.');
-        return;
-      }
-
-      await reloadControlCenterPromotions();
-      Alert.alert(
-        'Promotion updated',
-        nextStatus === 'active'
-          ? 'The promotion was activated.'
-          : nextStatus === 'pending'
-            ? 'The promotion was marked pending.'
-            : nextStatus === 'paused'
-              ? 'The promotion was paused.'
-              : nextStatus === 'expired'
-                ? 'The promotion expired.'
-                : 'The promotion was rejected.'
-      );
-    } catch (error) {
-      console.log('Control Center promotion update error:', error);
-      Alert.alert('Unable to update promotion', 'Please try again.');
-    } finally {
-      setPromotionSavingId(null);
-    }
-  };
-
-  const updateControlCenterBusiness = async (business, payload, successTitle, successBody) => {
-    if (!authUser?.id || !isDiscoverAdmin || !business?.id || businessSavingId) return;
-
-    try {
-      setBusinessSavingId(business.id);
-      const { error } = await supabase
-        .from('businesses')
-        .update(payload)
-        .eq('id', business.id);
-
-      if (error) {
-        console.log('Control Center business update error:', error);
-        Alert.alert('Unable to update business', 'Please try again.');
-        return;
-      }
-
-      await reloadControlCenterBusinesses();
-      Alert.alert(successTitle, successBody);
-    } catch (error) {
-      console.log('Control Center business update error:', error);
-      Alert.alert('Unable to update business', 'Please try again.');
-    } finally {
-      setBusinessSavingId(null);
-    }
-  };
-
-  const handleControlCenterBusinessAction = (business, action) => {
-    if (!business?.id) return;
-
-    if (action === 'approve') {
-      void updateControlCenterBusiness(
-        business,
-        {
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: authUser?.id || null,
-          rejected_at: null,
-        },
-        'Business approved',
-        'The business is now approved.'
-      );
-      return;
-    }
-
-    if (action === 'reject') {
-      void updateControlCenterBusiness(
-        business,
-        {
-          status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          approved_at: null,
-          approved_by: null,
-        },
-        'Business rejected',
-        'The business was rejected.'
-      );
-      return;
-    }
-
-    if (action === 'suspend') {
-      void updateControlCenterBusiness(
-        business,
-        {
-          status: 'suspended',
-          approved_at: null,
-          approved_by: null,
-        },
-        'Business suspended',
-        'The business was suspended.'
-      );
-      return;
-    }
-
-    if (action === 'verify') {
-      void updateControlCenterBusiness(
-        business,
-        { verified: true },
-        'Business verified',
-        'The business was marked verified.'
-      );
-      return;
-    }
-
-    if (action === 'unverify') {
-      void updateControlCenterBusiness(
-        business,
-        { verified: false },
-        'Verification removed',
-        'The business is no longer verified.'
-      );
-      return;
-    }
-
-    if (action === 'feature') {
-      void updateControlCenterBusiness(
-        business,
-        { is_featured: true },
-        'Business featured',
-        'The business will now appear featured where supported.'
-      );
-      return;
-    }
-
-    if (action === 'unfeature') {
-      void updateControlCenterBusiness(
-        business,
-        { is_featured: false },
-        'Business unfeatured',
-        'The business is no longer featured.'
-      );
-    }
-  };
-
-  const renderControlCenterBusinessField = (label, value, onChangeText, placeholder, options = {}) => (
-    <View style={s.discoverRegistrationField}>
-      <Text style={s.discoverRegistrationLabel}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#8291A7"
-        style={[
-          s.discoverRegistrationInput,
-          options.multiline && s.discoverRegistrationInputMultiline,
-        ]}
-        multiline={Boolean(options.multiline)}
-        numberOfLines={options.numberOfLines || (options.multiline ? 4 : 1)}
-        textAlignVertical={options.multiline ? 'top' : 'center'}
-        autoCapitalize={options.autoCapitalize || 'words'}
-        autoCorrect={Boolean(options.autoCorrect)}
-        keyboardType={options.keyboardType || 'default'}
-        returnKeyType={options.returnKeyType || 'next'}
-        maxLength={options.maxLength}
-        onSubmitEditing={options.onSubmitEditing}
-      />
-    </View>
-  );
-
-  const updatePartnerApplicationStatus = async (application, nextStatus) => {
-    if (!authUser?.id || !application?.id || !['contacted', 'approved', 'rejected'].includes(nextStatus)) {
-      return;
-    }
-
-    try {
-      const payload = nextStatus === 'contacted'
-        ? {
-            status: nextStatus,
-            contacted_at: new Date().toISOString(),
-          }
-        : {
-            status: nextStatus,
-            reviewed_by: authUser.id,
-            reviewed_at: new Date().toISOString(),
-          };
-
-      const { error } = await supabase
-        .from('partner_applications')
-        .update(payload)
-        .eq('id', application.id);
-
-      if (error) {
-        console.log('Partner application update error:', error);
-        Alert.alert('Unable to update application', 'Please try again.');
-        return;
-      }
-
-      setPartnerApplications((prev) => prev.filter((item) => item.id !== application.id));
-      setDashboard((prev) => ({
-        ...prev,
-        pendingPartnerApplications: Math.max(0, prev.pendingPartnerApplications - 1),
-        partnerApplicationsTotal: Math.max(0, prev.partnerApplicationsTotal - 1),
-        partnerApplicationsContacted: nextStatus === 'contacted'
-          ? prev.partnerApplicationsContacted + 1
-          : prev.partnerApplicationsContacted,
-        partnerApplicationsApproved: nextStatus === 'approved'
-          ? prev.partnerApplicationsApproved + 1
-          : prev.partnerApplicationsApproved,
-        partnerApplicationsRejected: nextStatus === 'rejected'
-          ? prev.partnerApplicationsRejected + 1
-          : prev.partnerApplicationsRejected,
-      }));
-      Alert.alert(
-        nextStatus === 'contacted'
-          ? 'Application marked contacted'
-          : nextStatus === 'approved'
-            ? 'Application approved'
-            : 'Application rejected',
-        nextStatus === 'contacted'
-          ? 'The application was marked as contacted.'
-          : nextStatus === 'approved'
-            ? 'The application was approved for follow-up.'
-            : 'The application was rejected.'
-      );
-    } catch (error) {
-      console.log('Partner application update error:', error);
-      Alert.alert('Unable to update application', 'Please try again.');
-    }
-  };
-
-  const scrollToUsers = useCallback(() => {
-    if (!controlCenterScrollRef.current || !usersSectionY) {
-      return;
-    }
-
-    controlCenterScrollRef.current.scrollTo({
-      y: Math.max(0, usersSectionY - 16),
-      animated: true,
-    });
-  }, [usersSectionY]);
-
-  const overviewCards = [
-    {
-      key: 'total-users',
-      title: 'Total Users',
-      value: dashboard.totalUsers,
-      icon: 'account-group',
-      iconColor: '#7c3aed',
-      iconBg: 'rgba(124,58,237,0.14)',
-      onPress: scrollToUsers,
-    },
-    {
-      key: 'premium-users',
-      title: 'Premium Users',
-      value: dashboard.premiumUsers,
-      icon: 'diamond-stone',
-      iconColor: '#16a34a',
-      iconBg: 'rgba(34,197,94,0.16)',
-      onPress: scrollToUsers,
-    },
-    {
-      key: 'free-users',
-      title: 'Free Users',
-      value: dashboard.freeUsers,
-      icon: 'account',
-      iconColor: '#2563eb',
-      iconBg: 'rgba(59,130,246,0.16)',
-      onPress: scrollToUsers,
-    },
-    {
-      key: 'businesses',
-      title: 'Businesses',
-      value: dashboard.partnersTotal,
-      icon: 'storefront-outline',
-      iconColor: '#f97316',
-      iconBg: 'rgba(249,115,22,0.16)',
-      onPress: scrollToBusinesses,
-    },
-    {
-      key: 'shelters',
-      title: 'Shelters',
-      value: dashboard.sheltersTotal,
-      icon: 'home-heart',
-      iconColor: '#0ea5a8',
-      iconBg: 'rgba(14,165,168,0.16)',
-      onPress: scrollToShelters,
-    },
-    {
-      key: 'adoptable-pets',
-      title: 'Adoptable Pets',
-      value: controlCenterAdoptablePets.length,
-      icon: 'paw',
-      iconColor: '#ef4444',
-      iconBg: 'rgba(239,68,68,0.16)',
-      onPress: scrollToAdoptablePets,
-    },
-    {
-      key: 'active-promotions',
-      title: 'Active Promotions',
-      value: dashboard.promotionsActive,
-      icon: 'tag-outline',
-      iconColor: '#eab308',
-      iconBg: 'rgba(234,179,8,0.16)',
-      onPress: scrollToPromotions,
-    },
-    {
-      key: 'active-events',
-      title: 'Active Events',
-      value: dashboard.eventsActive,
-      icon: 'calendar-month',
-      iconColor: '#8b5cf6',
-      iconBg: 'rgba(139,92,246,0.16)',
-      onPress: scrollToEvents,
-    },
-    {
-      key: 'pending-applications',
-      title: 'Pending Applications',
-      value: dashboard.pendingPartnerApplications,
-      icon: 'clipboard-text-outline',
-      iconColor: '#3b82f6',
-      iconBg: 'rgba(59,130,246,0.16)',
-      onPress: scrollToPartnerApplications,
-    },
-  ];
-
-  const quickAccessCards = [
-    {
-      key: 'partner-applications',
-      title: 'Partner Applications',
-      icon: 'clipboard-list',
-      iconColor: '#6B46C1',
-      iconBg: 'rgba(107,70,193,0.12)',
-      onPress: scrollToPartnerApplications,
-    },
-    {
-      key: 'businesses',
-      title: 'Businesses',
-      icon: 'store',
-      iconColor: '#F97316',
-      iconBg: 'rgba(249,115,22,0.12)',
-      onPress: scrollToBusinesses,
-    },
-    {
-      key: 'shelters',
-      title: 'Shelters',
-      icon: 'home-heart',
-      iconColor: '#0EA5A8',
-      iconBg: 'rgba(14,165,168,0.12)',
-      onPress: scrollToShelters,
-    },
-    {
-      key: 'adoptable-pets',
-      title: 'Adoptable Pets',
-      icon: 'paw',
-      iconColor: '#EF4444',
-      iconBg: 'rgba(239,68,68,0.12)',
-      onPress: scrollToAdoptablePets,
-    },
-    {
-      key: 'events',
-      title: 'Events',
-      icon: 'calendar',
-      iconColor: '#7C3AED',
-      iconBg: 'rgba(124,58,237,0.12)',
-      onPress: scrollToEvents,
-    },
-    {
-      key: 'promotions',
-      title: 'Promotions',
-      icon: 'tag',
-      iconColor: '#EAB308',
-      iconBg: 'rgba(234,179,8,0.12)',
-      onPress: scrollToPromotions,
-    },
-    {
-      key: 'users',
-      title: 'Users',
-      icon: 'account-group',
-      iconColor: '#3B82F6',
-      iconBg: 'rgba(59,130,246,0.12)',
-      onPress: scrollToUsers,
-    },
-    {
-      key: 'analytics',
-      title: 'Analytics',
-      icon: 'chart-bar',
-      iconColor: '#16A34A',
-      iconBg: 'rgba(34,197,94,0.12)',
-      onPress: scrollToAnalytics,
-    },
-    {
-      key: 'settings',
-      title: 'Settings',
-      icon: 'cog',
-      iconColor: '#6B7280',
-      iconBg: 'rgba(107,114,128,0.12)',
-      onPress: scrollToSettings,
-    },
-    {
-      key: 'launch-center',
-      title: 'Launch Center',
-      icon: 'rocket-launch',
-      iconColor: '#6B46C1',
-      iconBg: 'rgba(107,70,193,0.12)',
-      onPress: scrollToLaunchCenter,
-    },
-  ];
-
-  return (
-    <PetSyncBackground opacity={0.05}>
-      <SafeAreaView style={s.flex}>
-        <ScrollView ref={controlCenterScrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={s.controlCenterScroll}>
-          <View style={s.controlCenterHeaderCard}>
-            <View style={s.controlCenterHeaderTopRow}>
-              <View style={s.flex}>
-                <Text style={s.controlCenterHeaderEyebrow}>PETSYNC+ CONTROL CENTER</Text>
-                <Text style={s.controlCenterHeaderTitle}>Platform Administration</Text>
-                <Text style={s.controlCenterHeaderSubtitle}>{authUser?.email || 'petsyncplus@gmail.com'}</Text>
-              </View>
-              <TouchableOpacity style={s.controlCenterLogoutButton} activeOpacity={0.9} onPress={handleControlCenterLogout}>
-                <MaterialCommunityIcons name="logout" size={19} color={C.primaryActionBg} />
-                <Text style={s.controlCenterLogoutText}>Log Out</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {loading ? (
-            <Card style={s.controlCenterLoadingCard}>
-              <ActivityIndicator color={C.primaryActionBg} />
-              <Text style={s.controlCenterLoadingText}>Loading Control Center...</Text>
-            </Card>
-          ) : null}
-
-          <View style={s.controlCenterSectionShell}>
-            <View style={s.controlCenterSectionHeader}>
-              <View>
-                <Text style={s.controlCenterSectionTitle}>Overview</Text>
-                <Text style={s.controlCenterSectionSubtitle}>Live counts from Supabase.</Text>
-              </View>
-            </View>
-            <View style={s.controlCenterOverviewGrid}>
-              {overviewCards.map((card) => (
-                <TouchableOpacity
-                  key={card.key}
-                  style={s.controlCenterOverviewCard}
-                  activeOpacity={0.9}
-                  onPress={card.onPress}
-                >
-                  <View style={[s.controlCenterOverviewIconWrap, { backgroundColor: card.iconBg }]}>
-                    <MaterialCommunityIcons name={card.icon} size={22} color={card.iconColor} />
-                  </View>
-                  <View style={s.flex}>
-                    <Text style={s.controlCenterOverviewLabel}>{card.title}</Text>
-                    <Text style={s.controlCenterOverviewValue}>{String(card.value ?? 0)}</Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={22} color="#6B46C1" />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={s.controlCenterSectionShell}>
-            <View style={s.controlCenterSectionHeader}>
-              <View>
-                <Text style={s.controlCenterSectionTitle}>Quick Access</Text>
-                <Text style={s.controlCenterSectionSubtitle}>Jump straight to the right panel.</Text>
-              </View>
-            </View>
-            <View style={s.controlCenterQuickGrid}>
-              {quickAccessCards.map((item) => (
-                <TouchableOpacity
-                  key={item.key}
-                  style={s.controlCenterQuickCard}
-                  activeOpacity={0.9}
-                  onPress={item.onPress}
-                >
-                  <View style={[s.controlCenterQuickIconWrap, { backgroundColor: item.iconBg }]}>
-                    <MaterialCommunityIcons name={item.icon} size={24} color={item.iconColor} />
-                  </View>
-                  <Text style={s.controlCenterQuickLabel} numberOfLines={2}>{item.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={s.controlCenterSectionShell}>
-            <View style={s.controlCenterSectionHeader}>
-              <View style={s.flex}>
-                <Text style={s.controlCenterSectionTitle}>Recent Activity</Text>
-                <Text style={s.controlCenterSectionSubtitle}>Latest updates across the platform.</Text>
-              </View>
-              <TouchableOpacity activeOpacity={0.84} onPress={() => { setActiveControlCenterNav('dashboard'); scrollToAnalytics(); }}>
-                <Text style={s.controlCenterViewAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            {analyticsRecentActivity.length > 0 ? (
-              <View style={s.controlCenterActivityList}>
-                {analyticsRecentActivity.map((item) => {
-                  const activityIcon = item.id.startsWith('partner-application:')
-                    ? 'clipboard-text-outline'
-                    : item.id.startsWith('business:')
-                      ? 'storefront-outline'
-                      : item.id.startsWith('shelter:')
-                        ? 'home-heart'
-                        : item.id.startsWith('promotion:')
-                          ? 'tag-outline'
-                          : 'calendar-month';
-                  return (
-                    <View key={item.id} style={s.controlCenterActivityCard}>
-                      <View style={s.controlCenterActivityIconWrap}>
-                        <MaterialCommunityIcons name={activityIcon} size={18} color={C.primaryActionBg} />
-                      </View>
-                      <View style={s.flex}>
-                        <View style={s.controlCenterActivityRow}>
-                          <Text style={s.controlCenterActivityTitle}>{item.title}</Text>
-                          <Text style={s.controlCenterActivityTime}>{formatDiscoverListingDate(item.created_at) || 'Recently'}</Text>
-                        </View>
-                        <Text style={s.controlCenterActivityMeta}>{item.subtitle}</Text>
-                        <Text style={s.controlCenterActivityMeta}>{item.meta}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <Text style={s.controlCenterEmptyStateText}>No recent platform activity yet.</Text>
-            )}
-          </View>
-
-          <View style={s.controlCenterGrid}>
-            {cards.map((card) => (
-              <TouchableOpacity
-                key={card.key}
-                style={[s.controlCenterCard, card.accent && s.controlCenterCardAccent]}
-                activeOpacity={0.88}
-                onPress={card.key === 'businesses'
-                  ? scrollToBusinesses
-                  : card.key === 'shelters'
-                    ? scrollToShelters
-                    : card.key === 'adoptable-pets'
-                      ? scrollToAdoptablePets
-                    : card.key === 'events'
-                        ? scrollToEvents
-                        : card.key === 'promotions'
-                          ? scrollToPromotions
-                  : card.key === 'partner-applications'
-                    ? scrollToPartnerApplications
-                    : card.key === 'analytics'
-                      ? scrollToAnalytics
-                    : card.key === 'settings'
-                      ? scrollToSettings
-                    : card.key === 'users'
-                      ? scrollToUsers
-                      : () => handleCardPress(card.title)}
-              >
-                <View style={s.controlCenterCardHeader}>
-                  <View style={s.controlCenterCardHeaderText}>
-                    <Text style={s.controlCenterCardTitle}>{card.title}</Text>
-                    <Text style={s.controlCenterCardSubtitle}>{card.subtitle}</Text>
-                  </View>
-                </View>
-                <View style={s.controlCenterMetricList}>
-                  {card.body.map((metric) => (
-                    <View key={`${card.key}:${metric.label}`} style={s.controlCenterMetricRow}>
-                      <Text style={s.controlCenterMetricLabel}>{metric.label}</Text>
-                      <Text style={s.controlCenterMetricValue}>{String(metric.value)}</Text>
-                    </View>
-                  ))}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View onLayout={(event) => setBusinessesSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Businesses</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Manage business partners before they appear publicly.</Text>
-                </View>
-                <TouchableOpacity
-                  style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                  activeOpacity={0.88}
-                  onPress={() => openControlCenterBusinessModal()}
-                >
-                  <Text style={s.controlCenterApplicationBtnAccentText}>Add Business Partner</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={s.controlCenterBusinessesSummaryRow}>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Total</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterBusinessStatusCounts.total}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Pending</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterBusinessStatusCounts.pending}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Approved</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterBusinessStatusCounts.approved}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Rejected</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterBusinessStatusCounts.rejected}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Suspended</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterBusinessStatusCounts.suspended}</Text>
-                </View>
-              </View>
-
-              <TextInput
-                value={businessSearchTerm}
-                onChangeText={setBusinessSearchTerm}
-                placeholder="Search businesses by name, city, state, email, or category"
-                placeholderTextColor="#98A2B3"
-                style={s.controlCenterBusinessSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="default"
-                returnKeyType="search"
-              />
-
-              <View style={s.discoverRegistrationChoiceRow}>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'approved', label: 'Approved' },
-                  { value: 'rejected', label: 'Rejected' },
-                  { value: 'suspended', label: 'Suspended' },
-                ].map((option) => {
-                  const isSelected = businessStatusFilter === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                      activeOpacity={0.88}
-                      onPress={() => setBusinessStatusFilter(option.value)}
-                    >
-                      <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {businessesLoading ? (
-                <View style={s.controlCenterBusinessesLoading}>
-                  <ActivityIndicator color={C.primaryActionBg} />
-                  <Text style={s.controlCenterApplicationsLoadingText}>Loading businesses...</Text>
-                </View>
-              ) : filteredControlCenterBusinesses.length > 0 ? (
-                filteredControlCenterBusinesses.map((business) => {
-                  const categoryLabel = businessCategoryLookup[business.category_id]?.name || businessCategoryLookup[business.category_id]?.slug || 'Uncategorized';
-                  const isApproved = String(business.status || 'pending').toLowerCase() === 'approved';
-                  const isRejected = String(business.status || 'pending').toLowerCase() === 'rejected';
-                  const isSuspended = String(business.status || 'pending').toLowerCase() === 'suspended';
-                  const isVerified = Boolean(business.verified);
-                  const isFeatured = Boolean(business.is_featured || business.business_tier === 'featured' || business.business_tier === 'sponsor');
-                  return (
-                    <View key={business.id} style={s.discoverBusinessCard}>
-                      <View style={s.controlCenterBusinessTopRow}>
-                        <View style={s.flex}>
-                          <Text style={s.discoverCardTitle}>{business.name || 'Business'}</Text>
-                          <Text style={s.discoverCardMeta}>{categoryLabel}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{formatDiscoverListingStatus(business.status)}</Text>
-                        </View>
-                      </View>
-
-                      <View style={s.controlCenterBusinessTagRow}>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{String(business.business_tier || 'free').toUpperCase()}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{isVerified ? 'VERIFIED' : 'UNVERIFIED'}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{isFeatured ? 'FEATURED' : 'STANDARD'}</Text>
-                        </View>
-                      </View>
-
-                      <Text style={s.discoverCardMeta}>
-                        {[business.city, business.state].filter(Boolean).join(', ') || 'Location not listed'}
-                      </Text>
-                      <Text style={s.discoverCardMeta}>Email: {business.email || 'Not listed'}</Text>
-                      <Text style={s.discoverCardMeta}>Phone: {business.phone || 'Not listed'}</Text>
-                      <Text style={s.discoverDetailEmptyText}>
-                        Created {formatDiscoverListingDate(business.created_at) || 'recently'}
-                      </Text>
-
-                      <View style={s.controlCenterApplicationButtons}>
-                        {!isApproved ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                            activeOpacity={0.88}
-                            disabled={businessSavingId === business.id}
-                            onPress={() => handleControlCenterBusinessAction(business, 'approve')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnAccentText}>Approve</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isRejected ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnDanger]}
-                            activeOpacity={0.88}
-                            disabled={businessSavingId === business.id}
-                            onPress={() => handleControlCenterBusinessAction(business, 'reject')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnDangerText}>Reject</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isSuspended ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                            activeOpacity={0.88}
-                            disabled={businessSavingId === business.id}
-                            onPress={() => handleControlCenterBusinessAction(business, 'suspend')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnSoftText}>Suspend</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        <TouchableOpacity
-                          style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                          activeOpacity={0.88}
-                          disabled={businessSavingId === business.id}
-                          onPress={() => handleControlCenterBusinessAction(business, isVerified ? 'unverify' : 'verify')}
-                        >
-                          <Text style={s.controlCenterApplicationBtnSoftText}>
-                            {isVerified ? 'Remove Verified' : 'Mark Verified'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                          activeOpacity={0.88}
-                          disabled={businessSavingId === business.id}
-                          onPress={() => handleControlCenterBusinessAction(business, isFeatured ? 'unfeature' : 'feature')}
-                        >
-                          <Text style={s.controlCenterApplicationBtnSoftText}>
-                            {isFeatured ? 'Unfeature' : 'Feature'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={s.controlCenterApplicationsEmptyText}>
-                  {controlCenterBusinesses.length > 0 ? 'No businesses match your filters.' : 'No businesses added yet.'}
-                </Text>
-              )}
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setSheltersSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Shelters</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Manage shelters and rescues before they appear publicly.</Text>
-                </View>
-                <TouchableOpacity
-                  style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                  activeOpacity={0.88}
-                  onPress={() => openControlCenterShelterModal()}
-                >
-                  <Text style={s.controlCenterApplicationBtnAccentText}>Add Shelter / Rescue</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={s.controlCenterBusinessesSummaryRow}>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Total</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterShelterStatusCounts.total}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Pending</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterShelterStatusCounts.pending}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Approved</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterShelterStatusCounts.approved}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Rejected</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterShelterStatusCounts.rejected}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Suspended</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterShelterStatusCounts.suspended}</Text>
-                </View>
-              </View>
-
-              <TextInput
-                value={shelterSearchTerm}
-                onChangeText={setShelterSearchTerm}
-                placeholder="Search shelters by name, city, state, email, phone, or website"
-                placeholderTextColor="#98A2B3"
-                style={s.controlCenterBusinessSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="default"
-                returnKeyType="search"
-              />
-
-              <View style={s.discoverRegistrationChoiceRow}>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'approved', label: 'Approved' },
-                  { value: 'rejected', label: 'Rejected' },
-                  { value: 'suspended', label: 'Suspended' },
-                ].map((option) => {
-                  const isSelected = shelterStatusFilter === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                      activeOpacity={0.88}
-                      onPress={() => setShelterStatusFilter(option.value)}
-                    >
-                      <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {sheltersLoading ? (
-                <View style={s.controlCenterBusinessesLoading}>
-                  <ActivityIndicator color={C.primaryActionBg} />
-                  <Text style={s.controlCenterApplicationsLoadingText}>Loading shelters...</Text>
-                </View>
-              ) : filteredControlCenterShelters.length > 0 ? (
-                filteredControlCenterShelters.map((shelter) => {
-                  const isApproved = String(shelter.status || 'pending').toLowerCase() === 'approved';
-                  const isRejected = String(shelter.status || 'pending').toLowerCase() === 'rejected';
-                  const isSuspended = String(shelter.status || 'pending').toLowerCase() === 'suspended';
-                  const isVerified = Boolean(shelter.verified);
-                  return (
-                    <View key={shelter.id} style={s.discoverBusinessCard}>
-                      <View style={s.controlCenterBusinessTopRow}>
-                        <View style={s.flex}>
-                          <Text style={s.discoverCardTitle}>{shelter.name || 'Shelter / Rescue'}</Text>
-                          <Text style={s.discoverCardMeta}>Shelter / Rescue</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{formatDiscoverListingStatus(shelter.status)}</Text>
-                        </View>
-                      </View>
-
-                      <View style={s.controlCenterBusinessTagRow}>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{isVerified ? 'VERIFIED' : 'UNVERIFIED'}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{String(shelter.service_mode || 'local_only').toUpperCase()}</Text>
-                        </View>
-                      </View>
-
-                      <Text style={s.discoverCardMeta}>
-                        {[shelter.city, shelter.state].filter(Boolean).join(', ') || 'Location not listed'}
-                      </Text>
-                      <Text style={s.discoverCardMeta}>Email: {shelter.email || 'Not listed'}</Text>
-                      <Text style={s.discoverCardMeta}>Phone: {shelter.phone || 'Not listed'}</Text>
-                      <Text style={s.discoverCardMeta}>Website: {shelter.website || 'Not listed'}</Text>
-                      <Text style={s.discoverCardMeta}>Donation: {shelter.donation_url || 'Not listed'}</Text>
-                      <Text style={s.discoverDetailEmptyText}>
-                        Created {formatDiscoverListingDate(shelter.created_at) || 'recently'}
-                      </Text>
-
-                      <View style={s.controlCenterApplicationButtons}>
-                        {!isApproved ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                            activeOpacity={0.88}
-                            disabled={shelterSavingId === shelter.id}
-                            onPress={() => handleControlCenterShelterAction(shelter, 'approve')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnAccentText}>Approve</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isRejected ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnDanger]}
-                            activeOpacity={0.88}
-                            disabled={shelterSavingId === shelter.id}
-                            onPress={() => handleControlCenterShelterAction(shelter, 'reject')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnDangerText}>Reject</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isSuspended ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                            activeOpacity={0.88}
-                            disabled={shelterSavingId === shelter.id}
-                            onPress={() => handleControlCenterShelterAction(shelter, 'suspend')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnSoftText}>Suspend</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        <TouchableOpacity
-                          style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                          activeOpacity={0.88}
-                          disabled={shelterSavingId === shelter.id}
-                          onPress={() => handleControlCenterShelterAction(shelter, isVerified ? 'unverify' : 'verify')}
-                        >
-                          <Text style={s.controlCenterApplicationBtnSoftText}>
-                            {isVerified ? 'Remove Verified' : 'Mark Verified'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                          activeOpacity={0.88}
-                          disabled={shelterSavingId === shelter.id}
-                          onPress={() => openControlCenterShelterModal(shelter)}
-                        >
-                          <Text style={s.controlCenterApplicationBtnAccentText}>Edit</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={s.controlCenterApplicationsEmptyText}>
-                  {controlCenterShelters.length > 0 ? 'No shelters match your filters.' : 'No shelters added yet.'}
-                </Text>
-              )}
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setAdoptablePetsSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Adoptable Pets</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Manage adoptable pets across approved shelters.</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterBusinessesSummaryRow}>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Total</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterAdoptablePetStatusCounts.total}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Available</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterAdoptablePetStatusCounts.available}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Pending</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterAdoptablePetStatusCounts.pending}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Adopted</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterAdoptablePetStatusCounts.adopted}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Hidden</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterAdoptablePetStatusCounts.hidden}</Text>
-                </View>
-              </View>
-
-              <TextInput
-                value={adoptablePetSearchTerm}
-                onChangeText={setAdoptablePetSearchTerm}
-                placeholder="Search pets by name, species, breed, or shelter"
-                placeholderTextColor="#98A2B3"
-                style={s.controlCenterBusinessSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="default"
-                returnKeyType="search"
-              />
-
-              <View style={s.discoverRegistrationChoiceRow}>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'available', label: 'Available' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'adopted', label: 'Adopted' },
-                  { value: 'hidden', label: 'Hidden' },
-                ].map((option) => {
-                  const isSelected = adoptablePetStatusFilter === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                      activeOpacity={0.88}
-                      onPress={() => setAdoptablePetStatusFilter(option.value)}
-                    >
-                      <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {adoptablePetsLoading ? (
-                <View style={s.controlCenterBusinessesLoading}>
-                  <ActivityIndicator color={C.primaryActionBg} />
-                  <Text style={s.controlCenterApplicationsLoadingText}>Loading adoptable pets...</Text>
-                </View>
-              ) : filteredControlCenterAdoptablePets.length > 0 ? (
-                filteredControlCenterAdoptablePets.map((pet) => {
-                  const shelterName = shelterLookupById[pet.shelter_id]?.name || 'Unknown shelter';
-                  const isAvailable = String(pet.status || 'available').toLowerCase() === 'available';
-                  const isPending = String(pet.status || 'available').toLowerCase() === 'pending';
-                  const isAdopted = String(pet.status || 'available').toLowerCase() === 'adopted';
-                  const isHidden = String(pet.status || 'available').toLowerCase() === 'hidden';
-                  const adoptionFee = pet.adoption_fee != null && pet.adoption_fee !== '' ? `$${Number(pet.adoption_fee).toFixed(2)}` : 'Not set';
-                  const speciesBreed = [pet.species, pet.breed].filter(Boolean).join(' • ') || 'Not listed';
-                  return (
-                    <View key={pet.id} style={s.discoverPetCard}>
-                      <View style={{ padding: 14, gap: 10 }}>
-                        <View style={s.controlCenterBusinessTopRow}>
-                          <View style={s.flex}>
-                            <Text style={s.discoverCardTitle}>{pet.name || 'Adoptable Pet'}</Text>
-                            <Text style={s.discoverCardMeta}>{shelterName}</Text>
-                          </View>
-                          <View style={s.discoverChipAlt}>
-                            <Text style={s.discoverChipAltText}>{formatDiscoverPetStatus(pet.status)}</Text>
-                          </View>
-                        </View>
-
-                        <View style={s.controlCenterBusinessTagRow}>
-                          <View style={s.discoverChipAlt}>
-                            <Text style={s.discoverChipAltText}>{speciesBreed}</Text>
-                          </View>
-                          {pet.age_label ? (
-                            <View style={s.discoverChipAlt}>
-                              <Text style={s.discoverChipAltText}>{pet.age_label}</Text>
-                            </View>
-                          ) : null}
-                          <View style={s.discoverChipAlt}>
-                            <Text style={s.discoverChipAltText}>{adoptionFee}</Text>
-                          </View>
-                        </View>
-
-                        <Text style={s.discoverCardMeta}>Shelter: {shelterName}</Text>
-                        <Text style={s.discoverCardMeta}>Created {formatDiscoverListingDate(pet.created_at) || 'recently'}</Text>
-
-                        <View style={s.controlCenterApplicationButtons}>
-                          {!isAvailable ? (
-                            <TouchableOpacity
-                              style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                              activeOpacity={0.88}
-                              disabled={adoptablePetSavingId === pet.id}
-                              onPress={() => updateControlCenterAdoptablePetStatus(pet, 'available')}
-                            >
-                              <Text style={s.controlCenterApplicationBtnAccentText}>Mark Available</Text>
-                            </TouchableOpacity>
-                          ) : null}
-                          {!isPending ? (
-                            <TouchableOpacity
-                              style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                              activeOpacity={0.88}
-                              disabled={adoptablePetSavingId === pet.id}
-                              onPress={() => updateControlCenterAdoptablePetStatus(pet, 'pending')}
-                            >
-                              <Text style={s.controlCenterApplicationBtnSoftText}>Mark Pending</Text>
-                            </TouchableOpacity>
-                          ) : null}
-                          {!isAdopted ? (
-                            <TouchableOpacity
-                              style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                              activeOpacity={0.88}
-                              disabled={adoptablePetSavingId === pet.id}
-                              onPress={() => updateControlCenterAdoptablePetStatus(pet, 'adopted')}
-                            >
-                              <Text style={s.controlCenterApplicationBtnAccentText}>Mark Adopted</Text>
-                            </TouchableOpacity>
-                          ) : null}
-                          {!isHidden ? (
-                            <TouchableOpacity
-                              style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnDanger]}
-                              activeOpacity={0.88}
-                              disabled={adoptablePetSavingId === pet.id}
-                              onPress={() => updateControlCenterAdoptablePetStatus(pet, 'hidden')}
-                            >
-                              <Text style={s.controlCenterApplicationBtnDangerText}>Hide</Text>
-                            </TouchableOpacity>
-                          ) : null}
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={s.controlCenterApplicationsEmptyText}>
-                  {controlCenterAdoptablePets.length > 0 ? 'No pets match your filters.' : 'No adoptable pets added yet.'}
-                </Text>
-              )}
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setEventsSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Events</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Manage Discover events across businesses, shelters, and community hosts.</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterBusinessesSummaryRow}>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Total</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterEventStatusCounts.total}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Active</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterEventStatusCounts.active}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Pending</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterEventStatusCounts.pending}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Cancelled</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterEventStatusCounts.cancelled}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Hidden</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterEventStatusCounts.hidden}</Text>
-                </View>
-              </View>
-
-              <TextInput
-                value={eventSearchTerm}
-                onChangeText={setEventSearchTerm}
-                placeholder="Search events by title, type, city, state, or host"
-                placeholderTextColor="#98A2B3"
-                style={s.controlCenterBusinessSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="default"
-                returnKeyType="search"
-              />
-
-              <View style={s.discoverRegistrationChoiceRow}>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'active', label: 'Active' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'cancelled', label: 'Cancelled' },
-                  { value: 'hidden', label: 'Hidden' },
-                ].map((option) => {
-                  const isSelected = eventStatusFilter === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                      activeOpacity={0.88}
-                      onPress={() => setEventStatusFilter(option.value)}
-                    >
-                      <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {eventsLoading ? (
-                <View style={s.controlCenterBusinessesLoading}>
-                  <ActivityIndicator color={C.primaryActionBg} />
-                  <Text style={s.controlCenterApplicationsLoadingText}>Loading events...</Text>
-                </View>
-              ) : filteredControlCenterEvents.length > 0 ? (
-                filteredControlCenterEvents.map((event) => {
-                  const status = String(event.status || 'pending').trim().toLowerCase();
-                  const isActive = status === 'active';
-                  const isPending = status === 'pending';
-                  const isCancelled = status === 'cancelled';
-                  const isHidden = status === 'hidden';
-                  const hostName = event.host_type === 'business'
-                    ? businessLookupById[event.business_id]?.name || 'Business host'
-                    : event.host_type === 'shelter'
-                      ? shelterLookupById[event.shelter_id]?.name || 'Shelter host'
-                      : 'Community';
-                  const hostTypeLabel = event.host_type === 'business'
-                    ? 'Business'
-                    : event.host_type === 'shelter'
-                      ? 'Shelter'
-                      : 'Community';
-                  return (
-                    <View key={event.id} style={s.discoverBusinessCard}>
-                      <View style={s.controlCenterBusinessTopRow}>
-                        <View style={s.flex}>
-                          <Text style={s.discoverCardTitle}>{event.title || 'Event'}</Text>
-                          <Text style={s.discoverCardMeta}>{hostName}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{formatDiscoverEventStatus(event.status)}</Text>
-                        </View>
-                      </View>
-
-                      <View style={s.controlCenterBusinessTagRow}>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{hostTypeLabel}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{event.event_type || 'Event type not listed'}</Text>
-                        </View>
-                      </View>
-
-                      <Text style={s.discoverCardMeta}>Host: {hostName}</Text>
-                      <Text style={s.discoverCardMeta}>Type: {event.event_type || 'Not listed'}</Text>
-                      <Text style={s.discoverCardMeta}>
-                        {[event.city, event.state].filter(Boolean).join(', ') || 'Location not listed'}
-                      </Text>
-                      <Text style={s.discoverCardMeta}>Starts: {formatDiscoverListingDate(event.starts_at) || 'Not listed'}</Text>
-                      <Text style={s.discoverCardMeta}>Ends: {formatDiscoverListingDate(event.ends_at) || 'Not listed'}</Text>
-
-                      <View style={s.controlCenterApplicationButtons}>
-                        {!isActive ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                            activeOpacity={0.88}
-                            disabled={eventSavingId === event.id}
-                            onPress={() => updateControlCenterEventStatus(event, 'active')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnAccentText}>Activate</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isPending ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                            activeOpacity={0.88}
-                            disabled={eventSavingId === event.id}
-                            onPress={() => updateControlCenterEventStatus(event, 'pending')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnSoftText}>Mark Pending</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isCancelled ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnDanger]}
-                            activeOpacity={0.88}
-                            disabled={eventSavingId === event.id}
-                            onPress={() => updateControlCenterEventStatus(event, 'cancelled')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnDangerText}>Cancel</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isHidden ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                            activeOpacity={0.88}
-                            disabled={eventSavingId === event.id}
-                            onPress={() => updateControlCenterEventStatus(event, 'hidden')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnSoftText}>Hide</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                      </View>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={s.controlCenterApplicationsEmptyText}>
-                  {controlCenterEvents.length > 0 ? 'No events match your filters.' : 'No events added yet.'}
-                </Text>
-              )}
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setPromotionsSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Promotions</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Manage partner promotions across approved businesses.</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterBusinessesSummaryRow}>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Total</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterPromotionStatusCounts.total}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Active</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterPromotionStatusCounts.active}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Pending</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterPromotionStatusCounts.pending}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Paused</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterPromotionStatusCounts.paused}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Expired</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterPromotionStatusCounts.expired}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Rejected</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterPromotionStatusCounts.rejected}</Text>
-                </View>
-              </View>
-
-              <TextInput
-                value={promotionSearchTerm}
-                onChangeText={setPromotionSearchTerm}
-                placeholder="Search promotions by title, description, code, or business"
-                placeholderTextColor="#98A2B3"
-                style={s.controlCenterBusinessSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="default"
-                returnKeyType="search"
-              />
-
-              <View style={s.discoverRegistrationChoiceRow}>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'active', label: 'Active' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'paused', label: 'Paused' },
-                  { value: 'expired', label: 'Expired' },
-                  { value: 'rejected', label: 'Rejected' },
-                ].map((option) => {
-                  const isSelected = promotionStatusFilter === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                      activeOpacity={0.88}
-                      onPress={() => setPromotionStatusFilter(option.value)}
-                    >
-                      <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {promotionsLoading ? (
-                <View style={s.controlCenterBusinessesLoading}>
-                  <ActivityIndicator color={C.primaryActionBg} />
-                  <Text style={s.controlCenterApplicationsLoadingText}>Loading promotions...</Text>
-                </View>
-              ) : filteredControlCenterPromotions.length > 0 ? (
-                filteredControlCenterPromotions.map((promotion) => {
-                  const status = String(promotion.status || 'pending').trim().toLowerCase();
-                  const isActive = status === 'active';
-                  const isPending = status === 'pending';
-                  const isPaused = status === 'paused';
-                  const isExpired = status === 'expired';
-                  const isRejected = status === 'rejected';
-                  const businessName = businessLookupById[promotion.business_id]?.name || 'Business';
-                  return (
-                    <View key={promotion.id} style={s.discoverBusinessCard}>
-                      <View style={s.controlCenterBusinessTopRow}>
-                        <View style={s.flex}>
-                          <Text style={s.discoverCardTitle}>{promotion.title || 'Promotion'}</Text>
-                          <Text style={s.discoverCardMeta}>{businessName}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{formatDiscoverPromotionStatus(promotion.status)}</Text>
-                        </View>
-                      </View>
-
-                      <View style={s.controlCenterBusinessTagRow}>
-                        {promotion.promo_code ? (
-                          <View style={s.discoverChipAlt}>
-                            <Text style={s.discoverChipAltText}>Code: {promotion.promo_code}</Text>
-                          </View>
-                        ) : null}
-                        {promotion.button_text ? (
-                          <View style={s.discoverChipAlt}>
-                            <Text style={s.discoverChipAltText}>{promotion.button_text}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-
-                      <Text style={s.discoverCardMeta}>Business: {businessName}</Text>
-                      <Text style={s.discoverCardMeta}>{promotion.description || 'No promotion description provided.'}</Text>
-                      <Text style={s.discoverCardMeta}>Starts: {formatDiscoverDateTime(promotion.starts_at) || promotion.starts_at || 'Not set'}</Text>
-                      <Text style={s.discoverCardMeta}>Ends: {formatDiscoverDateTime(promotion.ends_at) || promotion.ends_at || 'Not set'}</Text>
-                      {promotion.button_url ? (
-                        <Text style={s.discoverCardMeta}>URL: {promotion.button_url}</Text>
-                      ) : null}
-
-                      <View style={s.controlCenterApplicationButtons}>
-                        {!isActive ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                            activeOpacity={0.88}
-                            disabled={promotionSavingId === promotion.id}
-                            onPress={() => updateControlCenterPromotionStatus(promotion, 'active')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnAccentText}>Activate</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isPending ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                            activeOpacity={0.88}
-                            disabled={promotionSavingId === promotion.id}
-                            onPress={() => updateControlCenterPromotionStatus(promotion, 'pending')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnSoftText}>Mark Pending</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isPaused ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                            activeOpacity={0.88}
-                            disabled={promotionSavingId === promotion.id}
-                            onPress={() => updateControlCenterPromotionStatus(promotion, 'paused')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnSoftText}>Pause</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isExpired ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnDanger]}
-                            activeOpacity={0.88}
-                            disabled={promotionSavingId === promotion.id}
-                            onPress={() => updateControlCenterPromotionStatus(promotion, 'expired')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnDangerText}>Expire</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        {!isRejected ? (
-                          <TouchableOpacity
-                            style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnDanger]}
-                            activeOpacity={0.88}
-                            disabled={promotionSavingId === promotion.id}
-                            onPress={() => updateControlCenterPromotionStatus(promotion, 'rejected')}
-                          >
-                            <Text style={s.controlCenterApplicationBtnDangerText}>Reject</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                      </View>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={s.controlCenterApplicationsEmptyText}>
-                  {controlCenterPromotions.length > 0 ? 'No promotions match your filters.' : 'No promotions added yet.'}
-                </Text>
-              )}
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setUsersSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Users</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Read-only profile directory for Control Center administrators.</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterBusinessesSummaryRow}>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Total</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterUserStatusCounts.total}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Premium</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterUserStatusCounts.premium}</Text>
-                </View>
-                <View style={s.controlCenterBusinessesSummaryPill}>
-                  <Text style={s.controlCenterBusinessesSummaryLabel}>Free</Text>
-                  <Text style={s.controlCenterBusinessesSummaryValue}>{controlCenterUserStatusCounts.free}</Text>
-                </View>
-              </View>
-
-              <TextInput
-                value={userSearchTerm}
-                onChangeText={setUserSearchTerm}
-                placeholder="Search users by name or email"
-                placeholderTextColor="#98A2B3"
-                style={s.controlCenterBusinessSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="default"
-                returnKeyType="search"
-              />
-
-              <View style={s.discoverRegistrationChoiceRow}>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'premium', label: 'Premium' },
-                  { value: 'free', label: 'Free' },
-                ].map((option) => {
-                  const isSelected = userPlanFilter === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                      activeOpacity={0.88}
-                      onPress={() => setUserPlanFilter(option.value)}
-                    >
-                      <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {usersLoading ? (
-                <View style={s.controlCenterBusinessesLoading}>
-                  <ActivityIndicator color={C.primaryActionBg} />
-                  <Text style={s.controlCenterApplicationsLoadingText}>Loading users...</Text>
-                </View>
-              ) : filteredControlCenterUsers.length > 0 ? (
-                filteredControlCenterUsers.map((user) => {
-                  const planValue = String(
-                    user.plan
-                    || user.subscription_plan
-                    || user.billing_plan
-                    || (user.revenueCatPremiumActive || user.revenuecat_premium_active ? 'premium' : '')
-                    || ''
-                  ).trim().toLowerCase();
-                  const isPremium = planValue.includes('premium') || planValue === 'pro' || planValue === 'plus' || planValue === 'paid';
-                  const displayName = user.display_name || user.full_name || user.name || user.username || user.email || 'User';
-                  const email = user.email || 'Email not listed';
-                  const createdAt = formatDiscoverListingDate(user.created_at) || user.created_at || 'Not listed';
-                  const petCountValue = Number.isFinite(Number(user.pet_count)) ? Number(user.pet_count) : Number.isFinite(Number(user.pets_count)) ? Number(user.pets_count) : null;
-                  const planLabel = planValue ? (isPremium ? 'Premium' : 'Free') : 'Not listed';
-
-                  return (
-                    <View key={user.id || `${email}:${createdAt}`} style={s.discoverBusinessCard}>
-                      <View style={s.controlCenterBusinessTopRow}>
-                        <View style={s.flex}>
-                          <Text style={s.discoverCardTitle}>{displayName}</Text>
-                          <Text style={s.discoverCardMeta}>{email}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{planLabel}</Text>
-                        </View>
-                      </View>
-
-                      <View style={s.controlCenterBusinessTagRow}>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{planLabel}</Text>
-                        </View>
-                        {petCountValue != null ? (
-                          <View style={s.discoverChipAlt}>
-                            <Text style={s.discoverChipAltText}>Pets: {petCountValue}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-
-                      <Text style={s.discoverCardMeta}>Email: {email}</Text>
-                      <Text style={s.discoverCardMeta}>Plan: {planLabel}</Text>
-                      <Text style={s.discoverCardMeta}>Created: {createdAt}</Text>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={s.controlCenterApplicationsEmptyText}>
-                  No users found.
-                </Text>
-              )}
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setAnalyticsSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Analytics</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Read-only platform snapshot from live Control Center data.</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterAnalyticsGrid}>
-                {[
-                  { label: 'Total Users', value: dashboard.totalUsers },
-                  { label: 'Premium Users', value: dashboard.premiumUsers },
-                  { label: 'Free Users', value: dashboard.freeUsers },
-                  { label: 'Businesses', value: dashboard.partnersTotal },
-                  { label: 'Shelters', value: dashboard.sheltersTotal },
-                  { label: 'Adoptable Pets', value: controlCenterAdoptablePets.length },
-                  { label: 'Active Promotions', value: dashboard.promotionsActive },
-                  { label: 'Active Events', value: dashboard.eventsActive },
-                  { label: 'Pending Partner Applications', value: dashboard.pendingPartnerApplications },
-                ].map((item) => {
-                  const displayValue = item.value == null ? 'Not available yet' : item.value;
-                  return (
-                    <View key={item.label} style={s.controlCenterAnalyticsCard}>
-                      <Text style={s.controlCenterAnalyticsLabel}>{item.label}</Text>
-                      <Text style={s.controlCenterAnalyticsValue}>{displayValue}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-
-              <View style={s.controlCenterAnalyticsSection}>
-                <Text style={s.controlCenterBusinessesTitle}>Recent Activity</Text>
-                <Text style={s.controlCenterBusinessesSubtitle}>Latest updates across partner applications, listings, promotions, and events.</Text>
-
-                {analyticsRecentActivity.length > 0 ? (
-                  analyticsRecentActivity.map((item) => (
-                    <View key={item.id} style={s.controlCenterAnalyticsActivityCard}>
-                      <View style={s.controlCenterBusinessTopRow}>
-                        <View style={s.flex}>
-                          <Text style={s.discoverCardTitle}>{item.title}</Text>
-                          <Text style={s.discoverCardMeta}>{item.subtitle}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{formatDiscoverListingDate(item.created_at) || 'Recently'}</Text>
-                        </View>
-                      </View>
-                      <Text style={s.discoverCardMeta}>{item.meta}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={s.controlCenterApplicationsEmptyText}>No recent activity yet.</Text>
-                )}
-              </View>
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setSettingsSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Settings</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Read-only platform configuration and launch checklist.</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterSettingsSection}>
-                <Text style={s.controlCenterBusinessesTitle}>Admin Email</Text>
-                <Text style={s.discoverCardMeta}>petsyncplus@gmail.com</Text>
-              </View>
-
-              <View style={s.controlCenterSettingsSection}>
-                <Text style={s.controlCenterBusinessesTitle}>Business Categories</Text>
-                <Text style={s.controlCenterBusinessesSubtitle}>Loaded from public.business_categories.</Text>
-                {sortedBusinessCategories.length > 0 ? (
-                  sortedBusinessCategories.map((category) => (
-                    <View key={category.id} style={s.controlCenterSettingsRow}>
-                      <View style={s.flex}>
-                        <Text style={s.discoverCardTitle}>{category.name || 'Category'}</Text>
-                        <Text style={s.discoverCardMeta}>{category.slug || 'No slug'}</Text>
-                      </View>
-                      <View style={s.discoverChipAlt}>
-                        <Text style={s.discoverChipAltText}>
-                          {category.active ? 'Active' : 'Inactive'}
-                        </Text>
-                      </View>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={s.controlCenterApplicationsEmptyText}>No business categories found.</Text>
-                )}
-              </View>
-
-                <View style={s.controlCenterSettingsSection}>
-                  <Text style={s.controlCenterBusinessesTitle}>Marketplace Launch Settings</Text>
-                  <Text style={s.controlCenterApplicationsEmptyText}>Configured in Launch Center.</Text>
-                </View>
-
-                <View style={s.controlCenterSettingsSection}>
-                  <Text style={s.controlCenterBusinessesTitle}>Email Notifications</Text>
-                  <Text style={s.controlCenterApplicationsEmptyText}>Planned for post-TestFlight automation.</Text>
-                </View>
-
-                <View style={s.controlCenterSettingsSection}>
-                  <Text style={s.controlCenterBusinessesTitle}>App Store / TestFlight Checklist</Text>
-                  <Text style={s.controlCenterApplicationsEmptyText}>Handled during TestFlight readiness.</Text>
-                </View>
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setLaunchCenterSectionY(event.nativeEvent.layout.y)}>
-            <Card style={s.controlCenterBusinessesCard}>
-              <View style={s.controlCenterBusinessesHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.controlCenterBusinessesTitle}>Launch Center</Text>
-                  <Text style={s.controlCenterBusinessesSubtitle}>Marketplace launch stays private until a future phase.</Text>
-                </View>
-                <View style={s.discoverSectionPill}>
-                  <Text style={s.discoverSectionPillText}>Private</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterLaunchSummaryRow}>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Approved Businesses</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.approvedBusinesses}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Approved Shelters</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.approvedShelters}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Available Adoptable Pets</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.availablePets}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Active Promotions</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.activePromotions}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Active Future Events</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.activeFutureEvents}</Text>
-                </View>
-                <View style={s.controlCenterLaunchSummaryPill}>
-                  <Text style={s.controlCenterLaunchSummaryLabel}>Pending Partner Applications</Text>
-                  <Text style={s.controlCenterLaunchSummaryValue}>{launchCenterSummary.pendingPartnerApplications}</Text>
-                </View>
-              </View>
-
-              <View style={s.controlCenterLaunchChecklist}>
-                {launchCenterSummary.checklist.map((item) => (
-                  <View key={item.key} style={s.controlCenterLaunchChecklistRow}>
-                    <View style={s.flex}>
-                      <Text style={s.controlCenterLaunchChecklistLabel}>{item.label}</Text>
-                    </View>
-                    <View style={[s.controlCenterLaunchChecklistBadge, item.ready ? s.controlCenterLaunchChecklistBadgeReady : s.controlCenterLaunchChecklistBadgeNotReady]}>
-                      <Text style={[s.controlCenterLaunchChecklistBadgeText, item.ready ? s.controlCenterLaunchChecklistBadgeTextReady : s.controlCenterLaunchChecklistBadgeTextNotReady]}>
-                        {item.ready ? 'Ready' : 'Not ready'}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </Card>
-          </View>
-
-          <View onLayout={(event) => setPartnerApplicationsSectionY(event.nativeEvent.layout.y)}>
-          <Card style={s.controlCenterApplicationsCard}>
-            <View style={s.controlCenterApplicationsHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.controlCenterApplicationsTitle}>Partner Applications</Text>
-                <Text style={s.controlCenterApplicationsSubtitle}>Pending applications that need review.</Text>
-              </View>
-              <View style={s.discoverSectionPill}>
-                <Text style={s.discoverSectionPillText}>{partnerApplications.filter((application) => String(application.status || 'pending').toLowerCase() === 'pending').length}</Text>
-              </View>
-            </View>
-
-            {partnerApplicationsLoading ? (
-              <View style={s.controlCenterApplicationsLoading}>
-                <ActivityIndicator color={C.primaryActionBg} />
-                <Text style={s.controlCenterApplicationsLoadingText}>Loading partner applications...</Text>
-              </View>
-            ) : partnerApplications.filter((application) => String(application.status || 'pending').toLowerCase() === 'pending').length > 0 ? (
-              partnerApplications
-                .filter((application) => String(application.status || 'pending').toLowerCase() === 'pending')
-                .map((application) => {
-                  const displayName = application.partner_type === 'business'
-                    ? application.business_name
-                    : application.organization_name;
-                  const typeLabel = application.partner_type === 'business'
-                    ? 'Business Partner'
-                    : application.partner_type === 'community'
-                      ? 'Community Partner'
-                      : 'Shelter / Rescue';
-                  return (
-                    <View key={application.id} style={s.controlCenterApplicationCard}>
-                      <View style={s.controlCenterApplicationHeader}>
-                        <View style={s.flex}>
-                          <Text style={s.controlCenterApplicationTitle}>{displayName || 'Partner Application'}</Text>
-                          <Text style={s.controlCenterApplicationMeta}>{typeLabel}</Text>
-                        </View>
-                        <View style={s.discoverChipAlt}>
-                          <Text style={s.discoverChipAltText}>{String(application.status || 'pending').toUpperCase()}</Text>
-                        </View>
-                      </View>
-                      <Text style={s.controlCenterApplicationLine}>Contact: {application.contact_name || 'Not listed'}</Text>
-                      <Text style={s.controlCenterApplicationLine}>Email: {application.email || 'Not listed'}</Text>
-                      <Text style={s.controlCenterApplicationLine}>Phone: {application.phone || 'Not listed'}</Text>
-                      <Text style={s.controlCenterApplicationLine}>
-                        {[application.city, application.state].filter(Boolean).join(', ') || 'Location not listed'}
-                      </Text>
-                      <Text style={s.controlCenterApplicationDescription}>
-                        {application.short_description || 'No description provided.'}
-                      </Text>
-                      <View style={s.controlCenterApplicationButtons}>
-                        <TouchableOpacity
-                          style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnSoft]}
-                          activeOpacity={0.88}
-                          onPress={() => updatePartnerApplicationStatus(application, 'contacted')}
-                        >
-                          <Text style={s.controlCenterApplicationBtnSoftText}>Mark Contacted</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnAccent]}
-                          activeOpacity={0.88}
-                          onPress={() => updatePartnerApplicationStatus(application, 'approved')}
-                        >
-                          <Text style={s.controlCenterApplicationBtnAccentText}>Approve</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[s.controlCenterApplicationBtn, s.controlCenterApplicationBtnDanger]}
-                          activeOpacity={0.88}
-                          onPress={() => updatePartnerApplicationStatus(application, 'rejected')}
-                        >
-                          <Text style={s.controlCenterApplicationBtnDangerText}>Reject</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })
-            ) : (
-              <Text style={s.controlCenterApplicationsEmptyText}>No partner applications awaiting review.</Text>
-            )}
-          </Card>
-          </View>
-
-          <Modal
-            visible={businessModalVisible}
-            transparent
-            animationType="slide"
-            onRequestClose={closeControlCenterBusinessModal}
-          >
-            <View style={s.discoverDetailModalBackdrop}>
-              <SafeAreaView style={s.flex}>
-                <View style={s.discoverDetailModalShell}>
-                  <View style={s.discoverDetailModalHeader}>
-                    <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeControlCenterBusinessModal} activeOpacity={0.88}>
-                      <MaterialCommunityIcons name="chevron-left" size={24} color="#101828" />
-                      <Text style={s.discoverDetailCloseText}>Back</Text>
-                    </TouchableOpacity>
-                    <View style={s.discoverDetailHeaderSpacer} />
-                    <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeControlCenterBusinessModal} activeOpacity={0.88}>
-                      <Text style={s.discoverDetailCloseText}>Close</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <KeyboardAvoidingView behavior={KEYBOARD_AVOIDING_BEHAVIOR} style={s.flex}>
-                    <ScrollView
-                      keyboardShouldPersistTaps="handled"
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={s.discoverRegistrationScrollContent}
-                    >
-                      <View style={s.discoverDetailHero}>
-                        <View style={s.discoverDetailHeroBody}>
-                          <View style={s.discoverDetailHeroTitleRow}>
-                            <View style={s.flex}>
-                              <Text style={s.discoverDetailTitle}>
-                                {editingBusiness?.id ? 'Edit Business Partner' : 'Add Business Partner'}
-                              </Text>
-                              <Text style={s.discoverDetailSubtitle}>
-                                Business partners are reviewed in the Control Center before they appear in Discover.
-                              </Text>
-                            </View>
-                            <View style={s.discoverSectionPill}>
-                              <Text style={s.discoverSectionPillText}>Pending</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-
-                      <DiscoverDetailSection title="Business Details">
-                        {renderControlCenterBusinessField(
-                          'Business name',
-                          businessForm.name,
-                          (value) => setBusinessForm((current) => ({ ...current, name: value })),
-                          'Enter business name',
-                          { autoCapitalize: 'words' }
-                        )}
-
-                        <View style={s.discoverRegistrationField}>
-                          <Text style={s.discoverRegistrationLabel}>Category</Text>
-                          <View style={s.discoverRegistrationChoiceRow}>
-                            {controlCenterBusinessCategories.length > 0 ? controlCenterBusinessCategories.map((category) => {
-                              const isSelected = businessForm.category_id === category.id;
-                              return (
-                                <TouchableOpacity
-                                  key={category.id}
-                                  style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                  activeOpacity={0.88}
-                                  onPress={() => setBusinessForm((current) => ({ ...current, category_id: category.id }))}
-                                >
-                                  <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                    {category.name}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            }) : (
-                              <Text style={s.discoverDetailEmptyText}>No business categories available.</Text>
-                            )}
-                          </View>
-                        </View>
-
-                        {renderControlCenterBusinessField(
-                          'Description',
-                          businessForm.description,
-                          (value) => setBusinessForm((current) => ({ ...current, description: value })),
-                          'Describe the business',
-                          { multiline: true, numberOfLines: 4 }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Phone',
-                          businessForm.phone,
-                          (value) => setBusinessForm((current) => ({ ...current, phone: value })),
-                          'Phone number',
-                          { keyboardType: 'phone-pad', autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Email',
-                          businessForm.email,
-                          (value) => setBusinessForm((current) => ({ ...current, email: value })),
-                          'Email address',
-                          { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Website',
-                          businessForm.website,
-                          (value) => setBusinessForm((current) => ({ ...current, website: value })),
-                          'Website URL',
-                          { autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Address',
-                          businessForm.address,
-                          (value) => setBusinessForm((current) => ({ ...current, address: value })),
-                          'Street address',
-                          { autoCapitalize: 'words' }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'City',
-                          businessForm.city,
-                          (value) => setBusinessForm((current) => ({ ...current, city: value })),
-                          'City',
-                          { autoCapitalize: 'words' }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'State',
-                          businessForm.state,
-                          (value) => setBusinessForm((current) => ({ ...current, state: value })),
-                          'State',
-                          { autoCapitalize: 'characters', maxLength: 2 }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'ZIP',
-                          businessForm.zip,
-                          (value) => setBusinessForm((current) => ({ ...current, zip: value })),
-                          'ZIP code',
-                          { keyboardType: 'number-pad', autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                      </DiscoverDetailSection>
-
-                      <TouchableOpacity
-                        style={[
-                          s.discoverRegistrationSubmitBtn,
-                          businessSubmitting && s.discoverRegistrationSubmitBtnDisabled,
-                        ]}
-                        activeOpacity={0.88}
-                        onPress={persistControlCenterBusiness}
-                        disabled={businessSubmitting}
-                      >
-                        {businessSubmitting ? (
-                          <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                          <Text style={s.discoverRegistrationSubmitBtnText}>
-                            Add Business Partner
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    </ScrollView>
-                  </KeyboardAvoidingView>
-                </View>
-              </SafeAreaView>
-            </View>
-          </Modal>
-
-          <Modal
-            visible={shelterModalVisible}
-            transparent
-            animationType="slide"
-            onRequestClose={closeControlCenterShelterModal}
-          >
-            <View style={s.discoverDetailModalBackdrop}>
-              <SafeAreaView style={s.flex}>
-                <View style={s.discoverDetailModalShell}>
-                  <View style={s.discoverDetailModalHeader}>
-                    <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeControlCenterShelterModal} activeOpacity={0.88}>
-                      <MaterialCommunityIcons name="chevron-left" size={24} color="#101828" />
-                      <Text style={s.discoverDetailCloseText}>Back</Text>
-                    </TouchableOpacity>
-                    <View style={s.discoverDetailHeaderSpacer} />
-                    <TouchableOpacity style={s.discoverDetailCloseBtn} onPress={closeControlCenterShelterModal} activeOpacity={0.88}>
-                      <Text style={s.discoverDetailCloseText}>Close</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <KeyboardAvoidingView behavior={KEYBOARD_AVOIDING_BEHAVIOR} style={s.flex}>
-                    <ScrollView
-                      keyboardShouldPersistTaps="handled"
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={s.discoverRegistrationScrollContent}
-                    >
-                      <View style={s.discoverDetailHero}>
-                        <View style={s.discoverDetailHeroBody}>
-                          <View style={s.discoverDetailHeroTitleRow}>
-                            <View style={s.flex}>
-                              <Text style={s.discoverDetailTitle}>
-                                {editingShelter?.id ? 'Edit Shelter / Rescue' : 'Add Shelter / Rescue'}
-                              </Text>
-                              <Text style={s.discoverDetailSubtitle}>
-                                Shelter and rescue listings are reviewed in the Control Center before they appear in Discover.
-                              </Text>
-                            </View>
-                            <View style={s.discoverSectionPill}>
-                              <Text style={s.discoverSectionPillText}>Pending</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-
-                      <DiscoverDetailSection title="Shelter Details">
-                        {renderControlCenterBusinessField(
-                          'Shelter / Rescue name',
-                          shelterForm.name,
-                          (value) => setShelterForm((current) => ({ ...current, name: value })),
-                          'Enter shelter or rescue name',
-                          { autoCapitalize: 'words' }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Description',
-                          shelterForm.description,
-                          (value) => setShelterForm((current) => ({ ...current, description: value })),
-                          'Describe the shelter or rescue',
-                          { multiline: true, numberOfLines: 4 }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Phone',
-                          shelterForm.phone,
-                          (value) => setShelterForm((current) => ({ ...current, phone: value })),
-                          'Phone number',
-                          { keyboardType: 'phone-pad', autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Email',
-                          shelterForm.email,
-                          (value) => setShelterForm((current) => ({ ...current, email: value })),
-                          'Email address',
-                          { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Website',
-                          shelterForm.website,
-                          (value) => setShelterForm((current) => ({ ...current, website: value })),
-                          'Website URL',
-                          { autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Donation URL',
-                          shelterForm.donation_url,
-                          (value) => setShelterForm((current) => ({ ...current, donation_url: value })),
-                          'Donation page URL',
-                          { autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Volunteer URL',
-                          shelterForm.volunteer_url,
-                          (value) => setShelterForm((current) => ({ ...current, volunteer_url: value })),
-                          'Volunteer page URL',
-                          { autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Wishlist URL',
-                          shelterForm.wishlist_url,
-                          (value) => setShelterForm((current) => ({ ...current, wishlist_url: value })),
-                          'Wishlist page URL',
-                          { autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Amazon Wishlist URL',
-                          shelterForm.amazon_wishlist_url,
-                          (value) => setShelterForm((current) => ({ ...current, amazon_wishlist_url: value })),
-                          'Amazon wishlist URL',
-                          { autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        <View style={s.discoverRegistrationField}>
-                          <Text style={s.discoverRegistrationLabel}>Service mode</Text>
-                          <View style={s.discoverRegistrationChoiceRow}>
-                            {[
-                              { value: 'local_only', label: 'Local only' },
-                              { value: 'online_only', label: 'Online only' },
-                              { value: 'hybrid', label: 'Hybrid' },
-                            ].map((option) => {
-                              const isSelected = shelterForm.service_mode === option.value;
-                              return (
-                                <TouchableOpacity
-                                  key={option.value}
-                                  style={[s.discoverRegistrationCategoryChip, isSelected && s.discoverRegistrationCategoryChipActive]}
-                                  activeOpacity={0.88}
-                                  onPress={() => setShelterForm((current) => ({ ...current, service_mode: option.value }))}
-                                >
-                                  <Text style={[s.discoverRegistrationCategoryChipText, isSelected && s.discoverRegistrationCategoryChipTextActive]}>
-                                    {option.label}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        </View>
-                        {renderControlCenterBusinessField(
-                          'Online service URL',
-                          shelterForm.online_service_url,
-                          (value) => setShelterForm((current) => ({ ...current, online_service_url: value })),
-                          'Online service URL',
-                          { autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'Address',
-                          shelterForm.address,
-                          (value) => setShelterForm((current) => ({ ...current, address: value })),
-                          'Street address',
-                          { autoCapitalize: 'words' }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'City',
-                          shelterForm.city,
-                          (value) => setShelterForm((current) => ({ ...current, city: value })),
-                          'City',
-                          { autoCapitalize: 'words' }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'State',
-                          shelterForm.state,
-                          (value) => setShelterForm((current) => ({ ...current, state: value })),
-                          'State',
-                          { autoCapitalize: 'characters', maxLength: 2 }
-                        )}
-                        {renderControlCenterBusinessField(
-                          'ZIP',
-                          shelterForm.zip,
-                          (value) => setShelterForm((current) => ({ ...current, zip: value })),
-                          'ZIP code',
-                          { keyboardType: 'number-pad', autoCapitalize: 'none', autoCorrect: false }
-                        )}
-                      </DiscoverDetailSection>
-
-                      <TouchableOpacity
-                        style={[
-                          s.discoverRegistrationSubmitBtn,
-                          shelterSubmitting && s.discoverRegistrationSubmitBtnDisabled,
-                        ]}
-                        activeOpacity={0.88}
-                        onPress={persistControlCenterShelter}
-                        disabled={shelterSubmitting}
-                      >
-                        {shelterSubmitting ? (
-                          <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                          <Text style={s.discoverRegistrationSubmitBtnText}>
-                            Add Shelter / Rescue
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    </ScrollView>
-                  </KeyboardAvoidingView>
-                </View>
-              </SafeAreaView>
-            </View>
-          </Modal>
-        </ScrollView>
-      </SafeAreaView>
-    </PetSyncBackground>
-  );
-}
-
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // NAVIGATION SETUP
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 const Tab   = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 function TabNavigator() {
-  const PETSYNC_ICONS = {
-    Home: require('./assets/icons/petsync/house_with_paw_1024.png'),
-    Health: require('./assets/icons/petsync/health_1024.png'),
-    Memories: require('./assets/icons/petsync/photos_gallery_1024.png'),
-    Community: require('./assets/icons/petsync/users_1024.png'),
-    Discover: require('./assets/icons/petsync/compass_1024.png'),
-    Settings: require('./assets/icons/petsync/admin-settings_1024.png'),
-  };
-
-const tabIcon = (name) => ({ focused }) => (
-<View
-  style={{
-    width: 60,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 25,
-    backgroundColor: focused
-      ? 'rgba(255,107,53,0.14)'
-      : 'transparent',
-  }}
->
-  <Image
-    source={PETSYNC_ICONS[name]}
-    style={{
-      width: focused ? 38 : 34,
-      height: focused ? 38 : 34,
-      opacity: focused ? 1 : 0.75,
-    }}
-    resizeMode="contain"
-  />
-</View>
-);
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+
         tabBarStyle: {
           position: 'absolute',
-          left: 0,
-          right: 0,
+          left: 16,
+          right: 16,
           bottom: 0,
-          height: 78,
+
+          height: 75,
+
+          borderRadius: 0,
           backgroundColor: '#f7faff',
+
           borderTopWidth: 0,
-          paddingTop: 6,
+
+          paddingTop: 0,
           paddingBottom: 12,
+
           elevation: 0,
+
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.12,
+          shadowRadius: 0,
         },
-        tabBarActiveTintColor: C.primaryActionBg,
-        tabBarInactiveTintColor: '#1f2a44',
+
+  tabBarActiveTintColor: C.primaryActionBg,
+        tabBarInactiveTintColor: C.muted,
+
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: '900',
         },
       }}
@@ -24916,7 +17784,24 @@ const tabIcon = (name) => ({ focused }) => (
         name="Home"
         component={DashboardScreen}
         options={{
-          tabBarIcon: tabIcon('Home'),
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused
+                  ? 'rgba(255,107,53,0.18)'
+                  : 'transparent',
+
+                padding: 5,
+                borderRadius: 16,
+              }}
+            >
+              <MaterialCommunityIcons
+                name="paw"
+                size={22}
+                color={color}
+              />
+            </View>
+          ),
         }}
       />
 
@@ -24924,7 +17809,11 @@ const tabIcon = (name) => ({ focused }) => (
         name="Health"
         component={HealthHubScreen}
         options={{
-          tabBarIcon: tabIcon('Health'),
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              💊
+            </Text>
+          ),
         }}
       />
 
@@ -24932,8 +17821,11 @@ const tabIcon = (name) => ({ focused }) => (
         name="Memories"
         component={MemoryVaultScreen}
         options={{
-          tabBarIcon: tabIcon('Memories'),
-          tabBarLabel: 'Memories',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              📸
+            </Text>
+          ),
         }}
       />
 
@@ -24941,8 +17833,11 @@ const tabIcon = (name) => ({ focused }) => (
         name="Community"
         component={CommunityScreen}
         options={{
-          tabBarIcon: tabIcon('Community'),
-          tabBarLabel: 'Community',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              👥
+            </Text>
+          ),
         }}
       />
 
@@ -24950,7 +17845,19 @@ const tabIcon = (name) => ({ focused }) => (
         name="Discover"
         component={DiscoverHomeScreen}
         options={{
-          tabBarIcon: tabIcon('Discover'),
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused
+                  ? 'rgba(255,107,53,0.18)'
+                  : 'transparent',
+                padding: 5,
+                borderRadius: 16,
+              }}
+            >
+              <MaterialCommunityIcons name="compass-outline" size={22} color={color} />
+            </View>
+          ),
         }}
       />
 
@@ -24958,12 +17865,17 @@ const tabIcon = (name) => ({ focused }) => (
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarIcon: tabIcon('Settings'),
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>
+              ⚙️
+            </Text>
+          ),
         }}
       />
     </Tab.Navigator>
   );
-}export default function App() {
+}
+export default function App() {
   const [authSession, setAuthSession] = useState(null);
   const [authUser, setAuthUser] = useState(null);
   const [authProfile, setAuthProfile] = useState(null);
@@ -25194,9 +18106,8 @@ const tabIcon = (name) => ({ focused }) => (
 
 
   const openAddPetModal = (onSelect, speciesHint = 'dog') => {
-    const safePetList = Array.isArray(pets) ? pets : [];
     const isFreePlan = authReady && !isPremiumUser(authProfile);
-    if (isFreePlan && safePetList.length >= MONETIZATION_LIMITS.free_pet_limit) {
+    if (isFreePlan && safePets.length >= MONETIZATION_LIMITS.free_pet_limit) {
       openLockedFeature(
         'unlimited_pets',
         'Add Pet',
@@ -25485,30 +18396,24 @@ const tabIcon = (name) => ({ focused }) => (
   }, [authReady, authUser?.id]);
 
   if (!authReady) {
-return (
-  <PetSyncBackground opacity={0.18}>
-    <View style={s.screen}>
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    return (
+      <PetSyncBackground opacity={0.18}>
+        <SafeAreaView style={s.screen} edges={['top']}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <Card style={[s.authCard, { width: '100%', maxWidth: 420, alignItems: 'center' }]}>
               <ActivityIndicator size="large" color={C.teal} />
               <Text style={[s.authTitle, { marginTop: 16 }]}>PetSync+</Text>
               <Text style={[s.authSub, { textAlign: 'center' }]}>Loading your account...</Text>
             </Card>
           </View>
-</View>
+        </SafeAreaView>
       </PetSyncBackground>
     );
   }
 
-if (!authSession) {
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <AuthScreen />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
-  );
-}
+  if (!authSession) {
+    return <AuthScreen />;
+  }
 
   const authContextValue = {
     authUser,
@@ -25518,12 +18423,11 @@ if (!authSession) {
     signOut,
     setAuthProfile,
   };
-  const isDiscoverAdmin = ADMIN_EMAILS.includes(String(authUser?.email || '').trim().toLowerCase());
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-<SafeAreaProvider initialMetrics={initialWindowMetrics}>
-          <StatusBar barStyle="light-content" backgroundColor={C.homeBg} />       
+      <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor={C.homeBg} />
         <AuthContext.Provider value={authContextValue}>
           <RevenueCatContext.Provider value={{
             revenueCatReady,
@@ -25548,24 +18452,16 @@ if (!authSession) {
                     <CareRemindersContext.Provider value={{ careReminders, setCareReminders }}>
                       <LostPetAlertsContext.Provider value={{ lostPetAlerts, setLostPetAlerts }}>
                         <VetFinderContext.Provider value={{ showEmergencyVetModal, openVetFinder, closeVetFinder, toggleVetFinder }}>
-                          {isDiscoverAdmin ? (
-                            <NavigationContainer ref={navigationRef}>
-                              <Stack.Navigator screenOptions={{ headerShown: false }}>
-                                <Stack.Screen name="ControlCenter" component={ControlCenterScreen} />
-                              </Stack.Navigator>
-                            </NavigationContainer>
-                          ) : (
-                            <NavigationContainer ref={navigationRef}>
-                              <Stack.Navigator screenOptions={{ headerShown: false }}>
-                                <Stack.Screen name="Main"    component={TabNavigator}  />
-                                <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
-                                <Stack.Screen name="FamilySharing" component={FamilySharingScreen} options={{ presentation: 'modal' }} />
-                                <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={{ presentation: 'modal' }} />
-                                <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
-                                <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
-                              </Stack.Navigator>
-                            </NavigationContainer>
-                          )}
+                          <NavigationContainer ref={navigationRef}>
+                            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                            <Stack.Screen name="Main"    component={TabNavigator}  />
+                            <Stack.Screen name="AIVet"   component={AIVetScreen}   options={{ presentation: 'modal' }} />
+                            <Stack.Screen name="FamilySharing" component={FamilySharingScreen} options={{ presentation: 'modal' }} />
+                            <Stack.Screen name="CommunityProfile" component={CommunityProfileScreen} options={{ presentation: 'modal' }} />
+                            <Stack.Screen name="PetProfile" component={PetProfileScreen} options={{ presentation: 'modal' }} />
+                            <Stack.Screen name="LostPet" component={LostPetScreen} options={{ presentation: 'modal' }} />
+                          </Stack.Navigator>
+                          </NavigationContainer>
                           <FeatureLockedModal
                             visible={Boolean(lockedFeature)}
                             feature={lockedFeature}
@@ -25680,7 +18576,7 @@ if (!authSession) {
                                   </Text>
                                 </View>
                                 <TouchableOpacity style={s.localVetFinderCloseBtn} onPress={closeVetFinder} activeOpacity={0.85}>
-                                  <MaterialCommunityIcons name="close" size={18} color={C.linkText} />
+                                  <Text style={s.localVetFinderCloseBtnText}>✕</Text>
                                 </TouchableOpacity>
                               </View>
 
@@ -25706,7 +18602,7 @@ if (!authSession) {
                                 </View>
 
                                 <TouchableOpacity style={s.localVetFinderSaveBtn} onPress={() => openVetAddModal()} activeOpacity={0.9}>
-                                  <Text style={s.localVetFinderSaveBtnText}>+ Add Vet Card</Text>
+                                  <Text style={s.localVetFinderSaveBtnText}>＋ Add Vet Card</Text>
                                 </TouchableOpacity>
 
                                 <View style={s.localVetSavedSection}>
@@ -25723,7 +18619,7 @@ if (!authSession) {
                                       <View key={clinic.id} style={s.localVetCard}>
                                         <View style={s.localVetCardTopRow}>
                                           <View style={s.localVetAvatar}>
-                                            <MaterialCommunityIcons name="stethoscope" size={18} color={C.linkText} />
+                                            <Text style={s.localVetAvatarText}>🏥</Text>
                                           </View>
                                           <View style={{ flex: 1 }}>
                                             <Text style={s.localVetName}>{clinic.name}</Text>
@@ -25798,9 +18694,9 @@ if (!authSession) {
   );
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // ALL STYLES
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 const s = StyleSheet.create({
   // Layout
   screen:            { flex: 1, backgroundColor: 'transparent' },
@@ -26968,161 +19864,6 @@ sosButton: {
     fontWeight: '600',
     paddingVertical: 0,
   },
-  discoverListingEntryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,107,53,0.18)',
-    padding: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
-  },
-  discoverListingEntryIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 16,
-    backgroundColor: '#FFF1EA',
-    borderWidth: 1,
-    borderColor: '#FFD8C7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discoverListingEntryTitle: {
-    color: '#101828',
-    fontSize: 16,
-    fontWeight: '900',
-    lineHeight: 20,
-  },
-  discoverListingEntrySubtitle: {
-    color: '#667085',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  discoverOwnedListingCard: {
-    borderRadius: 18,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E6E8F0',
-    padding: 12,
-    gap: 8,
-  },
-  discoverPromotionCard: {
-    borderRadius: 18,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E6E8F0',
-    padding: 12,
-    gap: 8,
-  },
-  discoverOwnedListingHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  discoverPromotionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  discoverApprovalCard: {
-    borderRadius: 18,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E6E8F0',
-    padding: 12,
-    gap: 8,
-  },
-  discoverApprovalCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  discoverOwnerEditBtn: {
-    minHeight: 44,
-    borderRadius: 16,
-    backgroundColor: C.primaryActionBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-  },
-  discoverOwnerEditBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  discoverModerationButtonRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  discoverPromotionActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  discoverModerationApproveBtn: {
-    flex: 1,
-  },
-  discoverPromotionActionBtn: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderWidth: 1,
-  },
-  discoverPromotionActionBtnPrimary: {
-    backgroundColor: C.primaryActionBg,
-    borderColor: C.primaryActionBg,
-  },
-  discoverPromotionActionBtnSecondary: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#D0D5DD',
-  },
-  discoverPromotionActionBtnDanger: {
-    backgroundColor: '#FFF1F1',
-    borderColor: '#FECACA',
-  },
-  discoverPromotionActionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  discoverPromotionActionBtnSecondaryText: {
-    color: '#344054',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  discoverPromotionActionBtnDangerText: {
-    color: C.destructiveActionBg,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  discoverModerationRejectBtn: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 18,
-    backgroundColor: '#FFF1F1',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  discoverModerationRejectText: {
-    color: C.destructiveActionBg,
-    fontSize: 15,
-    fontWeight: '900',
-  },
   discoverSection: {
     gap: 10,
   },
@@ -27498,11 +20239,6 @@ sosButton: {
     paddingBottom: 32,
     gap: 12,
   },
-  discoverRegistrationScrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    gap: 12,
-  },
   discoverDetailHero: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -27627,105 +20363,6 @@ sosButton: {
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
-  },
-  discoverRegistrationChoiceRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  discoverRegistrationChoiceCard: {
-    flexGrow: 1,
-    flexBasis: 0,
-    minWidth: 150,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E8F0',
-    padding: 14,
-    gap: 6,
-  },
-  discoverRegistrationChoiceCardActive: {
-    backgroundColor: '#F4ECFF',
-    borderColor: C.primaryActionBg,
-  },
-  discoverRegistrationChoiceTitle: {
-    color: '#101828',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  discoverRegistrationChoiceTitleActive: {
-    color: C.primaryActionBg,
-  },
-  discoverRegistrationChoiceText: {
-    color: '#667085',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-  },
-  discoverRegistrationField: {
-    gap: 8,
-  },
-  discoverRegistrationLabel: {
-    color: '#101828',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  discoverRegistrationInput: {
-    minHeight: 46,
-    borderRadius: 16,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E6E8F0',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: '#101828',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  discoverRegistrationInputMultiline: {
-    minHeight: 108,
-    paddingTop: 12,
-  },
-  discoverRegistrationCategoryRow: {
-    gap: 10,
-    paddingRight: 4,
-  },
-  discoverRegistrationCategoryChip: {
-    borderRadius: 999,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E4E7EC',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  discoverRegistrationCategoryChipActive: {
-    backgroundColor: '#F4ECFF',
-    borderColor: C.primaryActionBg,
-  },
-  discoverRegistrationCategoryChipText: {
-    color: '#344054',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  discoverRegistrationCategoryChipTextActive: {
-    color: C.primaryActionBg,
-  },
-  discoverRegistrationSubmitBtn: {
-    minHeight: 48,
-    borderRadius: 18,
-    backgroundColor: C.primaryActionBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    marginTop: 4,
-  },
-  discoverRegistrationSubmitBtnDisabled: {
-    opacity: 0.75,
-  },
-  discoverRegistrationSubmitBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '900',
   },
   discoverDetailMediaStrip: {
     gap: 10,
@@ -28781,709 +21418,6 @@ sosButton: {
     alignItems: 'center',
   },
   communityCommentPostBtnText: { color: C.primaryActionText, fontSize: 15, fontWeight: '900' },
-
-  // Control Center
-  controlCenterScroll: {
-    paddingHorizontal: 15,
-    paddingTop: 15,
-    paddingBottom: 150,
-    gap: 10,
-  },
-  controlCenterHeaderCard: {
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.10)',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
-  },
-  controlCenterHeaderTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  controlCenterHeaderEyebrow: {
-    color: '#F97316',
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 1.15,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  controlCenterHeaderTitle: {
-    color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '900',
-    lineHeight: 31,
-  },
-  controlCenterHeaderSubtitle: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '800',
-    marginTop: 5,
-  },
-  controlCenterLogoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFF',
-    borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.12)',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  controlCenterLogoutText: {
-    color: '#6B46C1',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  controlCenterHero: {
-    padding: 20,
-    borderRadius: 24,
-    backgroundColor: C.surfaceCard,
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 2,
-  },
-  controlCenterEyebrow: {
-    color: C.primaryActionBg,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  controlCenterTitle: {
-    color: C.primaryText,
-    fontSize: 28,
-    fontWeight: '900',
-    lineHeight: 34,
-  },
-  controlCenterSubtitle: {
-    color: C.muted,
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  controlCenterLoadingCard: {
-    alignItems: 'center',
-    paddingVertical: 22,
-    gap: 12,
-  },
-  controlCenterLoadingText: {
-    color: C.muted,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  controlCenterGrid: {
-    display: 'none',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 14,
-  },
-  controlCenterSectionShell: {
-    gap: 9,
-  },
-  controlCenterSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  controlCenterSectionTitle: {
-    color: '#6B46C1',
-    fontSize: 14,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  controlCenterSectionSubtitle: {
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-  controlCenterOverviewGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 7,
-  },
-  controlCenterOverviewCard: {
-    width: '31.8%',
-    minHeight: 108,
-    padding: 11,
-    borderRadius: 15,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.08)',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 1,
-    gap: 8,
-  },
-  controlCenterOverviewIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  controlCenterOverviewLabel: {
-    color: '#0F172A',
-    fontSize: 11,
-    fontWeight: '800',
-    lineHeight: 15,
-  },
-  controlCenterOverviewValue: {
-    color: '#111827',
-    fontSize: 23,
-    fontWeight: '900',
-    marginTop: 1,
-  },
-  controlCenterQuickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  controlCenterQuickCard: {
-    width: '18.55%',
-    minHeight: 86,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 7,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  controlCenterQuickIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(249,115,22,0.08)',
-    marginBottom: 5,
-  },
-  controlCenterQuickLabel: {
-    color: '#111827',
-    fontSize: 10,
-    fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 13,
-  },
-  controlCenterViewAllText: {
-    color: '#6B46C1',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  controlCenterActivityList: {
-    gap: 8,
-  },
-  controlCenterActivityCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.08)',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  controlCenterActivityIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(124,58,237,0.10)',
-  },
-  controlCenterActivityRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  controlCenterActivityTitle: {
-    color: '#0F172A',
-    fontSize: 13,
-    fontWeight: '900',
-    flex: 1,
-  },
-  controlCenterActivityTime: {
-    color: C.muted,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  controlCenterActivityMeta: {
-    color: C.muted,
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-  controlCenterEmptyStateText: {
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  controlCenterFooterSpacer: {
-    height: 2,
-  },
-  controlCenterAdminNav: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-    paddingHorizontal: 7,
-    paddingTop: 7,
-    paddingBottom: 9,
-    backgroundColor: '#F7FAFF',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(124,58,237,0.08)',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: -6 },
-    elevation: 8,
-  },
-  controlCenterAdminNavItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    borderRadius: 13,
-    marginHorizontal: 3,
-    gap: 4,
-  },
-  controlCenterAdminNavItemActive: {
-    backgroundColor: 'rgba(124,58,237,0.10)',
-  },
-  controlCenterAdminNavLabel: {
-    color: '#6B7280',
-    fontSize: 9,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  controlCenterAdminNavLabelActive: {
-    color: '#6B46C1',
-  },
-  controlCenterCard: {
-    width: '48.4%',
-    minHeight: 180,
-    padding: 18,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surfaceCard,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 1,
-  },
-  controlCenterCardAccent: {
-    borderColor: C.primaryActionBg,
-    backgroundColor: C.primaryActionBg + '10',
-  },
-  controlCenterCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 12,
-  },
-  controlCenterCardHeaderText: {
-    flex: 1,
-  },
-  controlCenterCardTitle: {
-    color: C.primaryText,
-    fontSize: 17,
-    fontWeight: '900',
-    lineHeight: 22,
-  },
-  controlCenterCardSubtitle: {
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  controlCenterMetricList: {
-    gap: 10,
-  },
-  controlCenterMetricRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  controlCenterMetricLabel: {
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    flex: 1,
-  },
-  controlCenterMetricValue: {
-    color: C.primaryText,
-    fontSize: 15,
-    fontWeight: '900',
-    textAlign: 'right',
-  },
-  controlCenterApplicationsCard: {
-    marginTop: 12,
-    padding: 16,
-  },
-  controlCenterBusinessesCard: {
-    marginTop: 12,
-    padding: 16,
-  },
-  controlCenterBusinessesHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 14,
-  },
-  controlCenterBusinessesTitle: {
-    color: C.primaryText,
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  controlCenterBusinessesSubtitle: {
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-  controlCenterBusinessesSummaryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 10,
-  },
-  controlCenterBusinessesSummaryPill: {
-    minWidth: 92,
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 3,
-  },
-  controlCenterBusinessesSummaryLabel: {
-    color: C.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  controlCenterBusinessesSummaryValue: {
-    color: C.primaryText,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  controlCenterAnalyticsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  controlCenterAnalyticsCard: {
-    width: '48.4%',
-    minHeight: 88,
-    borderRadius: 16,
-    padding: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: C.border,
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  controlCenterAnalyticsLabel: {
-    color: C.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  controlCenterAnalyticsValue: {
-    color: C.primaryText,
-    fontSize: 19,
-    fontWeight: '900',
-    lineHeight: 23,
-  },
-  controlCenterAnalyticsSection: {
-    gap: 8,
-  },
-  controlCenterAnalyticsActivityCard: {
-    borderRadius: 16,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 11,
-    gap: 5,
-  },
-  controlCenterSettingsSection: {
-    gap: 8,
-    marginBottom: 12,
-    paddingTop: 2,
-  },
-  controlCenterSettingsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  controlCenterLaunchSummaryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  controlCenterLaunchSummaryPill: {
-    minWidth: 112,
-    flexGrow: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 4,
-  },
-  controlCenterLaunchSummaryLabel: {
-    color: C.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  controlCenterLaunchSummaryValue: {
-    color: C.primaryText,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  controlCenterLaunchChecklist: {
-    gap: 8,
-  },
-  controlCenterLaunchChecklistRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  controlCenterLaunchChecklistLabel: {
-    color: C.primaryText,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  controlCenterLaunchChecklistBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-  },
-  controlCenterLaunchChecklistBadgeReady: {
-    backgroundColor: 'rgba(74,222,128,0.14)',
-    borderColor: 'rgba(74,222,128,0.32)',
-  },
-  controlCenterLaunchChecklistBadgeNotReady: {
-    backgroundColor: 'rgba(248,113,113,0.10)',
-    borderColor: 'rgba(248,113,113,0.24)',
-  },
-  controlCenterLaunchChecklistBadgeText: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.7,
-  },
-  controlCenterLaunchChecklistBadgeTextReady: {
-    color: C.successText,
-  },
-  controlCenterLaunchChecklistBadgeTextNotReady: {
-    color: C.dangerText,
-  },
-  controlCenterBusinessSearch: {
-    minHeight: 54,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginTop: 12,
-    marginBottom: 14,
-    color: C.primaryText,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  controlCenterBusinessesLoading: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 10,
-  },
-  controlCenterBusinessTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  controlCenterBusinessTagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 2,
-  },
-  controlCenterApplicationsHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 12,
-  },
-  controlCenterApplicationsTitle: {
-    color: C.primaryText,
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  controlCenterApplicationsSubtitle: {
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-  controlCenterApplicationsLoading: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 10,
-  },
-  controlCenterApplicationsLoadingText: {
-    color: C.muted,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  controlCenterApplicationsEmptyText: {
-    color: C.muted,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  controlCenterApplicationCard: {
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-    marginTop: 14,
-  },
-  controlCenterApplicationHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 10,
-  },
-  controlCenterApplicationTitle: {
-    color: C.primaryText,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  controlCenterApplicationMeta: {
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-  controlCenterApplicationLine: {
-    color: C.primaryText,
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 3,
-  },
-  controlCenterApplicationDescription: {
-    color: C.muted,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 8,
-  },
-  controlCenterApplicationButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 14,
-  },
-  controlCenterApplicationBtn: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  controlCenterApplicationBtnSoft: {
-    backgroundColor: `${C.primaryActionBg}12`,
-    borderColor: `${C.primaryActionBg}25`,
-  },
-  controlCenterApplicationBtnAccent: {
-    backgroundColor: C.primaryActionBg,
-    borderColor: C.primaryActionBg,
-  },
-  controlCenterApplicationBtnDanger: {
-    backgroundColor: `${C.destructiveActionBg}12`,
-    borderColor: `${C.destructiveActionBg}25`,
-  },
-  controlCenterApplicationBtnSoftText: {
-    color: C.primaryActionBg,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  controlCenterApplicationBtnAccentText: {
-    color: C.primaryActionText,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  controlCenterApplicationBtnDangerText: {
-    color: C.dangerText,
-    fontSize: 12,
-    fontWeight: '900',
-  },
 
   // Lost pet flow
   stepTitle:         { color: C.sosTitleText, fontSize: 24, fontWeight: '900', marginBottom: 16 },
