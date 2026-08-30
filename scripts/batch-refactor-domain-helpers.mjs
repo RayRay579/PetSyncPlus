@@ -77,60 +77,44 @@ const findMarker = (markers, fromIndex = 0) => {
 
 const plans = [
   {
-    name: 'community profile model',
-    startMarkers: ['const normalizeCommunityProfileKey ='],
-    endMarkers: ['const loadCommunityProfileFromSupabase = async'],
-    modulePath: 'src/models/communityProfile.js',
-    exports: [
-      'normalizeCommunityProfileKey',
-      'COMMUNITY_PROFILE_FIXTURES',
-      'getCommunityProfileFixture',
-      'mapCommunityProfileRow',
-    ],
-    importPath: './src/models/communityProfile',
-  },
-  {
-    name: 'community achievements model',
-    startMarkers: ['const buildCommunityProfileAchievements ='],
+    name: 'profile Supabase service',
+    startMarkers: ['const loadCommunityProfileFromSupabase = async'],
     endMarkers: ['const PET_SPECIES_EMOJIS ='],
-    modulePath: 'src/models/communityAchievements.js',
-    exports: ['buildCommunityProfileAchievements'],
-    importPath: './src/models/communityAchievements',
-  },
-  {
-    name: 'lost pet text model',
-    startMarkers: ['const LOST_PET_META_PREFIX ='],
-    endMarkers: ['const deleteLostPetAlertFromSupabase = async'],
-    modulePath: 'src/models/lostPetText.js',
+    modulePath: 'src/services/profiles/profileService.js',
     exports: [
-      'LOST_PET_META_PREFIX',
-      'parseLostPetDescription',
-      'buildLostPetStoredDescription',
-      'buildLostPetContactLine',
-      'buildProfileText',
-      'buildFlyerText',
+      'loadCommunityProfileFromSupabase',
+      'loadAuthProfileFromSupabase',
+      'canWriteProfileAvatarUrl',
+      'uploadProfileAvatarToStorage',
+      'upsertAuthProfileToSupabase',
+      'saveCommunityProfileToSupabase',
     ],
-    importPath: './src/models/lostPetText',
+    importPath: './src/services/profiles/profileService',
+    prefix: "import { supabase } from '../../../supabase';\nimport {\n  normalizeCommunityProfileKey,\n  getCommunityProfileFixture,\n  mapCommunityProfileRow,\n} from '../../models/communityProfile';\n\n",
   },
   {
-    name: 'family member model',
-    startMarkers: ['const normalizeFamilyMemberRole ='],
-    endMarkers: ['const getOrCreateOwnerHousehold = async'],
-    modulePath: 'src/models/familyMember.js',
-    exports: [
-      'normalizeFamilyMemberRole',
-      'normalizeFamilyMemberStatus',
-      'mapFamilyMemberRow',
-    ],
-    importPath: './src/models/familyMember',
+    name: 'community tab config',
+    startMarkers: ['const COMMUNITY_TABS ='],
+    endMarkers: ['const loadCommunityProfileFromSupabase = async'],
+    modulePath: 'src/config/community.js',
+    exports: ['COMMUNITY_TABS'],
+    importPath: './src/config/community',
   },
   {
-    name: 'storage filename helper',
-    startMarkers: ['const normalizeStorageFileName ='],
-    endMarkers: ['const uploadMemoryMediaToStorage = async'],
-    modulePath: 'src/utils/storageNames.js',
-    exports: ['normalizeStorageFileName'],
-    importPath: './src/utils/storageNames',
+    name: 'pet species emoji config',
+    startMarkers: ['const PET_SPECIES_EMOJIS ='],
+    endMarkers: ['const navigationRef = createNavigationContainerRef();'],
+    modulePath: 'src/config/petSpecies.js',
+    exports: ['PET_SPECIES_EMOJIS'],
+    importPath: './src/config/petSpecies',
+  },
+  {
+    name: 'feature locked benefits config',
+    startMarkers: ['const FEATURE_LOCKED_BENEFITS ='],
+    endMarkers: ['function FeatureLockedModal('],
+    modulePath: 'src/config/featureLockedBenefits.js',
+    exports: ['FEATURE_LOCKED_BENEFITS', 'getFeatureLockedBenefits'],
+    importPath: './src/config/featureLockedBenefits',
   },
 ];
 
@@ -161,9 +145,10 @@ const buildEditPlan = () => {
 
 const applyExtraction = ({ plan, start, end }) => {
   const block = source.slice(start.index, end.index).trimEnd();
+  const prefix = plan.prefix || '';
   writeFile(
     plan.modulePath,
-    `${block}\n\nexport {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n};`
+    `${prefix}${block}\n\nexport {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n};`
   );
   generatedFiles.push(plan.modulePath);
   source = `${source.slice(0, start.index)}${source.slice(end.index)}`;
@@ -191,8 +176,11 @@ try {
 
   let validation;
   if (process.platform === 'win32') {
-    const psCommand = "npx expo export --platform web --output-dir .petsync-refactor-web-check --clear";
-    validation = run('powershell.exe', ['-NoProfile', '-Command', psCommand]);
+    validation = run('powershell.exe', [
+      '-NoProfile',
+      '-Command',
+      'npx expo export --platform web --output-dir .petsync-refactor-web-check --clear',
+    ]);
   } else {
     validation = run('npx', [
       'expo',
@@ -215,7 +203,7 @@ try {
   const add = run('git', ['add', ...filesToAdd]);
   if (add.status !== 0) throw new Error('git add failed.');
 
-  const commit = run('git', ['commit', '-m', 'Batch extract PetSync domain helpers']);
+  const commit = run('git', ['commit', '-m', 'Extract profile service and shared config']);
   if (commit.status !== 0) throw new Error('git commit failed.');
 
   const push = run('git', ['push']);
@@ -223,13 +211,13 @@ try {
     console.log('\nRefactor and commit succeeded, but push failed. Your local commit is safe.');
     process.exitCode = 2;
   } else {
-    console.log('\nSUCCESS: batch refactor validated, committed, and pushed.');
+    console.log('\nSUCCESS: stage 2 refactor validated, committed, and pushed.');
   }
 
   console.log(`Hidden backup kept at: ${BACKUP_PATH}`);
 } catch (error) {
   console.error(`\nBATCH REFACTOR FAILED: ${error.message}`);
-  console.error('Restoring PetSyncApp.js and removing generated batch files...');
+  console.error('Restoring PetSyncApp.js and removing generated stage 2 files...');
 
   fs.writeFileSync(APP_PATH, originalSource, 'utf8');
 
@@ -243,6 +231,6 @@ try {
   }
 
   run('git', ['reset', '--', 'PetSyncApp.js', ...generatedFiles]);
-  console.error('Original working app restored. No batch refactor commit was created.');
+  console.error('Original working app restored. No stage 2 refactor commit was created.');
   process.exitCode = 1;
 }
