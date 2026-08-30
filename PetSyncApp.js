@@ -1,5 +1,30 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
 import {
+  normalizeFamilyMemberRole,
+  normalizeFamilyMemberStatus,
+  mapFamilyMemberRow,
+} from './src/models/familyMember';
+import {
+  normalizeStorageFileName,
+} from './src/utils/storageNames';
+import {
+  LOST_PET_META_PREFIX,
+  parseLostPetDescription,
+  buildLostPetStoredDescription,
+  buildLostPetContactLine,
+  buildProfileText,
+  buildFlyerText,
+} from './src/models/lostPetText';
+import {
+  buildCommunityProfileAchievements,
+} from './src/models/communityAchievements';
+import {
+  normalizeCommunityProfileKey,
+  COMMUNITY_PROFILE_FIXTURES,
+  getCommunityProfileFixture,
+  mapCommunityProfileRow,
+} from './src/models/communityProfile';
+import {
   getHealthRecordIcon,
   getHealthRecordNotes,
   normalizeHealthRecordFromSupabase,
@@ -140,50 +165,6 @@ const COMMUNITY_TABS = [
   { key: 'lostPets', label: 'Lost Pets' },
   { key: 'tips', label: 'Tips' },
 ];
-
-const normalizeCommunityProfileKey = (value) => String(value || '')
-  .toLowerCase()
-  .trim()
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/^-+|-+$/g, '');
-
-const COMMUNITY_PROFILE_FIXTURES = {};
-
-const getCommunityProfileFixture = (profileKey, displayName) => {
-  const normalizedKey = normalizeCommunityProfileKey(profileKey || displayName);
-  const fallbackName = displayName || 'Community Member';
-
-  return COMMUNITY_PROFILE_FIXTURES[normalizedKey] || {
-    displayName: fallbackName,
-    avatarEmoji: '??',
-    memberSince: 'Jan 2026',
-    bio: 'Community member',
-    favoritePetName: '',
-    favoritePetSpecies: '',
-    favoritePetBreed: '',
-    petCount: 0,
-    communityPostCount: 0,
-    recipeCount: 0,
-    lostPetAlertCount: 0,
-  };
-};
-
-const mapCommunityProfileRow = (row, fallback = {}) => ({
-  ...fallback,
-  displayName: row.display_name || row.displayName || row.full_name || row.username || row.name || fallback.displayName,
-  email: row.email || row.email_address || fallback.email || '',
-  avatarUrl: row.avatar_url || row.avatarUrl || row.photo_url || fallback.avatarUrl || '',
-  avatarEmoji: row.avatar_emoji || row.avatarEmoji || fallback.avatarEmoji || '??',
-  memberSince: row.member_since || row.memberSince || row.created_at || fallback.memberSince || '',
-  bio: row.bio || row.about || fallback.bio || '',
-  favoritePetName: row.favorite_pet_name || row.favoritePetName || fallback.favoritePetName || '',
-  favoritePetSpecies: row.favorite_pet_species || row.favoritePetSpecies || fallback.favoritePetSpecies || '',
-  favoritePetBreed: row.favorite_pet_breed || row.favoritePetBreed || fallback.favoritePetBreed || '',
-  petCount: row.pet_count ?? row.petCount ?? fallback.petCount ?? 0,
-  communityPostCount: row.community_post_count ?? row.communityPostCount ?? fallback.communityPostCount ?? 0,
-  recipeCount: row.recipe_count ?? row.recipeCount ?? fallback.recipeCount ?? 0,
-  lostPetAlertCount: row.lost_pet_alert_count ?? row.lostPetAlertCount ?? fallback.lostPetAlertCount ?? 0,
-});
 
 const loadCommunityProfileFromSupabase = async ({ profileKey, displayName }) => {
   try {
@@ -388,34 +369,6 @@ const saveCommunityProfileToSupabase = async (profileKey, draft) => {
     return false;
   }
 };
-
-const buildCommunityProfileAchievements = (profile) => ([
-  {
-    key: 'first-pet-added',
-    label: 'First Pet Added',
-    achieved: (profile.petCount || 0) > 0,
-  },
-  {
-    key: 'first-health-record',
-    label: 'First Health Record',
-    achieved: (profile.healthRecordCount || 0) > 0,
-  },
-  {
-    key: 'first-recipe-shared',
-    label: 'First Recipe Shared',
-    achieved: (profile.recipeCount || 0) > 0,
-  },
-  {
-    key: 'community-helper',
-    label: 'Community Helper',
-    achieved: (profile.communityPostCount || 0) > 0,
-  },
-  {
-    key: 'lost-pet-supporter',
-    label: 'Lost Pet Supporter',
-    achieved: (profile.lostPetAlertCount || 0) > 0,
-  },
-]);
 
 const PET_SPECIES_EMOJIS = {
   dog: '??',
@@ -1715,97 +1668,6 @@ const loadLostPetAlertsFromSupabase = async () => {
   return mappedAlerts;
 };
 
-const LOST_PET_META_PREFIX = '__petsync_lost_pet_meta__';
-
-const parseLostPetDescription = (description) => {
-  const text = String(description || '');
-  const [firstLine, ...rest] = text.split('\n');
-
-  if (!firstLine.startsWith(LOST_PET_META_PREFIX)) {
-    return {
-      description: text.trim(),
-      contactPhone: '',
-      reward: '',
-    };
-  }
-
-  const metaParts = firstLine.slice(LOST_PET_META_PREFIX.length).split(';');
-  const meta = metaParts.reduce((acc, part) => {
-    const [rawKey, ...rawValue] = String(part || '').split('=');
-    const key = String(rawKey || '').trim();
-    const value = rawValue.join('=').trim();
-
-    if (!key || !value) return acc;
-    acc[key] = value;
-    return acc;
-  }, {});
-
-  return {
-    description: rest.join('\n').trim(),
-    contactPhone: meta.contactPhone || '',
-    reward: meta.reward || '',
-  };
-};
-
-const buildLostPetStoredDescription = ({ description, contactPhone, reward }) => {
-  const metaParts = [];
-
-  if (contactPhone) {
-    metaParts.push(`contactPhone=${String(contactPhone).trim()}`);
-  }
-
-  if (reward) {
-    metaParts.push(`reward=${String(reward).trim()}`);
-  }
-
-  const visibleDescription = String(description || '').trim();
-
-  if (metaParts.length === 0) {
-    return visibleDescription;
-  }
-
-  return `${LOST_PET_META_PREFIX}${metaParts.join(';')}\n${visibleDescription}`.trim();
-};
-
-const buildLostPetContactLine = (contactPhone, reward) => {
-  const parts = [];
-  if (contactPhone) parts.push(`Contact: ${contactPhone}`);
-  if (reward) parts.push(`Reward: ${reward}`);
-  return parts.join(' ? ');
-};
-
-const buildProfileText = ({ pet, report, contactPhone, reward }) => {
-  const lines = [
-    'Lost Pet SOS',
-    '',
-    `Pet: ${pet?.name || report?.petName || 'Unknown'}`,
-    pet?.breed || report?.breed ? `Breed: ${pet?.breed || report?.breed || ''}` : '',
-    pet?.species || report?.species ? `Type: ${pet?.species || report?.species || ''}` : '',
-    report?.lastSeenLocation ? `Last seen: ${report.lastSeenLocation}` : '',
-    report?.description ? `Features: ${report.description}` : '',
-    buildLostPetContactLine(contactPhone, reward),
-  ].filter(Boolean);
-
-  return lines.join('\n');
-};
-
-const buildFlyerText = ({ pet, report, contactPhone, reward }) => {
-  const lines = [
-    'LOST PET ALERT',
-    '',
-    `Name: ${pet?.name || report?.petName || 'Unknown'}`,
-    pet?.breed || report?.breed ? `Breed: ${pet?.breed || report?.breed || ''}` : '',
-    pet?.species || report?.species ? `Type: ${pet?.species || report?.species || ''}` : '',
-    report?.lastSeenLocation ? `Last seen: ${report.lastSeenLocation}` : '',
-    report?.description ? `Identifying features: ${report.description}` : '',
-    buildLostPetContactLine(contactPhone, reward),
-    '',
-    'Please share this flyer and contact the owner right away if seen.',
-  ].filter(Boolean);
-
-  return lines.join('\n');
-};
-
 const deleteLostPetAlertFromSupabase = async (alertId) => {
   try {
     const { error } = await supabase
@@ -1824,12 +1686,6 @@ const deleteLostPetAlertFromSupabase = async (alertId) => {
     console.log('Supabase lost pet alert delete error:', error);
     return false;
   }
-};
-
-const normalizeStorageFileName = (fileName) => {
-  const fallbackName = `memory-${Date.now()}.jpg`;
-  const rawName = String(fileName || fallbackName).trim() || fallbackName;
-  return rawName.replace(/[^\w.\-]+/g, '_');
 };
 
 const uploadMemoryMediaToStorage = async ({ uri, fileName, mimeType, petId, userId }) => {
@@ -2073,33 +1929,6 @@ const setCurrentUserIdentity = (user) => {
     || user?.email?.split('@')?.[0]
     || 'Pet Parent';
 };
-
-const normalizeFamilyMemberRole = (role) => {
-  const value = String(role || 'Viewer').trim().toLowerCase();
-  if (value === 'caregiver') return 'Caregiver';
-  if (value === 'admin') return 'Admin';
-  return 'Viewer';
-};
-
-const normalizeFamilyMemberStatus = (status) => {
-  const value = String(status || 'pending').trim().toLowerCase();
-  if (value === 'accepted') return 'accepted';
-  return 'pending';
-};
-
-const mapFamilyMemberRow = (row) => ({
-  id: row.id,
-  ownerId: row.owner_id || '',
-  memberEmail: row.member_email || '',
-  role: normalizeFamilyMemberRole(row.role),
-  status: normalizeFamilyMemberStatus(row.status),
-  householdId: row.household_id || '',
-  invitedByUserId: row.invited_by_user_id || '',
-  memberUserId: row.member_user_id || '',
-  acceptedAt: row.accepted_at || '',
-  removedAt: row.removed_at || '',
-  createdAt: row.created_at || '',
-});
 
 const getOrCreateOwnerHousehold = async (ownerUser) => {
   const ownerId = ownerUser?.id || CURRENT_USER_OWNER_ID;
