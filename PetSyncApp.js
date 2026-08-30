@@ -1,4 +1,17 @@
-﻿import React, { useState, useRef, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import {
+  ActivityLogsContext,
+  AddPetContext,
+  AuthContext,
+  CareRemindersContext,
+  FeatureGateContext,
+  HealthRecordsContext,
+  LostPetAlertsContext,
+  PetsContext,
+  PetScoresContext,
+  RevenueCatContext,
+  VetFinderContext,
+} from './src/contexts';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
@@ -1025,71 +1038,7 @@ const PET_SPECIES_EMOJIS = {
   other: '??',
 };
 
-const PetsContext = createContext({
-  pets: [],
-  setPets: () => {},
-});
 
-const HealthRecordsContext = createContext({
-  healthRecords: [],
-  setHealthRecords: () => {},
-});
-
-const CareRemindersContext = createContext({
-  careReminders: [],
-  setCareReminders: () => {},
-});
-
-const LostPetAlertsContext = createContext({
-  lostPetAlerts: [],
-  setLostPetAlerts: () => {},
-});
-
-const PetScoresContext = createContext({
-  petScores: {},
-  setPetScores: () => {},
-});
-
-const ActivityLogsContext = createContext({
-  activityLogs: [],
-  setActivityLogs: () => {},
-});
-
-const AddPetContext = createContext({
-  openAddPetModal: () => {},
-});
-
-const VetFinderContext = createContext({
-  isVetFinderExpanded: false,
-  openVetFinder: () => {},
-  closeVetFinder: () => {},
-  toggleVetFinder: () => {},
-});
-
-const AuthContext = createContext({
-  authUser: null,
-  authProfile: null,
-  authReady: false,
-  signOut: async () => {},
-  setAuthProfile: () => {},
-});
-
-const RevenueCatContext = createContext({
-  revenueCatReady: false,
-  revenueCatCustomerInfo: null,
-  revenueCatPremiumActive: false,
-  revenueCatOfferings: null,
-  revenueCatMonthlyPackage: null,
-  revenueCatYearlyPackage: null,
-  restoreRevenueCatPurchases: async () => ({ ready: false, customerInfo: null, premiumActive: false }),
-  purchaseRevenueCatPackage: async () => ({ ready: false, customerInfo: null, premiumActive: false, error: null, cancelled: false }),
-});
-
-const FeatureGateContext = createContext({
-  lockedFeature: null,
-  openLockedFeature: () => {},
-  closeLockedFeature: () => {},
-});
 
 const navigationRef = createNavigationContainerRef();
 
