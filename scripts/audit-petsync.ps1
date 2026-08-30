@@ -73,7 +73,8 @@ Write-Lines ($routes | ForEach-Object { $_ })
 Add-Content -Path $OutputPath -Value ("TOTAL: {0}" -f $routes.Count)
 
 Write-Section '4. NAVIGATION TARGETS USED IN CODE'
-$navMatches = [regex]::Matches($app, '(?:navigate|push|replace)\(\s*["'']([^"'']+)["'']')
+# Only count navigation-object calls. Generic .push() is frequently used for arrays and is not navigation.
+$navMatches = [regex]::Matches($app, '(?:navigation|navigationRef)\.(?:navigate|push|replace)\(\s*["'']([^"'']+)["'']')
 $navTargets = $navMatches | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
 Write-Lines ($navTargets | ForEach-Object { $_ })
 Add-Content -Path $OutputPath -Value ("TOTAL: {0}" -f $navTargets.Count)
@@ -84,7 +85,7 @@ $unusedRoutes = $routes | Where-Object { $navTargets -notcontains $_ }
 Add-Content -Path $OutputPath -Value 'Targets used but no matching declared route:'
 Write-Lines ($missingRoutes | ForEach-Object { "  $_" })
 Add-Content -Path $OutputPath -Value ''
-Add-Content -Path $OutputPath -Value 'Declared routes with no direct navigate/push/replace reference:'
+Add-Content -Path $OutputPath -Value 'Declared routes with no direct navigation.navigate/push/replace reference:'
 Write-Lines ($unusedRoutes | ForEach-Object { "  $_" })
 
 Write-Section '6. CONTEXTS / PROVIDERS'
@@ -106,16 +107,26 @@ Write-Lines ($gates | ForEach-Object { $_ })
 Add-Content -Path $OutputPath -Value ("TOTAL: {0}" -f $gates.Count)
 
 Write-Section '9. ADMIN-ONLY / PRIVILEGED CHECKS'
-$adminLines = Select-String -Path $AppPath -Pattern 'ADMIN_EMAILS|isDiscoverAdmin|isPetSyncAdminProfile|Admin only|admin only|ControlCenter' | ForEach-Object {
+$adminMatches = Select-String -Path $AppPath -Pattern 'ADMIN_EMAILS|isDiscoverAdmin|isPetSyncAdminProfile|Admin only|admin only|ControlCenter'
+$adminLines = $adminMatches | Select-Object -First 45 | ForEach-Object {
   "Line $($_.LineNumber): $($_.Line.Trim())"
 }
 Write-Lines $adminLines
+Add-Content -Path $OutputPath -Value ("TOTAL MATCHES: {0}" -f $adminMatches.Count)
+if ($adminMatches.Count -gt 45) {
+  Add-Content -Path $OutputPath -Value '(output capped at first 45 matches)'
+}
 
 Write-Section '10. PLACEHOLDER / MOCK / TODO / FIXME / TEMP REFERENCES'
-$placeholderLines = Select-String -Path $AppPath -Pattern 'TODO|FIXME|mock|placeholder|coming soon|phase 1|for now|temporary|temporarily|seed' -CaseSensitive:$false | ForEach-Object {
+$placeholderMatches = Select-String -Path $AppPath -Pattern 'TODO|FIXME|mock|placeholder|coming soon|phase 1|for now|temporary|temporarily|seed' -CaseSensitive:$false
+$placeholderLines = $placeholderMatches | Select-Object -First 60 | ForEach-Object {
   "Line $($_.LineNumber): $($_.Line.Trim())"
 }
 Write-Lines $placeholderLines
+Add-Content -Path $OutputPath -Value ("TOTAL MATCHES: {0}" -f $placeholderMatches.Count)
+if ($placeholderMatches.Count -gt 60) {
+  Add-Content -Path $OutputPath -Value '(output capped at first 60 matches)'
+}
 
 Write-Section '11. DEPRECATED / WEB-SPECIFIC WARNINGS TO REVIEW'
 $warningLines = @()
@@ -177,10 +188,12 @@ Write-Section '17. QUICK AUDIT SUMMARY'
 Add-Content -Path $OutputPath -Value ("Screens/components inventoried: {0}" -f $screens.Count)
 Add-Content -Path $OutputPath -Value ("Declared routes: {0}" -f $routes.Count)
 Add-Content -Path $OutputPath -Value ("Navigation targets: {0}" -f $navTargets.Count)
+Add-Content -Path $OutputPath -Value ("Navigation targets missing routes: {0}" -f $missingRoutes.Count)
 Add-Content -Path $OutputPath -Value ("Supabase tables referenced: {0}" -f $tables.Count)
 Add-Content -Path $OutputPath -Value ("Premium feature gates found: {0}" -f $gates.Count)
+Add-Content -Path $OutputPath -Value ("Admin/privileged references: {0}" -f $adminMatches.Count)
 Add-Content -Path $OutputPath -Value ("Historical App*.js snapshots: {0}" -f $historyFiles.Count)
-Add-Content -Path $OutputPath -Value ("Placeholder/TODO-style lines: {0}" -f $placeholderLines.Count)
+Add-Content -Path $OutputPath -Value ("Placeholder/TODO-style matches: {0}" -f $placeholderMatches.Count)
 Add-Content -Path $OutputPath -Value ("Duplicate function/component names: {0}" -f $duplicates.Count)
 Add-Content -Path $OutputPath -Value ''
 Add-Content -Path $OutputPath -Value 'NEXT: Review this report before deleting, moving, or refactoring anything.'
