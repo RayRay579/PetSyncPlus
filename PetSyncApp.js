@@ -74,8 +74,6 @@ Notifications.setNotificationHandler({
 // ---------------------------------------------
 // COLORS & THEME
 // ------,
-  aiVetDisabledButtonBg: '#3a5a72',
-};
 
 const PETSYNC_BACKGROUND_IMAGE = require('./assets/images/petsync-background.png');
 const PETSYNC_STARTUP_BACKGROUND = '#f6f8ff';
@@ -624,13 +622,11 @@ const uploadProfileAvatarToStorage = async (photoUri, userId) => {
 
     return publicUrlData?.publicUrl || '';
   } catch (error) {
-    console.log('Profile avatar canUseFeature = (profile, featureKey) => {
-  const requiredPlan = FEATURE_GATES[featureKey];
-  if (!requiredPlan || requiredPlan === PLAN_FREE) {
-    return true;
+    console.log('Profile avatar upload error:', error);
+    return '';
   }
-  return isPremiumUser(profile);
 };
+
 
 const upsertAuthProfileToSupabase = async (user, displayName, avatarUrl = '') => {
   if (!user?.id) {
