@@ -59,7 +59,7 @@ const generatedFiles = [];
 
 const insertImport = (importText) => {
   if (source.includes(importText.trim())) return;
-  const reactStart = source.indexOf("import React");
+  const reactStart = source.indexOf('import React');
   const firstImportEnd = source.indexOf('\n', reactStart);
   if (reactStart < 0 || firstImportEnd < 0) {
     throw new Error('Could not locate the React import anchor.');
@@ -145,45 +145,56 @@ const preflight = () => {
   }
 };
 
-const extractRange = (plan) => {
-  if (source.includes(`from '${plan.importPath}'`)) {
-    console.log(`SKIP ${plan.name}: already extracted.`);
-    return;
+const buildEditPlan = () => {
+  const edits = [];
+  for (const plan of plans) {
+    if (source.includes(`from '${plan.importPath}'`)) {
+      console.log(`SKIP ${plan.name}: already extracted.`);
+      continue;
+    }
+    const start = findMarker(plan.startMarkers);
+    const end = findMarker(plan.endMarkers, start.index + start.marker.length);
+    edits.push({ plan, start, end });
   }
+  return edits.sort((a, b) => b.start.index - a.start.index);
+};
 
-  const start = findMarker(plan.startMarkers);
-  const end = findMarker(plan.endMarkers, start.index + start.marker.length);
+const applyExtraction = ({ plan, start, end }) => {
   const block = source.slice(start.index, end.index).trimEnd();
-
   writeFile(
     plan.modulePath,
     `${block}\n\nexport {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n};`
   );
   generatedFiles.push(plan.modulePath);
-
-  insertImport(
-    `import {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n} from '${plan.importPath}';`
-  );
   source = `${source.slice(0, start.index)}${source.slice(end.index)}`;
   console.log(`EXTRACTED ${plan.name} -> ${plan.modulePath}`);
 };
 
 try {
   preflight();
-  for (const plan of plans) extractRange(plan);
+  const edits = buildEditPlan();
+
+  for (const edit of edits) {
+    applyExtraction(edit);
+  }
+
+  for (const { plan } of [...edits].reverse()) {
+    insertImport(
+      `import {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n} from '${plan.importPath}';`
+    );
+  }
 
   fs.writeFileSync(APP_PATH, source, 'utf8');
 
   console.log('\nRunning Expo web export validation...');
   fs.rmSync(CHECK_DIR, { recursive: true, force: true });
 
-  const validation = process.platform === 'win32'
-    ? run('powershell.exe', [
-      '-NoProfile',
-      '-Command',
-      'npx expo export --platform web --output-dir .petsync-refactor-web-check --clear',
-    ])
-    : run('npx', [
+  let validation;
+  if (process.platform === 'win32') {
+    const psCommand = "npx expo export --platform web --output-dir .petsync-refactor-web-check --clear";
+    validation = run('powershell.exe', ['-NoProfile', '-Command', psCommand]);
+  } else {
+    validation = run('npx', [
       'expo',
       'export',
       '--platform',
@@ -192,6 +203,7 @@ try {
       '.petsync-refactor-web-check',
       '--clear',
     ]);
+  }
 
   if (validation.status !== 0) {
     throw new Error('Expo web export validation failed.');
