@@ -131,7 +131,7 @@ $nameMatches = [regex]::Matches($app, '(?m)^(?:function\s+([A-Za-z_$][A-Za-z0-9_
 $names = $nameMatches | ForEach-Object {
   if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value }
 }
-$duplicates = $names | Group-Object | Where-Object { $_.Count -gt 1 } | Sort-Object Count -Descending, Name
+$duplicates = $names | Group-Object | Where-Object { $_.Count -gt 1 } | Sort-Object -Property @{Expression='Count'; Descending=$true}, @{Expression='Name'; Descending=$false}
 Write-Lines ($duplicates | ForEach-Object { "{0} x {1}" -f $_.Name, $_.Count })
 
 Write-Section '13. LARGE / HISTORICAL APP SNAPSHOT FILES'
