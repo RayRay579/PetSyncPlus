@@ -14,7 +14,7 @@ const run = (command, args, options = {}) => {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: options.capture ? 'pipe' : 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
     ...options,
   });
 
@@ -79,104 +79,83 @@ const extractRange = ({
   }
 
   const start = source.indexOf(startMarker);
-  if (start < 0) throw new Error(`Could not find start marker for ${name}: ${startMarker}`);
-
   const end = source.indexOf(endMarker, start);
-  if (end < 0) throw new Error(`Could not find end marker for ${name}: ${endMarker}`);
+  if (start < 0 || end < 0 || end <= start) {
+    throw new Error(`Could not locate ${name} block.`);
+  }
 
-  const block = source.slice(start, end).trim();
-  const exportBlock = `\n\nexport {\n${exports.map((item) => `  ${item},`).join('\n')}\n};\n`;
-  writeFile(modulePath, `${modulePrefix}${block}${exportBlock}`);
+  const block = source.slice(start, end).trimEnd();
+  writeFile(modulePath, `${modulePrefix}${block}\n\nexport {\n${exports.map((name) => `  ${name},`).join('\n')}\n};`);
   generatedFiles.push(modulePath);
 
+  insertImport(`import {\n${exports.map((name) => `  ${name},`).join('\n')}\n} from '${importPath}';`);
   source = `${source.slice(0, start)}${source.slice(end)}`;
-
-  const importText = `import {\n${exports.map((item) => `  ${item},`).join('\n')}\n} from '${importPath}';`;
-  insertImport(importText);
   console.log(`EXTRACTED ${name} -> ${modulePath}`);
 };
 
+extractRange({
+  name: 'community profile model',
+  startMarker: 'const normalizeCommunityProfile =',
+  endMarker: 'const COMMUNITY_PROFILE_ACHIEVEMENTS =',
+  modulePath: 'src/models/communityProfile.js',
+  exports: ['normalizeCommunityProfile', 'mergeCommunityProfile'],
+  importPath: './src/models/communityProfile',
+});
+
+extractRange({
+  name: 'community achievements model',
+  startMarker: 'const COMMUNITY_PROFILE_ACHIEVEMENTS =',
+  endMarker: 'const PET_SPECIES_EMOJIS =',
+  modulePath: 'src/models/communityAchievements.js',
+  exports: ['COMMUNITY_PROFILE_ACHIEVEMENTS', 'getCommunityProfileAchievements'],
+  importPath: './src/models/communityAchievements',
+});
+
+extractRange({
+  name: 'lost pet text model',
+  startMarker: 'const sanitizeLostPetDescription =',
+  endMarker: 'const FAMILY_ROLE_LABELS =',
+  modulePath: 'src/models/lostPetText.js',
+  exports: [
+    'sanitizeLostPetDescription',
+    'getLostPetProfileSummary',
+    'getLostPetFlyerContactLines',
+    'buildLostPetFlyerText',
+  ],
+  importPath: './src/models/lostPetText',
+});
+
+extractRange({
+  name: 'family member model',
+  startMarker: 'const FAMILY_ROLE_LABELS =',
+  endMarker: 'const sanitizeStorageFileName =',
+  modulePath: 'src/models/familyMember.js',
+  exports: [
+    'FAMILY_ROLE_LABELS',
+    'normalizeFamilyMemberRole',
+    'getFamilyMemberRoleLabel',
+    'normalizeFamilyMemberFromSupabase',
+  ],
+  importPath: './src/models/familyMember',
+});
+
+extractRange({
+  name: 'storage filename helper',
+  startMarker: 'const sanitizeStorageFileName =',
+  endMarker: 'const uploadCommunityMediaToSupabase =',
+  modulePath: 'src/utils/storageNames.js',
+  exports: ['sanitizeStorageFileName'],
+  importPath: './src/utils/storageNames',
+});
+
 try {
-  extractRange({
-    name: 'community profile model',
-    startMarker: "const normalizeCommunityProfileKey = (value) => String(value || '')",
-    endMarker: 'const loadCommunityProfileFromSupabase = async',
-    modulePath: 'src/models/communityProfile.js',
-    exports: [
-      'normalizeCommunityProfileKey',
-      'COMMUNITY_PROFILE_FIXTURES',
-      'getCommunityProfileFixture',
-      'mapCommunityProfileRow',
-    ],
-    importPath: './src/models/communityProfile',
-  });
-
-  extractRange({
-    name: 'community achievements model',
-    startMarker: 'const buildCommunityProfileAchievements = (profile) => ([',
-    endMarker: 'const PET_SPECIES_EMOJIS = {',
-    modulePath: 'src/models/communityAchievements.js',
-    exports: ['buildCommunityProfileAchievements'],
-    importPath: './src/models/communityAchievements',
-  });
-
-  extractRange({
-    name: 'lost pet text model',
-    startMarker: "const LOST_PET_META_PREFIX = '__petsync_lost_pet_meta__';",
-    endMarker: 'const deleteLostPetAlertFromSupabase = async',
-    modulePath: 'src/models/lostPetText.js',
-    modulePrefix: "import { formatDate } from '../utils/dateTime';\n\n",
-    exports: [
-      'LOST_PET_META_PREFIX',
-      'parseLostPetDescription',
-      'buildLostPetStoredDescription',
-      'buildLostPetContactLine',
-      'buildProfileText',
-      'buildFlyerText',
-    ],
-    importPath: './src/models/lostPetText',
-  });
-
-  extractRange({
-    name: 'family member model',
-    startMarker: 'const normalizeFamilyMemberRole = (role) => {',
-    endMarker: 'const getOrCreateOwnerHousehold = async',
-    modulePath: 'src/models/familyMember.js',
-    exports: [
-      'normalizeFamilyMemberRole',
-      'normalizeFamilyMemberStatus',
-      'mapFamilyMemberRow',
-    ],
-    importPath: './src/models/familyMember',
-  });
-
-  extractRange({
-    name: 'storage filename helper',
-    startMarker: 'const normalizeStorageFileName = (fileName) => {',
-    endMarker: 'const uploadMemoryMediaToStorage = async',
-    modulePath: 'src/utils/storageNames.js',
-    exports: ['normalizeStorageFileName'],
-    importPath: './src/utils/storageNames',
-  });
-
   fs.writeFileSync(APP_PATH, source, 'utf8');
 
-  if (fs.existsSync(CHECK_DIR)) {
-    fs.rmSync(CHECK_DIR, { recursive: true, force: true });
-  }
-
   console.log('\nRunning Expo web export validation...');
-  const build = run('npx', [
-    'expo',
-    'export',
-    '--platform',
-    'web',
-    '--output-dir',
-    '.petsync-refactor-web-check',
-    '--clear',
-  ]);
-
-  if (build.status !== 0) {
+  fs.rmSync(CHECK_DIR, { recursive: true, force: true });
+  const expoCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const validation = run(expoCommand, ['expo', 'export', '--platform', 'web', '--output-dir', '.petsync-refactor-web-check', '--clear']);
+  if (validation.status !== 0) {
     throw new Error('Expo web export validation failed.');
   }
 
