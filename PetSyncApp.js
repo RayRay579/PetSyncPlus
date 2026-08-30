@@ -12,6 +12,18 @@ import {
   RevenueCatContext,
   VetFinderContext,
 } from './src/contexts';
+import { C } from './src/theme/colors';
+import {
+  FEATURE_GATES,
+  MONETIZATION_LIMITS,
+  PLAN_FREE,
+  PLAN_PREMIUM,
+  canUseFeature,
+  getUserPlan,
+  isPetSyncAdminProfile,
+  isPremiumUser,
+  normalizePlanValue,
+} from './src/config/access';
 import { 
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   TextInput, FlatList, Dimensions, Modal, Alert, Image, Linking, Share,
@@ -61,193 +73,7 @@ Notifications.setNotificationHandler({
 
 // ---------------------------------------------
 // COLORS & THEME
-// ---------------------------------------------
-const C = {
-  bg:        '#6f7f9127',
-  card:      '#a682b2d9',
-  cardHigh:  '#d7dee6bb',
-  accent:    '#ff6b35',
-  green:     '#4ade80',
-  yellow:    '#fbbf24',
-  red:       '#f87171',
-  blue:      '#2b4c74',
-  text:      '#050505',
-  muted:     '#050505',
-  faint:     '#3a5a72',
-  border:    '#1f3347',
-
-  // Section aliases. These intentionally match the existing colors so the
-  // app looks the same while giving each area its own control point.
-  homeBg: '#6f7f9127',
-  homeCard: '#a682b27b',
-  homeCardHigh: '#d7dee6bb',
-
-  healthBg: '#6f7f9127',
-  healthCard: '#a682b288',
-  healthCardHigh: '#d7dee6bb',
-  healthChartCard: '#a682b2d9',
-
-  memoryBg: '#6f7f9127',
-  memoryCard: '#a682b27a',
-  memoryCardHigh: '#d7dee6bb',
-
-  communityBg: '#6f7f9127',
-  communityCard: '#a682b2d9',
-  communityCardHigh: '#d7dee6bb',
-
-  settingsBg: '#6f7f9127',
-  settingsCard: '#a682b278',
-  settingsCardHigh: '#d7dee6bb',
-  profileCard: '#a682b272',
-  familyCard: '#81678ad9',
-
-  modalBg: '#6f7f9127',
-  modalCard: '#a682b2d9',
-  modalCardHigh: '#d7dee6bb',
-
-  sosCard: '#a682b2d9',
-  aiVetCard: '#a682b2d9',
-  sosFoundBtnText: '#fff',
-  primaryActionBg: '#ff6b35',
-  primaryActionText: '#fff',
-  secondaryActionBg: '#d7dee6bb',
-  destructiveActionBg: '#f87171',
-  destructiveActionText: '#fff',
-  successText: '#4ade80',
-  successBg: '#4ade80',
-  warningText: '#fbbf24',
-  warningBg: '#fbbf24',
-  dangerText: '#f87171',
-  dangerBg: '#f87171',
-  infoText: '#2b4c74',
-  infoBg: '#2b4c74',
-  linkText: '#ff6b35',
-  activePillBg: '#d7dee6bb',
-  activePillText: '#fff',
-  badgeSuccessBg: '#4ade80',
-  badgeWarningBg: '#fbbf24',
-  badgeDangerBg: '#f87171',
-  badgeInfoBg: '#2b4c74',
-  homeAccent: '#ff6b35',
-  healthAccent: '#ff6b35',
-  memoryAccent: '#ff6b35',
-  communityAccent: '#ff6b35',
-  settingsAccent: '#ff6b35',
-  familyAccent: '#ff6b35',
-  modalAccent: '#ff6b35',
-  sosAccent: '#f87171',
-  aiVetAccent: '#ff6b35',
-  // Fine-grained text aliases. These keep the same text colors while giving
-  // each screen/component its own control point for titles, body copy, and
-  // helper text.
-  homeTitleText: '#050505',
-  homeBodyText: '#050505',
-  homeMutedText: '#050505',
-  healthTitleText: '#050505',
-  healthBodyText: '#050505',
-  healthMutedText: '#050505',
-  memoryTitleText: '#050505',
-  memoryBodyText: '#050505',
-  memoryMutedText: '#050505',
-  communityTitleText: '#050505',
-  communityBodyText: '#050505',
-  communityMutedText: '#050505',
-  settingsTitleText: '#050505',
-  settingsBodyText: '#050505',
-  settingsMutedText: '#050505',
-  familyTitleText: '#050505',
-  familyBodyText: '#050505',
-  familyMutedText: '#050505',
-  modalTitleText: '#050505',
-  modalBodyText: '#050505',
-  modalMutedText: '#050505',
-  sosTitleText: '#050505',
-  sosBodyText: '#050505',
-  sosMutedText: '#050505',
-  aiVetTitleText: '#050505',
-  aiVetBodyText: '#050505',
-  aiVetMutedText: '#050505',
-  faintText: '#3a5a72',
-  homeCardBorder: '#1f3347',
-  healthCardBorder: '#1f3347',
-  memoryCardBorder: '#1f3347',
-  communityCardBorder: '#1f3347',
-  settingsCardBorder: '#1f3347',
-  familyCardBorder: '#1f3347',
-  modalCardBorder: '#1f3347',
-  sosCardBorder: '#1f3347',
-  aiVetCardBorder: '#1f3347',
-  inputBorder: '#1f3347',
-  pillBorder: '#1f3347',
-  badgeBorder: '#1f3347',
-
-  // Phase 2 fine-grained aliases. These keep the current appearance while
-  // separating cards, pills, inputs, badges, and helper surfaces.
-  surfaceCard: '#a682b2d9',
-  surfaceCardHigh: '#d7dee6bb',
-  surfacePill: '#a682b2d9',
-  surfacePillActive: '#d7dee6bb',
-  surfaceInput: '#6f7f9127',
-  surfaceBadge: '#d7dee6bb',
-
-  homeQuickActionCard: '#a682b27b',
-  homeRecentActivityCard: '#a682b27b',
-  homeCalendarCard: '#a682b27b',
-  homePetAvatarPill: '#d7dee6bb',
-  homeStatsCard: '#d7dee6bb',
-
-  healthScoreCard: '#a682b288',
-  healthRecordCard: '#a682b2d9',
-  healthTimelineCard: '#a682b288',
-  healthReminderCard: '#a682b288',
-  healthTabPill: '#a682b288',
-  healthTabPillActive: '#d7dee6bb',
-  healthInput: '#6f7f9127',
-  healthBadge: '#d7dee6bb',
-
-  memoryTimelineCard: '#a682b2d9',
-  memoryPhotoCard: '#a682b2d9',
-  memoryMilestonePill: '#a682b2d9',
-  memoryMilestonePillActive: '#d7dee6bb',
-  memoryPetPill: '#a682b2d9',
-  memoryPetPillActive: '#d7dee6bb',
-  memoryInput: '#6f7f9127',
-
-  communityPostCard: '#a682b2d9',
-  communityRecipeCard: '#a682b2d9',
-  communityCommentCard: '#a682b2d9',
-  communityComposerCard: '#a682b2d9',
-  communityTabPill: '#a682b2d9',
-  communityTabPillActive: '#d7dee6bb',
-  communityInput: '#6f7f9127',
-  communityBadge: '#d7dee6bb',
-
-  settingsMenuCard: '#a682b2d9',
-  settingsPetCard: '#a682b2d9',
-  settingsSearchInput: '#6f7f9127',
-  settingsAccountCard: '#a682b2d9',
-  settingsDangerCard: '#a682b2d9',
-  profileAvatarSurface: '#d7dee6bb',
-  profileSummaryCard: '#a682b272',
-
-  familyMemberCard: '#a682b2d9',
-  familyInviteCard: '#a682b2d9',
-  familyPendingBadge: '#d7dee6bb',
-  familyAcceptedBadge: '#4ade80',
-  familyRolePill: '#d7dee6bb',
-
-  modalContainer: '#a682b2d9',
-  modalInput: '#6f7f9127',
-  modalPickerCard: '#a682b2d9',
-  modalOptionPill: '#a682b2d9',
-  modalOptionPillActive: '#d7dee6bb',
-  modalSecondaryButton: '#d7dee6bb',
-
-  sosEmergencyCard: '#a682b2d9',
-  sosActionCard: '#a682b2d9',
-  aiVetPromptCard: '#a682b2d9',
-  aiVetChatBubble: '#a682b2d9',
-  aiVetEmergencyCard: '#f87171',
+// ------,
   aiVetDisabledButtonBg: '#3a5a72',
 };
 
@@ -798,113 +624,7 @@ const uploadProfileAvatarToStorage = async (photoUri, userId) => {
 
     return publicUrlData?.publicUrl || '';
   } catch (error) {
-    console.log('Profile avatar upload error:', error);
-    return '';
-  }
-};
-
-// Local monetization map only. This keeps free/premium decisions centralized
-// for later cleanup and paywall wiring, but does not enable any payment flow.
-const PLAN_FREE = 'free';
-const PLAN_PREMIUM = 'premium';
-
-// Intended product limits for future gating.
-// free_pet_limit = 1
-// free_reminder_limit = 5
-const MONETIZATION_LIMITS = {
-  free_pet_limit: 1,
-  free_reminder_limit: 5,
-};
-
-// TODO: Use this map for local-only feature checks once gating is introduced.
-// TODO: Keep behavior unchanged until payment and entitlement work is ready.
-const FEATURE_GATES = {
-  // Free features
-  auth: PLAN_FREE,
-  profile: PLAN_FREE,
-  basic_profile: PLAN_FREE,
-  basic_profile_avatar: PLAN_FREE,
-  basic_pet_management: PLAN_FREE,
-  basic_health_records: PLAN_FREE,
-  basic_reminders: PLAN_FREE,
-  basic_memory_vault: PLAN_FREE,
-  view_family_shared_pets: PLAN_FREE,
-  basic_lost_pet_report: PLAN_FREE,
-  community_browsing: PLAN_FREE,
-  local_notifications: PLAN_FREE,
-
-  // Premium features
-  unlimited_pets: PLAN_PREMIUM,
-  health_records: PLAN_PREMIUM,
-  health_file_uploads: PLAN_PREMIUM,
-  medications: PLAN_PREMIUM,
-  vaccinations: PLAN_PREMIUM,
-  vet_visits: PLAN_PREMIUM,
-  advanced_health_analytics: PLAN_PREMIUM,
-  trend_tracking: PLAN_PREMIUM,
-  streak_system: PLAN_PREMIUM,
-  streaks: PLAN_PREMIUM,
-  care_score_history: PLAN_PREMIUM,
-  ai_vet_assistant: PLAN_PREMIUM,
-  advanced_reminder_scheduling: PLAN_PREMIUM,
-  advanced_reminders: PLAN_PREMIUM,
-  expanded_file_uploads: PLAN_PREMIUM,
-  family_household_management: PLAN_PREMIUM,
-  family_sharing: PLAN_PREMIUM,
-  lost_pet_boosted_alerts: PLAN_PREMIUM,
-  lost_pet_sos: PLAN_PREMIUM,
-  export_health_records: PLAN_PREMIUM,
-  advanced_memory_storage: PLAN_PREMIUM,
-  unlimited_memory_storage: PLAN_PREMIUM,
-  community_posting: PLAN_PREMIUM,
-  community_recipes: PLAN_PREMIUM,
-  premium_community_customization: PLAN_PREMIUM,
-  premium_profile_customization: PLAN_PREMIUM,
-};
-
-const normalizePlanValue = (value) => String(value || '').trim().toLowerCase();
-
-const getUserPlan = (profile) => {
-  const candidates = [
-    profile?.plan,
-    profile?.tier,
-    profile?.membership,
-    profile?.account_tier,
-    profile?.subscription_plan,
-    profile?.subscription?.plan,
-    profile?.subscription?.tier,
-    profile?.subscription?.status,
-    profile?.subscription_status,
-    profile?.billing_plan,
-    profile?.billing?.plan,
-    profile?.revenueCatPremiumActive,
-    profile?.revenueCat?.premiumActive,
-    profile?.premium,
-    profile?.is_premium,
-  ];
-
-  for (const candidate of candidates) {
-    if (candidate === true) return PLAN_PREMIUM;
-    if (candidate === false || candidate == null) continue;
-    const normalized = normalizePlanValue(candidate);
-    if (!normalized) continue;
-    if (/premium|pro|plus|paid|active|trial/.test(normalized)) return PLAN_PREMIUM;
-    if (/free|basic/.test(normalized)) return PLAN_FREE;
-  }
-
-  return PLAN_FREE;
-};
-
-const isPetSyncAdminProfile = (profile) => {
-  const email = String(profile?.email || '').trim().toLowerCase();
-  return email === 'rayray579@gmail.com';
-};
-
-const isPremiumUser = (profile) =>
-  isPetSyncAdminProfile(profile) ||
-  getUserPlan(profile) === PLAN_PREMIUM;
-
-const canUseFeature = (profile, featureKey) => {
+    console.log('Profile avatar canUseFeature = (profile, featureKey) => {
   const requiredPlan = FEATURE_GATES[featureKey];
   if (!requiredPlan || requiredPlan === PLAN_FREE) {
     return true;
