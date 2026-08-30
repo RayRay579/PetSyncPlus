@@ -30,6 +30,7 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { supabase } from './supabase';
+import { buildPetSyncIntelligence } from './src/services/PetSyncIntelligence';
 import {
   initializeRevenueCatForUser,
   restoreRevenueCatPurchases as restoreRevenueCatPurchasesNative,
@@ -4681,7 +4682,7 @@ function DashboardScreen({ navigation }) {
   const { pets } = useContext(PetsContext);
   const { openAddPetModal } = useContext(AddPetContext);
   const { careReminders, setCareReminders } = useContext(CareRemindersContext);
-  const { setHealthRecords } = useContext(HealthRecordsContext);
+  const { healthRecords, setHealthRecords } = useContext(HealthRecordsContext);
   const { petScores, setPetScores } = useContext(PetScoresContext);
   const { activityLogs, setActivityLogs } = useContext(ActivityLogsContext);
   const { openVetFinder } = useContext(VetFinderContext);
@@ -4885,6 +4886,15 @@ function DashboardScreen({ navigation }) {
     if (previousPetIdRef.current === selectedPetId) return;
     previousPetIdRef.current = selectedPetId;
   }, [selectedPetId]);
+  const formatLocalDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const selectedCalendarDateKey = formatLocalDateKey(selectedCalendarDate);
+
   useEffect(() => {
     calendarChipBounce.stopAnimation();
     calendarChipBounce.setValue(1);
@@ -4916,12 +4926,6 @@ function DashboardScreen({ navigation }) {
     'broom',
     'sleep',
   ];
-  const formatLocalDateKey = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
   const setReminderAlerted = useCallback((reminderId) => {
     setCareReminderAlerted(reminderId);
   }, []);
@@ -4941,7 +4945,6 @@ function DashboardScreen({ navigation }) {
     date.setDate(date.getDate() + index);
     return date;
   });
-  const selectedCalendarDateKey = formatLocalDateKey(selectedCalendarDate);
   const calendarReminders = careReminders.filter(reminder => {
     return (
       reminder.petId === selectedPetId
@@ -4981,6 +4984,7 @@ function DashboardScreen({ navigation }) {
   });
   const activityTrendMax = Math.max(0, ...activityTrendCounts);
   const weeklyActivityTotal = activityTrendCounts.reduce((sum, count) => sum + count, 0);
+  const currentScore = Math.max(0, Math.min(100, petScores[selectedPetId] ?? pet?.score ?? 80));
   const scoreProgressSegments = Array.from({ length: 12 }, (_, index) => index < Math.round((currentScore / 100) * 12));
   const formatReminderDate = (value) => {
     const key = normalizeReminderDateKey(value);
@@ -5494,7 +5498,6 @@ function DashboardScreen({ navigation }) {
     return activity;
   };
 
-  const currentScore = Math.max(0, Math.min(100, petScores[selectedPetId] ?? pet?.score ?? 80));
   if (!pet) {
     return (
       <SafeAreaView style={s.screen} edges={['top']}>
@@ -5527,6 +5530,12 @@ function DashboardScreen({ navigation }) {
   const weeklyTrendSummary = getWeeklyTrendSummaryForPet(activityLogs, pet.id);
   const trendBreakdown = getTrendActionBreakdownForPet(activityLogs, pet.id);
   const streakDays = getStreakDaysForPet(activityLogs, pet.id);
+  const petIntelligence = buildPetSyncIntelligence({
+    pet,
+    healthRecords,
+    careReminders,
+  });
+
   const healthInsights = [];
 
   if (streakDays >= 3) {
@@ -5550,6 +5559,18 @@ function DashboardScreen({ navigation }) {
   }
 
   const visibleHealthInsights = healthInsights.slice(0, 3);
+
+  const petSyncInsight =
+    petIntelligence.primaryObservation ||
+    petIntelligence.healthInsight ||
+    petIntelligence.routineSummary ||
+    petIntelligence.speciesGuidance ||
+    ('Keep logging ' + pet.name + "'s care to help PetSync learn their routine.");
+
+  const petSyncRecommendation =
+    petIntelligence.dailyRecommendation ||
+    petIntelligence.educationalNote ||
+    '';
   void weeklyTrendSummary;
   void trendBreakdown;
   const handleAIVetPress = () => {
@@ -5914,6 +5935,68 @@ function DashboardScreen({ navigation }) {
             </View>
           </Card>
         </TouchableOpacity>
+
+        <Card
+          style={[
+            s.dashboardTrendCard,
+            {
+              backgroundColor: C.aiVetCard,
+              borderColor: C.aiVetCardBorder,
+            },
+          ]}
+        >
+          <View style={s.dashboardTrendHeader}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={s.dashboardTrendTitle}>PetSync Insight</Text>
+              <Text style={s.dashboardTrendSub}>
+                Personalized from your real care history
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name="brain"
+              size={26}
+              color={C.primaryActionBg}
+            />
+          </View>
+
+          <Text style={[s.dashboardAISub, { paddingRight: 0 }]}>
+            {petSyncInsight}
+          </Text>
+
+          {petSyncRecommendation ? (
+            <View
+              style={{
+                marginTop: 12,
+                padding: 12,
+                borderRadius: 16,
+                backgroundColor: C.surfaceBadge,
+                borderWidth: 1,
+                borderColor: C.badgeBorder,
+              }}
+            >
+              <Text
+                style={{
+                  color: C.primaryActionBg,
+                  fontSize: 11,
+                  fontWeight: '800',
+                  marginBottom: 4,
+                }}
+              >
+                NEXT BEST STEP
+              </Text>
+              <Text
+                style={{
+                  color: '#42464b',
+                  fontSize: 12,
+                  lineHeight: 17,
+                  fontWeight: '600',
+                }}
+              >
+                {petSyncRecommendation}
+              </Text>
+            </View>
+          ) : null}
+        </Card>
 
         <Card style={[s.dashboardTrendCard, { backgroundColor: C.homeRecentActivityCard, borderColor: C.homeCardBorder }]}>
           <View style={s.dashboardTrendHeader}>
