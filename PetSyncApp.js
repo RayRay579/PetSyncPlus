@@ -1,4 +1,9 @@
-﻿import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import {
+  getHealthRecordIcon,
+  getHealthRecordNotes,
+  normalizeHealthRecordFromSupabase,
+} from './src/services/health/healthRecordModel';
 import {
   ActivityLogsContext,
   AddPetContext,
@@ -24,7 +29,6 @@ import {
   sharedReminderAlertedIds,
   sharedReminderSnoozeUntil,
 } from './src/services/reminders/reminderNotifications';
-
 
 
 import {
@@ -1064,68 +1068,6 @@ const registerForPushNotificationsAsync = async () => {
   }
 };
 
-const getHealthRecordIcon = (type) => {
-  const iconMap = {
-    vaccination: 'needle',
-    medication: 'pill',
-    appointment: 'calendar-clock',
-    weight: 'scale-bathroom',
-    symptom: 'alert-circle-outline',
-    surgery: 'scalpel',
-    allergy: 'allergy',
-    diagnosis: 'file-document-outline',
-    lab: 'test-tube',
-    fish: 'fish',
-    imported_file: 'file-import-outline',
-  };
-
-  return iconMap[type] || 'file-document-outline';
-};
-
-const getHealthRecordNotes = (type, details = {}, fallback = '') => {
-  const detailMap = {
-    vaccination: details.vaccineNotes,
-    medication: details.medicationNotes,
-    appointment: details.appointmentNotes,
-    weight: details.weightNotes,
-    symptom: details.symptomNotes,
-    surgery: details.recoveryNotes,
-    allergy: details.allergyNotes,
-    diagnosis: details.diagnosisNotes,
-    lab: details.labNotes,
-    fish: details.readingNotes,
-  };
-
-  return String(detailMap[type] || fallback || '').trim();
-};
-
-const normalizeHealthRecordFromSupabase = (row) => ({
-  id: row.id,
-  petId: row.pet_id,
-  type: row.type,
-  title: row.title,
-  date: row.record_date,
-  nextDue: row.next_due,
-  details: row.details || {},
-  notes: row.notes || '',
-  icon: getHealthRecordIcon(row.type),
-  status: 'current',
-  fileUri: row.type === 'imported_file' ? (row.details?.fileUrl || row.details?.fileUri || row.details?.file_uri || '') : '',
-  fileUrl: row.type === 'imported_file' ? (row.details?.fileUrl || row.details?.fileUri || row.details?.file_uri || '') : '',
-  filePath: row.type === 'imported_file' ? (row.details?.filePath || row.details?.file_path || '') : '',
-  fileName: row.type === 'imported_file' ? (row.details?.fileName || row.title || '') : '',
-  mimeType: row.type === 'imported_file' ? (row.details?.mimeType || row.details?.mime_type || '') : '',
-  size: row.type === 'imported_file' ? (row.details?.size || null) : null,
-  provider: row.details?.provider
-    || row.details?.providerClinic
-    || row.details?.vetClinic
-    || row.details?.prescribingVet
-    || row.details?.diagnosisVet
-    || row.details?.labVet
-    || row.details?.clinicVet
-    || '',
-});
-
 const resolveAccessibleSharedPetIds = async (currentUserId, accessiblePetIds = []) => {
   const directPetIds = Array.isArray(accessiblePetIds)
     ? accessiblePetIds.map((petId) => String(petId || '').trim()).filter(Boolean)
@@ -1927,7 +1869,7 @@ const buildLostPetContactLine = (contactPhone, reward) => {
   const parts = [];
   if (contactPhone) parts.push(`Contact: ${contactPhone}`);
   if (reward) parts.push(`Reward: ${reward}`);
-  return parts.join(' � ');
+  return parts.join(' ? ');
 };
 
 const buildProfileText = ({ pet, report, contactPhone, reward }) => {
@@ -3720,7 +3662,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
   };
 
   const stepProgress = step / 3;
-  const introCopy = 'Let�s set up your pet portal';
+  const introCopy = 'Let?s set up your pet portal';
 
   const selectedSpeciesLabel = speciesOptions.find(item => item.value === petSpecies)?.label || 'Pet';
 
@@ -3916,7 +3858,7 @@ function AddPetModal({ visible, initialSpecies = 'dog', onClose, onSave }) {
                       <View style={{ flex: 1 }}>
                         <Text style={s.addPetReviewName}>{petName.trim() || 'Your pet'}</Text>
                         <Text style={s.addPetReviewMeta}>
-                          {selectedSpeciesLabel} � {breedType.trim() || 'Breed / type'} � {
+                          {selectedSpeciesLabel} ? {breedType.trim() || 'Breed / type'} ? {
                             birthMode === 'birthday'
                               ? (birthday.trim() ? `Birthday: ${formatDate(birthday.trim())}` : 'Birthday pending')
                               : (ageText.trim() || 'Age pending')
@@ -5142,7 +5084,7 @@ function DashboardScreen({ navigation }) {
               </Text>
 
               <Text style={s.subGreeting} numberOfLines={1}>
-                {formatDate(new Date())} · {pets.length} pets
+                {formatDate(new Date())} � {pets.length} pets
               </Text>
             </View>
 
@@ -5204,7 +5146,7 @@ function DashboardScreen({ navigation }) {
                   </View>
                 </View>
                 <Text style={s.dashboardPetMeta}>
-                {pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet'} · {pet.breed || 'Breed'}
+                {pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet'} � {pet.breed || 'Breed'}
                 </Text>
                 <Text style={s.dashboardPetAge}>{pet.age || 'Age unknown'}</Text>
                 <View style={{ marginTop: 8 }}>
@@ -5534,7 +5476,7 @@ function DashboardScreen({ navigation }) {
                     </Text>
                     <Text style={s.reminderDate}>
                       {formatReminderDate(reminder.date)}
-                      {reminder.time ? ` � ${reminder.time}` : ''}
+                      {reminder.time ? ` ? ${reminder.time}` : ''}
                     </Text>
                     {reminder.source === 'healthRecord' && reminder.sourceRecordId ? (
                       <TouchableOpacity
@@ -6142,7 +6084,7 @@ function PetProfileScreen({ navigation, route }) {
           </View>
 
             <Text style={s.petProfileName}>{pet.name}</Text>
-            <Text style={s.petProfileSubtitle}>{speciesLabel} · {pet.breed || 'Breed not set'}</Text>
+            <Text style={s.petProfileSubtitle}>{speciesLabel} � {pet.breed || 'Breed not set'}</Text>
             {(
               pet.isShared === true
               || String(pet.userId || pet.user_id || '') !== String(CURRENT_USER_OWNER_ID || '')
@@ -6212,7 +6154,7 @@ function PetProfileScreen({ navigation, route }) {
                 <View style={{ flex: 1 }}>
                   <Text style={s.petProfileActivityTitle}>{log.title}</Text>
                   <Text style={s.petProfileActivitySub}>
-                    {log.time}{log.dateKey ? ` � ${formatDate(log.dateKey)}` : ''}
+                    {log.time}{log.dateKey ? ` ? ${formatDate(log.dateKey)}` : ''}
                   </Text>
                 </View>
               </View>
@@ -6234,7 +6176,7 @@ function PetProfileScreen({ navigation, route }) {
                   <Text style={s.petProfileActivityTitle}>{reminder.title}</Text>
                   <Text style={s.petProfileActivitySub}>
                     {formatDate(reminder.date)}
-                    {reminder.time ? ` � ${reminder.time}` : ''}
+                    {reminder.time ? ` ? ${reminder.time}` : ''}
                   </Text>
                 </View>
               </View>
@@ -7124,7 +7066,7 @@ function HealthHubScreen({ navigation, route }) {
   const appointmentFrequencyMax = Math.max(0, ...appointmentFrequencyMonths.map((item) => item.count));
   const appointmentFrequencyHasData = appointmentFrequencyMonths.some((item) => item.count > 0);
   const formatWeightTrendValue = (value) => (
-    Number.isFinite(value) ? `${value.toFixed(1).replace(/\.0$/, '')} lbs` : '�'
+    Number.isFinite(value) ? `${value.toFixed(1).replace(/\.0$/, '')} lbs` : '?'
   );
 
   const renderWeightAnalyticsCard = () => (
@@ -9739,7 +9681,7 @@ function HealthHubScreen({ navigation, route }) {
             <View style={{ flex: 1 }}>
               <Text style={{ color: C.healthTitleText, fontSize: 20, fontWeight: '900' }}>{pet.name}</Text>
               <Text style={{ color: C.healthMutedText, fontSize: 12, marginTop: 2, textTransform: 'capitalize' }}>
-                {pet.species || 'Pet'} · {getPetAgeLabel(pet)} · {pet.gender || 'Gender not set'}
+                {pet.species || 'Pet'} � {getPetAgeLabel(pet)} � {pet.gender || 'Gender not set'}
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                 <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: `${C.infoBg}18`, borderWidth: 1, borderColor: `${C.infoBg}40` }}>
@@ -10231,7 +10173,7 @@ function HealthHubScreen({ navigation, route }) {
                           >
                             <Text style={s.recordDetailFieldLabel}>{label}</Text>
                             <Text style={[s.recordDetailFieldValue, isNotes && s.recordDetailNotesValue]}>
-                              {value || '�'}
+                              {value || '?'}
                             </Text>
                           </View>
                         );
@@ -10359,7 +10301,7 @@ function HealthHubScreen({ navigation, route }) {
                       </Text>
                       {analysisResults.warnings.map((warning, index) => (
                         <Text key={`warning-${index}`} style={{ color: C.healthMutedText, fontSize: 12, lineHeight: 18 }}>
-                          � {warning}
+                          ? {warning}
                         </Text>
                       ))}
                     </View>
@@ -10897,7 +10839,7 @@ function MemoryVaultScreen({ navigation }) {
       <View style={s.pageHeader}>
         <View>
           <Text style={s.pageTitle}>Memory Vault</Text>
-          <Text style={s.pageSub}>{visibleMemories.length} memories · {visibleMemories.filter((m) => m.milestone).length} milestones</Text>
+          <Text style={s.pageSub}>{visibleMemories.length} memories � {visibleMemories.filter((m) => m.milestone).length} milestones</Text>
         </View>
           <TouchableOpacity style={[s.iconBtn, isSelectedPetReadOnly && { opacity: 0.45 }]} onPress={isSelectedPetReadOnly ? undefined : openMemoryCamera}>
             <MaterialCommunityIcons name="camera-outline" size={22} color={C.memoryAccent} />
@@ -11947,7 +11889,7 @@ function CommunityScreen() {
           </View>
           <View style={s.flex}>
             <Text style={s.postAuthor}>{alert.petName || 'Lost Pet'}</Text>
-            <Text style={s.postPetType}>{[speciesLabel, breedLabel].filter(Boolean).join(' · ') || 'Unknown species'}</Text>
+            <Text style={s.postPetType}>{[speciesLabel, breedLabel].filter(Boolean).join(' � ') || 'Unknown species'}</Text>
           </View>
           <View style={[s.lostFoundBadge, isFound ? s.lostFoundBadgeFound : s.lostFoundBadgeActive]}>
             <Text style={[s.lostFoundBadgeText, isFound ? s.lostFoundBadgeTextFound : s.lostFoundBadgeTextActive]}>
@@ -12033,7 +11975,7 @@ function CommunityScreen() {
         </TouchableOpacity>
       <TouchableOpacity style={s.flex} activeOpacity={0.85} onPress={() => openCommunityProfile(post.author, post.author, post.emoji)}>
           <Text style={s.postAuthor}>{post.author}</Text>
-          <Text style={s.postPetType}>{post.petType} · {post.time}</Text>
+          <Text style={s.postPetType}>{post.petType} � {post.time}</Text>
         </TouchableOpacity>
       </View>
       <Text style={s.postContent}>{post.content}</Text>
@@ -12092,7 +12034,7 @@ function CommunityScreen() {
         <TouchableOpacity style={s.flex} activeOpacity={0.85} onPress={() => openCommunityProfile(recipe.author, recipe.author, recipe.emoji)}>
           <Text style={s.recipeTitle}>{recipe.title}</Text>
           <Text style={s.recipeMeta}>
-            {recipe.author} · {recipe.petType} / {recipeSafeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}
+            {recipe.author} � {recipe.petType} / {recipeSafeFor.map((species) => species.charAt(0).toUpperCase() + species.slice(1)).join(', ')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -12113,8 +12055,8 @@ function CommunityScreen() {
         <View style={s.recipeIngredientsBlock}>
           <Text style={s.recipeIngredientsLabel}>Ingredients preview</Text>
           <Text style={s.recipeIngredientsText}>
-            {recipeIngredients.slice(0, 3).join(' · ')}
-            {recipeIngredients.length > 3 ? ' · ·' : ''}
+            {recipeIngredients.slice(0, 3).join(' � ')}
+            {recipeIngredients.length > 3 ? ' � �' : ''}
           </Text>
         </View>
 
@@ -12141,7 +12083,7 @@ function CommunityScreen() {
               <Text style={s.recipeInstructionsLabel}>Full ingredients</Text>
               {recipeIngredients.map((ingredient, index) => (
                 <Text key={`${recipe.id}-ingredient-${index}`} style={s.recipeIngredientFullText}>
-                  · {ingredient}
+                  � {ingredient}
                 </Text>
               ))}
             </View>
@@ -13901,7 +13843,7 @@ function SettingsScreen({ navigation, route }) {
           label: 'Family Sharing',
           sub: countsLoading
             ? 'Loading invitations...'
-: `${familyCounts.total ?? 0} members · ${familyCounts.pending ?? 0} pending`,          onPress: handleFamilySharingPress,
+: `${familyCounts.total ?? 0} members � ${familyCounts.pending ?? 0} pending`,          onPress: handleFamilySharingPress,
         },
       ],
     },
@@ -13916,7 +13858,7 @@ function SettingsScreen({ navigation, route }) {
               pet.species,
               pet.breed,
               pet.age,
-].filter(Boolean).join(' · ') || 'Pet profile',
+].filter(Boolean).join(' � ') || 'Pet profile',
             onPress: () => handleOpenPet(pet),
             onLongPress: () => deletePet(pet),
           })),
@@ -13936,7 +13878,7 @@ function SettingsScreen({ navigation, route }) {
         {
           icon: 'bell-outline',
           label: 'Reminder Notifications',
-          sub: `${reminderNotificationsStatus} · ${petSoundAlertsEnabled ? 'Pet sounds on' : 'Pet sounds off'}`,
+          sub: `${reminderNotificationsStatus} � ${petSoundAlertsEnabled ? 'Pet sounds on' : 'Pet sounds off'}`,
           onPress: handleReminderNotificationsPress,
         },
         {
@@ -14207,7 +14149,7 @@ function SettingsScreen({ navigation, route }) {
                       const ageLabel = pet.birthday ? petAge(pet.birthday) : pet.age || '';
                       const weightLabel = String(pet.weight || '').trim();
                       const speciesLabel = pet.species ? `${pet.species.charAt(0).toUpperCase()}${pet.species.slice(1)}` : 'Pet';
-                      const breedLabel = [pet.breed, speciesLabel].filter(Boolean).join(' � ');
+                      const breedLabel = [pet.breed, speciesLabel].filter(Boolean).join(' ? ');
                       const isLost = activeLostPetIds.has(String(pet.id));
 
                       return (
@@ -14356,7 +14298,7 @@ function SettingsScreen({ navigation, route }) {
           >
             <Text style={s.signOutText}>Logout</Text>
           </TouchableOpacity>
-          <Text style={s.versionText}>PetSync+ v1.0.0 · Made with care for pet families</Text>
+          <Text style={s.versionText}>PetSync+ v1.0.0 � Made with care for pet families</Text>
         </ScrollView>
 
         <Modal visible={showAccountModal} transparent animationType="fade" onRequestClose={() => setShowAccountModal(false)}>
@@ -14751,7 +14693,7 @@ function CommunityProfileScreen({ navigation, route }) {
                   <View style={s.flex}>
                     <Text style={s.communityProfilePetPreviewName}>{profile.favoritePetName}</Text>
                     <Text style={s.communityProfilePetPreviewMeta}>
-                      {[profile.favoritePetSpecies, profile.favoritePetBreed].filter(Boolean).join(' · ') || 'Pet preview'}
+                      {[profile.favoritePetSpecies, profile.favoritePetBreed].filter(Boolean).join(' � ') || 'Pet preview'}
                     </Text>
                   </View>
                 </View>
@@ -17024,7 +16966,7 @@ function DiscoverHomeScreen() {
                       : favorite.favorite_type === 'shelter'
                         ? [item.city, item.state].filter(Boolean).join(', ') || 'Saved shelter'
                         : favorite.favorite_type === 'adoptable_pet'
-                          ? [item.species, item.breed].filter(Boolean).join(' � ') || 'Saved pet'
+                          ? [item.species, item.breed].filter(Boolean).join(' ? ') || 'Saved pet'
                           : item.event_type || 'Saved event';
                     return (
                       <TouchableOpacity
@@ -17566,7 +17508,7 @@ function DiscoverHomeScreen() {
                                     <View style={s.flex}>
                                       <Text style={s.discoverCardTitle}>{pet.name}</Text>
                                       <Text style={s.discoverCardMeta}>
-                                        {[pet.species, pet.breed].filter(Boolean).join(' · ') || 'Adoptable pet'}
+                                        {[pet.species, pet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
                                       </Text>
                                     </View>
                                     <View style={s.discoverChipAlt}>
@@ -17575,7 +17517,7 @@ function DiscoverHomeScreen() {
                                   </View>
 
                                   <Text style={s.discoverDetailLine}>
-                                    {pet.age_label || 'Age not listed'} · {pet.sex || 'Sex not listed'}
+                                    {pet.age_label || 'Age not listed'} � {pet.sex || 'Sex not listed'}
                                   </Text>
                                   <Text style={s.discoverDetailLine}>
                                     {pet.adoption_fee != null ? `Adoption fee: $${Number(pet.adoption_fee).toFixed(0)}` : 'Adoption fee not listed'}
@@ -17926,7 +17868,7 @@ function DiscoverHomeScreen() {
                           <View style={s.flex}>
                             <Text numberOfLines={1} style={s.discoverCardTitle}>{pet.name}</Text>
                             <Text numberOfLines={1} style={s.discoverCardMeta}>
-                              {[pet.species, pet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
+                              {[pet.species, pet.breed].filter(Boolean).join(' ? ') || 'Adoptable pet'}
                             </Text>
                           </View>
                           <DiscoverFavoriteButton
@@ -18013,7 +17955,7 @@ function DiscoverHomeScreen() {
                         {event.description || 'Active community event.'}
                       </Text>
                       <Text numberOfLines={1} style={s.discoverCardFootnote}>
-                        {[formatDiscoverDateTime(event.starts_at), [event.city, event.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Event details will appear here when available.'}
+                        {[formatDiscoverDateTime(event.starts_at), [event.city, event.state].filter(Boolean).join(', ')].filter(Boolean).join(' ? ') || 'Event details will appear here when available.'}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -18192,7 +18134,7 @@ function DiscoverHomeScreen() {
 
                             <DiscoverDetailSection title="Location">
                               <Text style={s.discoverDetailLine}>
-                                {[selectedDetailShelter.address, [selectedDetailShelter.city, selectedDetailShelter.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Location not listed'}
+                                {[selectedDetailShelter.address, [selectedDetailShelter.city, selectedDetailShelter.state].filter(Boolean).join(', ')].filter(Boolean).join(' ? ') || 'Location not listed'}
                               </Text>
                             </DiscoverDetailSection>
 
@@ -18209,7 +18151,7 @@ function DiscoverHomeScreen() {
                                     >
                                       <Text style={s.discoverDetailCardTitle}>{pet.name}</Text>
                                       <Text style={s.discoverDetailBodyText}>
-                                        {[pet.species, pet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
+                                        {[pet.species, pet.breed].filter(Boolean).join(' ? ') || 'Adoptable pet'}
                                       </Text>
                                     </TouchableOpacity>
                                   ))
@@ -18269,7 +18211,7 @@ function DiscoverHomeScreen() {
 
                             <DiscoverDetailSection title="Location">
                               <Text style={s.discoverDetailLine}>
-                                {[selectedDetailBusiness.address, [selectedDetailBusiness.city, selectedDetailBusiness.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Location not listed'}
+                                {[selectedDetailBusiness.address, [selectedDetailBusiness.city, selectedDetailBusiness.state].filter(Boolean).join(', ')].filter(Boolean).join(' ? ') || 'Location not listed'}
                               </Text>
                             </DiscoverDetailSection>
 
@@ -18334,7 +18276,7 @@ function DiscoverHomeScreen() {
                                 <View style={s.flex}>
                                   <Text style={s.discoverDetailTitle}>{selectedDetailPet.name}</Text>
                                   <Text style={s.discoverDetailSubtitle}>
-                                    {[selectedDetailPet.species, selectedDetailPet.breed].filter(Boolean).join(' � ') || 'Adoptable pet'}
+                                    {[selectedDetailPet.species, selectedDetailPet.breed].filter(Boolean).join(' ? ') || 'Adoptable pet'}
                                   </Text>
                                 </View>
                                 <DiscoverFavoriteButton
@@ -18414,7 +18356,7 @@ function DiscoverHomeScreen() {
 
                             <DiscoverDetailSection title="Location">
                               <Text style={s.discoverDetailLine}>
-                                {[selectedDetailEvent.address, [selectedDetailEvent.city, selectedDetailEvent.state].filter(Boolean).join(', ')].filter(Boolean).join(' � ') || 'Location not listed'}
+                                {[selectedDetailEvent.address, [selectedDetailEvent.city, selectedDetailEvent.state].filter(Boolean).join(', ')].filter(Boolean).join(' ? ') || 'Location not listed'}
                               </Text>
                             </DiscoverDetailSection>
 
@@ -19679,7 +19621,7 @@ function AIVetScreen({ navigation, route }) {
     petContext.breed,
     `Age: ${petContext.age}`,
     `Weight: ${petContext.weight}`,
-  ].filter(Boolean).join(' · ');
+  ].filter(Boolean).join(' � ');
 
   const buildFallbackReply = (questionText) => {
     const lower = String(questionText || '').toLowerCase();
@@ -19688,12 +19630,12 @@ function AIVetScreen({ navigation, route }) {
     }
 
     const recordHighlights = petContext.recentHealthRecords
-      .map((record) => `${record.title}${record.date ? ` · ${formatDate(record.date)}` : ''}`)
+      .map((record) => `${record.title}${record.date ? ` � ${formatDate(record.date)}` : ''}`)
       .join(' | ');
 
     return [
       `I couldn't reach the AI Vet backend right now, so I'm giving safe general guidance for ${petContext.name}.`,
-      `Context: ${petContext.species} · ${petContext.breed} · Age ${petContext.age} · Weight ${petContext.weight}`,
+      `Context: ${petContext.species} � ${petContext.breed} � Age ${petContext.age} � Weight ${petContext.weight}`,
       petContext.medications.length ? `Medications: ${petContext.medications.join(', ')}` : 'Medications: none recorded',
       petContext.vaccinations.length ? `Vaccinations: ${petContext.vaccinations.join(', ')}` : 'Vaccinations: none recorded',
       recordHighlights ? `Recent health records: ${recordHighlights}` : 'Recent health records: none recorded',
@@ -20991,28 +20933,28 @@ function ControlCenterScreen() {
         title: item.partner_type === 'business'
           ? item.business_name || 'Business partner application'
           : item.organization_name || 'Partner application',
-        subtitle: `${String(item.partner_type || 'partner').toUpperCase()} · ${String(item.status || 'pending').toUpperCase()}`,
+        subtitle: `${String(item.partner_type || 'partner').toUpperCase()} � ${String(item.status || 'pending').toUpperCase()}`,
         meta: item.short_description || 'Partner application submitted.',
         created_at: item.created_at,
       })),
       ...controlCenterBusinesses.map((item) => ({
         id: `business:${item.id}`,
         title: item.name || 'Business',
-        subtitle: `BUSINESS · ${String(item.status || 'pending').toUpperCase()}`,
+        subtitle: `BUSINESS � ${String(item.status || 'pending').toUpperCase()}`,
         meta: item.city || item.state ? [item.city, item.state].filter(Boolean).join(', ') : 'Business added.',
         created_at: item.created_at,
       })),
       ...controlCenterShelters.map((item) => ({
         id: `shelter:${item.id}`,
         title: item.name || 'Shelter',
-        subtitle: `SHELTER · ${String(item.status || 'pending').toUpperCase()}`,
+        subtitle: `SHELTER � ${String(item.status || 'pending').toUpperCase()}`,
         meta: item.city || item.state ? [item.city, item.state].filter(Boolean).join(', ') : 'Shelter added.',
         created_at: item.created_at,
       })),
       ...controlCenterPromotions.map((item) => ({
         id: `promotion:${item.id}`,
         title: item.title || 'Promotion',
-        subtitle: `PROMOTION · ${String(item.status || 'pending').toUpperCase()}`,
+        subtitle: `PROMOTION � ${String(item.status || 'pending').toUpperCase()}`,
         meta: item.promo_code ? `Code: ${item.promo_code}` : 'Promotion created.',
         created_at: item.created_at,
       })),
@@ -21025,7 +20967,7 @@ function ControlCenterScreen() {
         return {
           id: `event:${item.id}`,
           title: item.title || 'Event',
-          subtitle: `EVENT · ${String(item.status || 'pending').toUpperCase()}`,
+          subtitle: `EVENT � ${String(item.status || 'pending').toUpperCase()}`,
           meta: hostName,
           created_at: item.created_at,
         };
@@ -23103,7 +23045,7 @@ function ControlCenterScreen() {
                   const isAdopted = String(pet.status || 'available').toLowerCase() === 'adopted';
                   const isHidden = String(pet.status || 'available').toLowerCase() === 'hidden';
                   const adoptionFee = pet.adoption_fee != null && pet.adoption_fee !== '' ? `$${Number(pet.adoption_fee).toFixed(2)}` : 'Not set';
-                  const speciesBreed = [pet.species, pet.breed].filter(Boolean).join(' • ') || 'Not listed';
+                  const speciesBreed = [pet.species, pet.breed].filter(Boolean).join(' � ') || 'Not listed';
                   return (
                     <View key={pet.id} style={s.discoverPetCard}>
                       <View style={{ padding: 14, gap: 10 }}>
@@ -28928,3 +28870,4 @@ sosButton: {
   foundBtn:          { backgroundColor: C.successBg, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   foundBtnText:      { color: C.sosFoundBtnText, fontWeight: '900', fontSize: 16 },
 });
+
