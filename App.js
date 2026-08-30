@@ -882,7 +882,14 @@ const getUserPlan = (profile) => {
   return PLAN_FREE;
 };
 
-const isPremiumUser = (profile) => getUserPlan(profile) === PLAN_PREMIUM;
+const isPetSyncAdminProfile = (profile) => {
+  const email = String(profile?.email || '').trim().toLowerCase();
+  return email === 'rayray579@gmail.com';
+};
+
+const isPremiumUser = (profile) =>
+  isPetSyncAdminProfile(profile) ||
+  getUserPlan(profile) === PLAN_PREMIUM;
 
 const canUseFeature = (profile, featureKey) => {
   const requiredPlan = FEATURE_GATES[featureKey];
