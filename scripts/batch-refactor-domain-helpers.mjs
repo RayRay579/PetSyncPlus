@@ -17,7 +17,6 @@ const run = (command, args, options = {}) => {
     shell: false,
     ...options,
   });
-
   if (result.error) throw result.error;
   return result;
 };
@@ -54,107 +53,139 @@ if (!fs.existsSync(APP_PATH)) {
 ensureDir(BACKUP_DIR);
 fs.copyFileSync(APP_PATH, BACKUP_PATH);
 
-let source = fs.readFileSync(APP_PATH, 'utf8');
+const originalSource = fs.readFileSync(APP_PATH, 'utf8');
+let source = originalSource;
 const generatedFiles = [];
 
 const insertImport = (importText) => {
   if (source.includes(importText.trim())) return;
-  const firstImportEnd = source.indexOf('\n', source.indexOf("import React"));
-  if (firstImportEnd < 0) throw new Error('Could not locate the React import anchor.');
+  const reactStart = source.indexOf("import React");
+  const firstImportEnd = source.indexOf('\n', reactStart);
+  if (reactStart < 0 || firstImportEnd < 0) {
+    throw new Error('Could not locate the React import anchor.');
+  }
   source = `${source.slice(0, firstImportEnd + 1)}${importText.trim()}\n${source.slice(firstImportEnd + 1)}`;
 };
 
-const extractRange = ({
-  name,
-  startMarker,
-  endMarker,
-  modulePath,
-  modulePrefix = '',
-  exports = [],
-  importPath,
-}) => {
-  if (source.includes(`from '${importPath}'`)) {
-    console.log(`SKIP ${name}: already extracted.`);
+const findMarker = (markers, fromIndex = 0) => {
+  for (const marker of markers) {
+    const index = source.indexOf(marker, fromIndex);
+    if (index >= 0) return { marker, index };
+  }
+  return null;
+};
+
+const plans = [
+  {
+    name: 'community profile model',
+    startMarkers: ['const normalizeCommunityProfileKey ='],
+    endMarkers: ['const loadCommunityProfileFromSupabase = async'],
+    modulePath: 'src/models/communityProfile.js',
+    exports: [
+      'normalizeCommunityProfileKey',
+      'COMMUNITY_PROFILE_FIXTURES',
+      'getCommunityProfileFixture',
+      'mapCommunityProfileRow',
+    ],
+    importPath: './src/models/communityProfile',
+  },
+  {
+    name: 'community achievements model',
+    startMarkers: ['const buildCommunityProfileAchievements ='],
+    endMarkers: ['const PET_SPECIES_EMOJIS ='],
+    modulePath: 'src/models/communityAchievements.js',
+    exports: ['buildCommunityProfileAchievements'],
+    importPath: './src/models/communityAchievements',
+  },
+  {
+    name: 'lost pet text model',
+    startMarkers: ['const LOST_PET_META_PREFIX ='],
+    endMarkers: ['const deleteLostPetAlertFromSupabase = async'],
+    modulePath: 'src/models/lostPetText.js',
+    exports: [
+      'LOST_PET_META_PREFIX',
+      'parseLostPetDescription',
+      'buildLostPetStoredDescription',
+      'buildLostPetContactLine',
+      'buildProfileText',
+      'buildFlyerText',
+    ],
+    importPath: './src/models/lostPetText',
+  },
+  {
+    name: 'family member model',
+    startMarkers: ['const normalizeFamilyMemberRole ='],
+    endMarkers: ['const getOrCreateOwnerHousehold = async'],
+    modulePath: 'src/models/familyMember.js',
+    exports: [
+      'normalizeFamilyMemberRole',
+      'normalizeFamilyMemberStatus',
+      'mapFamilyMemberRow',
+    ],
+    importPath: './src/models/familyMember',
+  },
+  {
+    name: 'storage filename helper',
+    startMarkers: ['const normalizeStorageFileName ='],
+    endMarkers: ['const uploadMemoryMediaToStorage = async'],
+    modulePath: 'src/utils/storageNames.js',
+    exports: ['normalizeStorageFileName'],
+    importPath: './src/utils/storageNames',
+  },
+];
+
+const preflight = () => {
+  for (const plan of plans) {
+    if (source.includes(`from '${plan.importPath}'`)) continue;
+    const start = findMarker(plan.startMarkers);
+    const end = start ? findMarker(plan.endMarkers, start.index + start.marker.length) : null;
+    if (!start || !end || end.index <= start.index) {
+      throw new Error(`Preflight could not locate ${plan.name} block. No app files were changed.`);
+    }
+  }
+};
+
+const extractRange = (plan) => {
+  if (source.includes(`from '${plan.importPath}'`)) {
+    console.log(`SKIP ${plan.name}: already extracted.`);
     return;
   }
 
-  const start = source.indexOf(startMarker);
-  const end = source.indexOf(endMarker, start);
-  if (start < 0 || end < 0 || end <= start) {
-    throw new Error(`Could not locate ${name} block.`);
-  }
+  const start = findMarker(plan.startMarkers);
+  const end = findMarker(plan.endMarkers, start.index + start.marker.length);
+  const block = source.slice(start.index, end.index).trimEnd();
 
-  const block = source.slice(start, end).trimEnd();
-  writeFile(modulePath, `${modulePrefix}${block}\n\nexport {\n${exports.map((name) => `  ${name},`).join('\n')}\n};`);
-  generatedFiles.push(modulePath);
+  writeFile(
+    plan.modulePath,
+    `${block}\n\nexport {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n};`
+  );
+  generatedFiles.push(plan.modulePath);
 
-  insertImport(`import {\n${exports.map((name) => `  ${name},`).join('\n')}\n} from '${importPath}';`);
-  source = `${source.slice(0, start)}${source.slice(end)}`;
-  console.log(`EXTRACTED ${name} -> ${modulePath}`);
+  insertImport(
+    `import {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n} from '${plan.importPath}';`
+  );
+  source = `${source.slice(0, start.index)}${source.slice(end.index)}`;
+  console.log(`EXTRACTED ${plan.name} -> ${plan.modulePath}`);
 };
 
-extractRange({
-  name: 'community profile model',
-  startMarker: 'const normalizeCommunityProfile =',
-  endMarker: 'const COMMUNITY_PROFILE_ACHIEVEMENTS =',
-  modulePath: 'src/models/communityProfile.js',
-  exports: ['normalizeCommunityProfile', 'mergeCommunityProfile'],
-  importPath: './src/models/communityProfile',
-});
-
-extractRange({
-  name: 'community achievements model',
-  startMarker: 'const COMMUNITY_PROFILE_ACHIEVEMENTS =',
-  endMarker: 'const PET_SPECIES_EMOJIS =',
-  modulePath: 'src/models/communityAchievements.js',
-  exports: ['COMMUNITY_PROFILE_ACHIEVEMENTS', 'getCommunityProfileAchievements'],
-  importPath: './src/models/communityAchievements',
-});
-
-extractRange({
-  name: 'lost pet text model',
-  startMarker: 'const sanitizeLostPetDescription =',
-  endMarker: 'const FAMILY_ROLE_LABELS =',
-  modulePath: 'src/models/lostPetText.js',
-  exports: [
-    'sanitizeLostPetDescription',
-    'getLostPetProfileSummary',
-    'getLostPetFlyerContactLines',
-    'buildLostPetFlyerText',
-  ],
-  importPath: './src/models/lostPetText',
-});
-
-extractRange({
-  name: 'family member model',
-  startMarker: 'const FAMILY_ROLE_LABELS =',
-  endMarker: 'const sanitizeStorageFileName =',
-  modulePath: 'src/models/familyMember.js',
-  exports: [
-    'FAMILY_ROLE_LABELS',
-    'normalizeFamilyMemberRole',
-    'getFamilyMemberRoleLabel',
-    'normalizeFamilyMemberFromSupabase',
-  ],
-  importPath: './src/models/familyMember',
-});
-
-extractRange({
-  name: 'storage filename helper',
-  startMarker: 'const sanitizeStorageFileName =',
-  endMarker: 'const uploadCommunityMediaToSupabase =',
-  modulePath: 'src/utils/storageNames.js',
-  exports: ['sanitizeStorageFileName'],
-  importPath: './src/utils/storageNames',
-});
-
 try {
+  preflight();
+  for (const plan of plans) extractRange(plan);
+
   fs.writeFileSync(APP_PATH, source, 'utf8');
 
   console.log('\nRunning Expo web export validation...');
   fs.rmSync(CHECK_DIR, { recursive: true, force: true });
   const expoCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const validation = run(expoCommand, ['expo', 'export', '--platform', 'web', '--output-dir', '.petsync-refactor-web-check', '--clear']);
+  const validation = run(expoCommand, [
+    'expo',
+    'export',
+    '--platform',
+    'web',
+    '--output-dir',
+    '.petsync-refactor-web-check',
+    '--clear',
+  ]);
   if (validation.status !== 0) {
     throw new Error('Expo web export validation failed.');
   }
@@ -181,9 +212,7 @@ try {
   console.error(`\nBATCH REFACTOR FAILED: ${error.message}`);
   console.error('Restoring PetSyncApp.js and removing generated batch files...');
 
-  if (fs.existsSync(BACKUP_PATH)) {
-    fs.copyFileSync(BACKUP_PATH, APP_PATH);
-  }
+  fs.writeFileSync(APP_PATH, originalSource, 'utf8');
 
   for (const relativePath of generatedFiles) {
     const absolute = path.join(ROOT, relativePath);
