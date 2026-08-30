@@ -176,16 +176,23 @@ try {
 
   console.log('\nRunning Expo web export validation...');
   fs.rmSync(CHECK_DIR, { recursive: true, force: true });
-  const expoCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const validation = run(expoCommand, [
-    'expo',
-    'export',
-    '--platform',
-    'web',
-    '--output-dir',
-    '.petsync-refactor-web-check',
-    '--clear',
-  ]);
+
+  const validation = process.platform === 'win32'
+    ? run('powershell.exe', [
+      '-NoProfile',
+      '-Command',
+      'npx expo export --platform web --output-dir .petsync-refactor-web-check --clear',
+    ])
+    : run('npx', [
+      'expo',
+      'export',
+      '--platform',
+      'web',
+      '--output-dir',
+      '.petsync-refactor-web-check',
+      '--clear',
+    ]);
+
   if (validation.status !== 0) {
     throw new Error('Expo web export validation failed.');
   }
