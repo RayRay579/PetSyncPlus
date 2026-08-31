@@ -1,5 +1,12 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
 import {
+  PET_SOUNDS,
+  getDefaultPetEmoji,
+  getStarterPetScore,
+  getPetSoundAsset,
+  getPetOwnerIdentity,
+} from './src/models/petModel';
+import {
   COMMUNITY_MEDIA_BUCKET,
   isRemoteCommunityMediaUri,
   buildCommunityPostMediaPayload,
@@ -162,14 +169,6 @@ Notifications.setNotificationHandler({
 
 // Runtime collections start empty and are populated from Supabase or user-created data.
 
-const PET_SOUNDS = {
-  dog: require('./assets/sounds/dog.mp3'),
-  cat: require('./assets/sounds/cat.mp3'),
-  fish: require('./assets/sounds/fish.mp3'),
-  bird: require('./assets/sounds/bird.mp3'),
-  reptile: require('./assets/sounds/reptile.mp3'),
-};
-
 const SOS_SOUND = require('./assets/sounds/sos.mp3');
 
 const getExpoProjectId = () => Constants?.expoConfig?.extra?.eas?.projectId
@@ -254,37 +253,6 @@ function FeatureLockedModal({ visible, feature, onClose }) {
     </Modal>
   );
 }
-
-const getDefaultPetEmoji = (species) => PET_SPECIES_EMOJIS[species] || '??';
-
-const getStarterPetScore = (species) => {
-  const scoreMap = {
-    dog: 87,
-    cat: 92,
-    fish: 89,
-    bird: 84,
-    reptile: 82,
-    rabbit: 85,
-    hamster: 83,
-    horse: 86,
-    other: 80,
-  };
-
-  return scoreMap[species] ?? 80;
-};
-
-const getPetSoundAsset = (species) => PET_SOUNDS[species] || PET_SOUNDS.dog;
-
-
-const getPetOwnerIdentity = (pet) => String(
-  pet?.user_id
-  || pet?.userId
-  || pet?.owner_id
-  || pet?.ownerId
-  || pet?.created_by_user_id
-  || pet?.createdByUserId
-  || '',
-).trim();
 
 const isSharedPetForCurrentUser = (pet, currentUserId = CURRENT_USER_OWNER_ID) => {
   const ownerIdentity = getPetOwnerIdentity(pet);
