@@ -346,6 +346,9 @@ const ensureWritablePetByRecordId = async (tableName, recordId, actionLabel = 'm
 
 const getPetService = () => createPetService({
   CURRENT_USER_OWNER_ID,
+  CURRENT_USER_EMAIL,
+  CURRENT_USER_NAME,
+  getOrCreateOwnerHousehold,
   ensureWritablePetByPetId,
 });
 

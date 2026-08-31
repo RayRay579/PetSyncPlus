@@ -2,6 +2,9 @@ import { supabase } from '../../../supabase';
 
 export const createPetService = ({
   CURRENT_USER_OWNER_ID,
+  CURRENT_USER_EMAIL,
+  CURRENT_USER_NAME,
+  getOrCreateOwnerHousehold,
   ensureWritablePetByPetId,
 } = {}) => {
   const savePetToSupabase = async (pet) => {
