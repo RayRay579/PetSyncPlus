@@ -43,7 +43,7 @@ if (branch !== EXPECTED_BRANCH) {
 
 const dirtyBefore = capture('git', ['status', '--porcelain']);
 if (dirtyBefore) {
-  throw new Error(`STOP: working tree is not clean before batch refactor:\n${dirtyBefore}`);
+  throw new Error(`STOP: working tree is not clean before stage 3 refactor:\n${dirtyBefore}`);
 }
 
 if (!fs.existsSync(APP_PATH)) {
@@ -77,44 +77,18 @@ const findMarker = (markers, fromIndex = 0) => {
 
 const plans = [
   {
-    name: 'profile Supabase service',
-    startMarkers: ['const loadCommunityProfileFromSupabase = async'],
-    endMarkers: ['const PET_SPECIES_EMOJIS ='],
-    modulePath: 'src/services/profiles/profileService.js',
+    name: 'community media and post mapping model',
+    startMarkers: ['const COMMUNITY_MEDIA_BUCKET ='],
+    endMarkers: ['const uploadCommunityPostMediaToStorage = async'],
+    modulePath: 'src/models/communityMedia.js',
     exports: [
-      'loadCommunityProfileFromSupabase',
-      'loadAuthProfileFromSupabase',
-      'canWriteProfileAvatarUrl',
-      'uploadProfileAvatarToStorage',
-      'upsertAuthProfileToSupabase',
-      'saveCommunityProfileToSupabase',
+      'COMMUNITY_MEDIA_BUCKET',
+      'isRemoteCommunityMediaUri',
+      'buildCommunityPostMediaPayload',
+      'mapCommunityPostRow',
+      'isCommunityPostMediaSchemaError',
     ],
-    importPath: './src/services/profiles/profileService',
-    prefix: "import { supabase } from '../../../supabase';\nimport {\n  normalizeCommunityProfileKey,\n  getCommunityProfileFixture,\n  mapCommunityProfileRow,\n} from '../../models/communityProfile';\n\n",
-  },
-  {
-    name: 'community tab config',
-    startMarkers: ['const COMMUNITY_TABS ='],
-    endMarkers: ['const loadCommunityProfileFromSupabase = async'],
-    modulePath: 'src/config/community.js',
-    exports: ['COMMUNITY_TABS'],
-    importPath: './src/config/community',
-  },
-  {
-    name: 'pet species emoji config',
-    startMarkers: ['const PET_SPECIES_EMOJIS ='],
-    endMarkers: ['const navigationRef = createNavigationContainerRef();'],
-    modulePath: 'src/config/petSpecies.js',
-    exports: ['PET_SPECIES_EMOJIS'],
-    importPath: './src/config/petSpecies',
-  },
-  {
-    name: 'feature locked benefits config',
-    startMarkers: ['const FEATURE_LOCKED_BENEFITS ='],
-    endMarkers: ['function FeatureLockedModal('],
-    modulePath: 'src/config/featureLockedBenefits.js',
-    exports: ['FEATURE_LOCKED_BENEFITS', 'getFeatureLockedBenefits'],
-    importPath: './src/config/featureLockedBenefits',
+    importPath: './src/models/communityMedia',
   },
 ];
 
@@ -145,10 +119,9 @@ const buildEditPlan = () => {
 
 const applyExtraction = ({ plan, start, end }) => {
   const block = source.slice(start.index, end.index).trimEnd();
-  const prefix = plan.prefix || '';
   writeFile(
     plan.modulePath,
-    `${prefix}${block}\n\nexport {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n};`
+    `${block}\n\nexport {\n${plan.exports.map((name) => `  ${name},`).join('\n')}\n};`
   );
   generatedFiles.push(plan.modulePath);
   source = `${source.slice(0, start.index)}${source.slice(end.index)}`;
@@ -159,9 +132,7 @@ try {
   preflight();
   const edits = buildEditPlan();
 
-  for (const edit of edits) {
-    applyExtraction(edit);
-  }
+  for (const edit of edits) applyExtraction(edit);
 
   for (const { plan } of [...edits].reverse()) {
     insertImport(
@@ -203,34 +174,30 @@ try {
   const add = run('git', ['add', ...filesToAdd]);
   if (add.status !== 0) throw new Error('git add failed.');
 
-  const commit = run('git', ['commit', '-m', 'Extract profile service and shared config']);
+  const commit = run('git', ['commit', '-m', 'Extract community media model']);
   if (commit.status !== 0) throw new Error('git commit failed.');
 
   const push = run('git', ['push']);
   if (push.status !== 0) {
-    console.log('\nRefactor and commit succeeded, but push failed. Your local commit is safe.');
+    console.log('\nStage 3 refactor and commit succeeded, but push failed. Your local commit is safe.');
     process.exitCode = 2;
   } else {
-    console.log('\nSUCCESS: stage 2 refactor validated, committed, and pushed.');
+    console.log('\nSUCCESS: stage 3 refactor validated, committed, and pushed.');
   }
 
   console.log(`Hidden backup kept at: ${BACKUP_PATH}`);
 } catch (error) {
   console.error(`\nBATCH REFACTOR FAILED: ${error.message}`);
-  console.error('Restoring PetSyncApp.js and removing generated stage 2 files...');
+  console.error('Restoring PetSyncApp.js and removing generated stage 3 files...');
 
   fs.writeFileSync(APP_PATH, originalSource, 'utf8');
-
   for (const relativePath of generatedFiles) {
     const absolute = path.join(ROOT, relativePath);
     if (fs.existsSync(absolute)) fs.rmSync(absolute, { force: true });
   }
-
-  if (fs.existsSync(CHECK_DIR)) {
-    fs.rmSync(CHECK_DIR, { recursive: true, force: true });
-  }
+  if (fs.existsSync(CHECK_DIR)) fs.rmSync(CHECK_DIR, { recursive: true, force: true });
 
   run('git', ['reset', '--', 'PetSyncApp.js', ...generatedFiles]);
-  console.error('Original working app restored. No stage 2 refactor commit was created.');
+  console.error('Original working app restored. No stage 3 refactor commit was created.');
   process.exitCode = 1;
 }
