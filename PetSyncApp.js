@@ -1173,7 +1173,7 @@ const loadCommunityPostsFromSupabase = async () => {
     return [];
   }
 
-  const mappedPosts = data.map(mapCommunityPostRow);
+  const mappedPosts = data.map((row) => mapCommunityPostRow(row, CURRENT_USER_OWNER_ID));
 
   console.log('Loaded community posts from Supabase');
   return mappedPosts;

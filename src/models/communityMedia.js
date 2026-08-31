@@ -48,7 +48,7 @@ const buildCommunityPostMediaPayload = (post, { clearMedia = false } = {}) => {
   };
 };
 
-const mapCommunityPostRow = (row) => {
+const mapCommunityPostRow = (row, currentUserId = '') => {
   const mediaUrl = String(
     row?.media_url
     || row?.mediaUrl
@@ -74,7 +74,7 @@ const mapCommunityPostRow = (row) => {
     user_id: row.user_id || row.author_id || null,
     author_id: row.author_id || row.user_id || null,
     author: row.author || 'Pet Parent',
-    owner: Boolean(row.user_id || row.author_id) && String(row.user_id || row.author_id) === String(CURRENT_USER_OWNER_ID || ''),
+    owner: Boolean(row.user_id || row.author_id) && String(row.user_id || row.author_id) === String(currentUserId || ''),
     petType: 'Community Member',
     time: 'Just now',
     content: row.content || '',
