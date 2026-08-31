@@ -4,10 +4,10 @@ import { spawnSync } from 'node:child_process';
 
 const ROOT = process.cwd();
 const APP_PATH = path.join(ROOT, 'PetSyncApp.js');
-const SERVICE_PATH = path.join(ROOT, 'src', 'services', 'health', 'healthRecordService.js');
+const SERVICE_PATH = path.join(ROOT, 'src', 'services', 'reminders', 'careReminderService.js');
 const CHECK_DIR = path.join(ROOT, '.petsync-refactor-web-check');
 const BACKUP_DIR = path.join(ROOT, '.git', 'petsync-refactor-backups');
-const APP_BACKUP = path.join(BACKUP_DIR, `PetSyncApp-stage7-${Date.now()}.js`);
+const APP_BACKUP = path.join(BACKUP_DIR, `PetSyncApp-stage8-${Date.now()}.js`);
 const EXPECTED_BRANCH = 'petsync-clean-refactor';
 
 const run = (command, args, options = {}) => {
@@ -64,7 +64,7 @@ if (branch !== EXPECTED_BRANCH) {
 
 const dirtyBefore = capture('git', ['status', '--porcelain']);
 if (dirtyBefore) {
-  throw new Error(`STOP: working tree is not clean before stage 7:\n${dirtyBefore}`);
+  throw new Error(`STOP: working tree is not clean before stage 8:\n${dirtyBefore}`);
 }
 
 if (!fs.existsSync(APP_PATH)) {
@@ -78,119 +78,108 @@ const originalApp = fs.readFileSync(APP_PATH, 'utf8');
 let app = originalApp;
 let createdService = false;
 
+const findNextTopLevelDeclaration = (source, fromIndex) => {
+  const candidates = ['\nconst ', '\nfunction ', '\nclass ', '\nlet ', '\nvar ']
+    .map((marker) => source.indexOf(marker, fromIndex))
+    .filter((index) => index >= 0);
+  return candidates.length > 0 ? Math.min(...candidates) + 1 : source.length;
+};
+
 try {
-  if (app.includes("from './src/services/health/healthRecordService'")) {
-    console.log('Stage 7 health record service is already extracted.');
+  if (app.includes("from './src/services/reminders/careReminderService'")) {
+    console.log('Stage 8 care reminder service is already extracted.');
   } else {
-    const startMarker = 'const resolveAccessibleSharedPetIds = async';
-    const endMarker = 'const saveCareReminderToSupabase = async';
+    const startMarker = 'const saveCareReminderToSupabase = async';
+    const loadMarker = 'const loadCareRemindersFromSupabase = async';
     const start = app.indexOf(startMarker);
-    const end = app.indexOf(endMarker, start + startMarker.length);
+    const loadStart = app.indexOf(loadMarker, start + startMarker.length);
 
-    if (start < 0 || end < 0 || end <= start) {
-      throw new Error('Could not locate the Stage 7 health-record block. No app files were changed.');
+    if (start < 0 || loadStart < 0 || loadStart <= start) {
+      throw new Error('Could not locate the Stage 8 care-reminder service block. No app files were changed.');
     }
 
-    let block = app.slice(start, end).trimEnd();
-
-    block = block.replace(
-      'const saveHealthRecordToSupabase = async (record) => {',
-      "const saveHealthRecordToSupabase = async (record, { currentUserId = null, ensureWritablePetByPetId = async () => true } = {}) => {",
-    );
-    block = block.replace(
-      "const userId = CURRENT_USER_OWNER_ID || null;",
-      'const userId = currentUserId || null;',
-    );
-
-    block = block.replace(
-      'const updateHealthRecordInSupabase = async (record) => {',
-      "const updateHealthRecordInSupabase = async (record, { currentUserId = null, ensureWritablePetByPetId = async () => true } = {}) => {",
-    );
-    block = block.replace(
-      "const userId = CURRENT_USER_OWNER_ID || null;",
-      'const userId = currentUserId || null;',
-    );
-
-    block = block.replace(
-      'const deleteHealthRecordFromSupabase = async (recordId) => {',
-      "const deleteHealthRecordFromSupabase = async (recordId, { ensureWritablePetByRecordId = async () => true } = {}) => {",
-    );
-
-    block = block.replace(
-      'const loadHealthRecordsFromSupabase = async (currentUser = null, accessiblePetIds = []) => {',
-      'const loadHealthRecordsFromSupabase = async (currentUser = null, accessiblePetIds = [], currentUserIdFallback = null) => {',
-    );
-    block = block.replace(
-      'const currentUserId = currentUser?.id || CURRENT_USER_OWNER_ID;',
-      'const currentUserId = currentUser?.id || currentUserIdFallback;',
-    );
-
-    if (block.includes('CURRENT_USER_OWNER_ID')) {
-      throw new Error('Stage 7 service block still contains a hidden CURRENT_USER_OWNER_ID dependency.');
+    const end = findNextTopLevelDeclaration(app, loadStart + loadMarker.length);
+    if (end <= loadStart) {
+      throw new Error('Could not locate the end of the Stage 8 care-reminder service block.');
     }
 
-    const serviceSource = `import { supabase } from '../../../supabase';\nimport { normalizeHealthRecordFromSupabase } from './healthRecordModel';\n\n${block}\n\nexport {\n  resolveAccessibleSharedPetIds,\n  saveHealthRecordToSupabase,\n  updateHealthRecordInSupabase,\n  deleteHealthRecordFromSupabase,\n  loadHealthRecordsFromSupabase,\n};\n`;
+    const block = app.slice(start, end).trimEnd();
+    const requiredNames = [
+      'saveCareReminderToSupabase',
+      'updateCareReminderInSupabase',
+      'upsertCareReminderInSupabase',
+      'deleteCareReminderFromSupabase',
+      'loadCareRemindersFromSupabase',
+    ];
+
+    for (const name of requiredNames) {
+      if (!block.includes(`const ${name} =`)) {
+        throw new Error(`Stage 8 preflight could not find ${name}. No app files were changed.`);
+      }
+    }
+
+    const serviceSource = `import { supabase } from '../../../supabase';\nimport { resolveAccessibleSharedPetIds as defaultResolveAccessibleSharedPetIds } from '../health/healthRecordService';\n\nexport const createCareReminderService = ({\n  currentUserId = null,\n  ensureWritablePetByPetId = async () => true,\n  ensureWritablePetByRecordId = async () => true,\n  resolveAccessibleSharedPetIdsFn = defaultResolveAccessibleSharedPetIds,\n} = {}) => {\n  // Compatibility aliases keep the extracted service behavior identical while\n  // making all former PetSyncApp globals explicit dependencies.\n  const CURRENT_USER_OWNER_ID = currentUserId;\n  const resolveAccessibleSharedPetIds = resolveAccessibleSharedPetIdsFn;\n\n${block.split('\n').map((line) => `  ${line}`).join('\n')}\n\n  return {\n    saveCareReminderToSupabase,\n    updateCareReminderInSupabase,\n    upsertCareReminderInSupabase,\n    deleteCareReminderFromSupabase,\n    loadCareRemindersFromSupabase,\n  };\n};\n`;
 
     fs.mkdirSync(path.dirname(SERVICE_PATH), { recursive: true });
     fs.writeFileSync(SERVICE_PATH, serviceSource, 'utf8');
     createdService = true;
 
-    const wrappers = `const saveHealthRecordToSupabase = (record) =>\n  saveHealthRecordToSupabaseService(record, {\n    currentUserId: CURRENT_USER_OWNER_ID,\n    ensureWritablePetByPetId,\n  });\n\nconst updateHealthRecordInSupabase = (record) =>\n  updateHealthRecordInSupabaseService(record, {\n    currentUserId: CURRENT_USER_OWNER_ID,\n    ensureWritablePetByPetId,\n  });\n\nconst deleteHealthRecordFromSupabase = (recordId) =>\n  deleteHealthRecordFromSupabaseService(recordId, {\n    ensureWritablePetByRecordId,\n  });\n\nconst loadHealthRecordsFromSupabase = (currentUser = null, accessiblePetIds = []) =>\n  loadHealthRecordsFromSupabaseService(\n    currentUser,\n    accessiblePetIds,\n    CURRENT_USER_OWNER_ID,\n  );\n\n`;
+    const wrappers = `const getCareReminderService = () => createCareReminderService({\n  currentUserId: CURRENT_USER_OWNER_ID,\n  ensureWritablePetByPetId,\n  ensureWritablePetByRecordId,\n});\n\nconst saveCareReminderToSupabase = (...args) =>\n  getCareReminderService().saveCareReminderToSupabase(...args);\n\nconst updateCareReminderInSupabase = (...args) =>\n  getCareReminderService().updateCareReminderInSupabase(...args);\n\nconst upsertCareReminderInSupabase = (...args) =>\n  getCareReminderService().upsertCareReminderInSupabase(...args);\n\nconst deleteCareReminderFromSupabase = (...args) =>\n  getCareReminderService().deleteCareReminderFromSupabase(...args);\n\nconst loadCareRemindersFromSupabase = (...args) =>\n  getCareReminderService().loadCareRemindersFromSupabase(...args);\n\n`;
 
     app = `${app.slice(0, start)}${wrappers}${app.slice(end)}`;
 
     const reactImportEnd = app.indexOf('\n', app.indexOf('import React'));
     if (reactImportEnd < 0) throw new Error('Could not locate import insertion point.');
 
-    const importText = `import {\n  saveHealthRecordToSupabase as saveHealthRecordToSupabaseService,\n  updateHealthRecordInSupabase as updateHealthRecordInSupabaseService,\n  deleteHealthRecordFromSupabase as deleteHealthRecordFromSupabaseService,\n  loadHealthRecordsFromSupabase as loadHealthRecordsFromSupabaseService,\n} from './src/services/health/healthRecordService';\n`;
+    const importText = `import { createCareReminderService } from './src/services/reminders/careReminderService';\n`;
     app = `${app.slice(0, reactImportEnd + 1)}${importText}${app.slice(reactImportEnd + 1)}`;
 
     fs.writeFileSync(APP_PATH, app, 'utf8');
-    console.log('EXTRACTED health record Supabase service -> src/services/health/healthRecordService.js');
+    console.log('EXTRACTED care reminder Supabase service -> src/services/reminders/careReminderService.js');
   }
 
   validateWeb();
 
   const dirtyAfter = capture('git', ['status', '--porcelain']);
   if (!dirtyAfter) {
-    console.log('\nSUCCESS: Stage 7 is already applied and validated. Nothing to commit.');
+    console.log('\nSUCCESS: Stage 8 is already applied and validated. Nothing to commit.');
     console.log(`Hidden backup kept at: ${APP_BACKUP}`);
     process.exit(0);
   }
 
   const filesToAdd = createdService
-    ? ['PetSyncApp.js', 'src/services/health/healthRecordService.js']
+    ? ['PetSyncApp.js', 'src/services/reminders/careReminderService.js']
     : ['PetSyncApp.js'];
   const add = run('git', ['add', ...filesToAdd]);
   if (add.status !== 0) throw new Error('git add failed.');
 
   const staged = capture('git', ['diff', '--cached', '--name-only']);
   if (!staged) {
-    console.log('\nSUCCESS: Stage 7 validated with no staged source changes.');
+    console.log('\nSUCCESS: Stage 8 validated with no staged source changes.');
     process.exit(0);
   }
 
-  const commit = run('git', ['commit', '-m', 'Extract health record service']);
+  const commit = run('git', ['commit', '-m', 'Extract care reminder service']);
   if (commit.status !== 0) throw new Error('git commit failed.');
 
   const push = run('git', ['push']);
   if (push.status !== 0) {
-    console.log('\nStage 7 commit succeeded, but push failed. Your local commit is safe.');
+    console.log('\nStage 8 commit succeeded, but push failed. Your local commit is safe.');
     process.exitCode = 2;
   } else {
-    console.log('\nSUCCESS: Stage 7 refactor validated, committed, and pushed.');
+    console.log('\nSUCCESS: Stage 8 refactor validated, committed, and pushed.');
   }
 
   console.log(`Hidden backup kept at: ${APP_BACKUP}`);
 } catch (error) {
-  console.error(`\nSTAGE 7 FAILED: ${error.message}`);
-  console.error('Restoring Stage 7 source files...');
+  console.error(`\nSTAGE 8 FAILED: ${error.message}`);
+  console.error('Restoring Stage 8 source files...');
 
   fs.writeFileSync(APP_PATH, originalApp, 'utf8');
   if (createdService && fs.existsSync(SERVICE_PATH)) fs.rmSync(SERVICE_PATH, { force: true });
   fs.rmSync(CHECK_DIR, { recursive: true, force: true });
-  run('git', ['reset', '--', 'PetSyncApp.js', 'src/services/health/healthRecordService.js']);
+  run('git', ['reset', '--', 'PetSyncApp.js', 'src/services/reminders/careReminderService.js']);
 
-  console.error('Original files restored. No Stage 7 source commit was created.');
+  console.error('Original files restored. No Stage 8 source commit was created.');
   process.exitCode = 1;
 }
