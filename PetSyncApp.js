@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createOpenExternalDiscoverLink } from './src/services/discover/openExternalLink';
 import { createFormatDiscoverPetStatus } from './src/models/discover/formatPetStatus';
 import { createFormatDiscoverListingStatus } from './src/models/discover/formatListingStatus';
 import { createFormatDiscoverEventStatus } from './src/models/discover/formatEventStatus';
@@ -12459,12 +12460,10 @@ function DiscoverSearchEmptyState({ title, body }) {
   );
 }
 
-const openExternalDiscoverLink = (url) => {
-  const normalized = String(url || '').trim();
-  if (!normalized) return;
-  const nextUrl = /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
-  Linking.openURL(nextUrl);
-};
+const openExternalDiscoverLink = (...args) =>
+  createOpenExternalDiscoverLink({ Linking })(...args);
+
+
 
 const formatDiscoverListingStatus = (...args) =>
   createFormatDiscoverListingStatus({})(...args);
