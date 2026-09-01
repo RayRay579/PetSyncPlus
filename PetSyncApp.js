@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createFormatDiscoverListingDate } from './src/models/discover/formatListingDate';
 import { createFormatDiscoverDate } from './src/models/discover/formatDate';
 import { createFormatDiscoverDateTime } from './src/models/discover/formatDateTime';
 import { createCreateDefaultDiscoverShelterRegistration } from './src/models/discover/defaultShelterRegistration';
@@ -12487,16 +12488,10 @@ const formatDiscoverEventStatus = (value) => {
   return 'Pending';
 };
 
-const formatDiscoverListingDate = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
+const formatDiscoverListingDate = (...args) =>
+  createFormatDiscoverListingDate({})(...args);
+
+
 
 const formatDiscoverPetStatus = (value) => {
   const status = String(value || 'available').trim().toLowerCase();
