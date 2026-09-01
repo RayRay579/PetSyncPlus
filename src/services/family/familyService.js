@@ -3,6 +3,7 @@ export const createFamilyService = ({
   CURRENT_USER_OWNER_ID,
   CURRENT_USER_EMAIL,
   CURRENT_USER_NAME,
+  showAlert = () => {},
   mapFamilyMemberRow,
   normalizeFamilyMemberRole,
   normalizeFamilyMemberStatus,
@@ -125,7 +126,7 @@ const saveFamilyInvitationToSupabase = async ({ ownerUser, memberEmail, role }) 
     }
 
     if (existingInvite) {
-      Alert.alert('Invitation already exists.', 'Invitation already exists.');
+      showAlert('Invitation already exists.', 'Invitation already exists.');
       return mapFamilyMemberRow(existingInvite);
     }
 
@@ -147,7 +148,7 @@ const saveFamilyInvitationToSupabase = async ({ ownerUser, memberEmail, role }) 
 
     if (error) {
       if (error.code === '23505') {
-        Alert.alert('Invitation already exists for this email.', 'Invitation already exists for this email.');
+        showAlert('Invitation already exists for this email.', 'Invitation already exists for this email.');
         const { data: duplicateInvite } = await supabase
           .from('family_members')
           .select('*')
