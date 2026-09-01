@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createCreateDiscoverPetForm } from './src/models/discover/petForm';
 import { createCreateDiscoverEventForm } from './src/models/discover/eventForm';
 import { createCreateDiscoverBusinessEditForm } from './src/models/discover/businessEditForm';
 import { createFormatDiscoverBusinessHours } from './src/models/discover/formatBusinessHours';
@@ -12561,25 +12562,10 @@ const createDiscoverShelterEditForm = (listing = {}) => ({
   logo_url: String(listing.logo_url || ''),
 });
 
-const createDiscoverPetForm = (pet = {}) => ({
-  shelter_id: String(pet.shelter_id || ''),
-  name: String(pet.name || ''),
-  species: String(pet.species || ''),
-  breed: String(pet.breed || ''),
-  age_label: String(pet.age_label || ''),
-  sex: String(pet.sex || ''),
-  size: String(pet.size || ''),
-  weight: String(pet.weight || ''),
-  description: String(pet.description || ''),
-  personality: String(pet.personality || ''),
-  good_with_kids: pet.good_with_kids ?? null,
-  good_with_dogs: pet.good_with_dogs ?? null,
-  good_with_cats: pet.good_with_cats ?? null,
-  house_trained: pet.house_trained ?? null,
-  medical_status: String(pet.medical_status || ''),
-  adoption_fee: pet.adoption_fee != null ? String(pet.adoption_fee) : '',
-  status: String(pet.status || 'available'),
-});
+const createDiscoverPetForm = (...args) =>
+  createCreateDiscoverPetForm({})(...args);
+
+
 
 const createDiscoverPromotionForm = (promotion = {}) => ({
   business_id: String(promotion.business_id || ''),
