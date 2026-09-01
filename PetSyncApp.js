@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createFormatDiscoverPetStatus } from './src/models/discover/formatPetStatus';
 import { createFormatDiscoverListingStatus } from './src/models/discover/formatListingStatus';
 import { createFormatDiscoverEventStatus } from './src/models/discover/formatEventStatus';
 import { createFormatDiscoverPromotionStatus } from './src/models/discover/formatPromotionStatus';
@@ -12485,13 +12486,10 @@ const formatDiscoverListingDate = (...args) =>
 
 
 
-const formatDiscoverPetStatus = (value) => {
-  const status = String(value || 'available').trim().toLowerCase();
-  if (status === 'pending') return 'Pending';
-  if (status === 'adopted') return 'Adopted';
-  if (status === 'hidden') return 'Hidden';
-  return 'Available';
-};
+const formatDiscoverPetStatus = (...args) =>
+  createFormatDiscoverPetStatus({})(...args);
+
+
 
 const createDefaultDiscoverBusinessRegistration = (...args) =>
   createCreateDefaultDiscoverBusinessRegistration({})(...args);
