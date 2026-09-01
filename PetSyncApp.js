@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createPlaySosSound } from './src/services/audio/playSosSound';
 import { createOpenExternalDiscoverLink } from './src/services/discover/openExternalLink';
 import { createFormatDiscoverPetStatus } from './src/models/discover/formatPetStatus';
 import { createFormatDiscoverListingStatus } from './src/models/discover/formatListingStatus';
@@ -1530,32 +1531,10 @@ function buildPetEditDraft(pet) {
   };
 }
 
-const playSosSound = async () => {
-  try {
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-    });
+const playSosSound = (...args) =>
+  createPlaySosSound({ Audio, Vibration, require })(...args);
 
-    const { sound } = await Audio.Sound.createAsync(
-      require('./assets/sounds/sos.mp3'),
-      {
-        shouldPlay: true,
-        volume: 0.8,
-      }
-    );
 
-    // unload AFTER playback finishes
-    sound.setOnPlaybackStatusUpdate(async (status) => {
-      if (status.didJustFinish) {
-        await sound.unloadAsync();
-      }
-    });
-
-  } catch (error) {
-    console.log('SOS SOUND ERROR:', error);
-    Vibration.vibrate(80);
-  }
-};
 // ---------------------------------------------
 // SCREEN: DASHBOARD
 // ---------------------------------------------
