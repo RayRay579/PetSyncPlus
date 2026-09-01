@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createGetTrendEventsForPet } from './src/models/trendEvents';
 import { createGetStreakSummaryForPet } from './src/models/streakSummary';
 import { createGetStreakEventsForPet } from './src/models/streakEvents';
 import { createGetStreakDaysFromEvents } from './src/models/streakDays';
@@ -763,22 +764,10 @@ const getStreakSummaryForPet = (...args) =>
 
 const getStreakDaysForPet = (activityLogs, petId) => getStreakSummaryForPet(activityLogs, petId).care_streak;
 
-const getTrendEventsForPet = (activityLogs, petId) => {
-  if (!petId || !Array.isArray(activityLogs)) return [];
+const getTrendEventsForPet = (...args) =>
+  createGetTrendEventsForPet({ CARE_ACTIVITY_TYPES, normalizeCareActivityType })(...args);
 
-  return activityLogs
-    .filter((log) => {
-      const logPetId = log?.petId ?? log?.pet_id;
-      const createdAt = log?.created_at || log?.createdAt || log?.dateKey;
-      const normalizedType = normalizeCareActivityType(log?.type || log?.action_type);
-      return String(logPetId || '') === String(petId) && !!createdAt && CARE_ACTIVITY_TYPES.has(normalizedType);
-    })
-    .sort((a, b) => {
-      const left = new Date(a?.created_at || a?.createdAt || a?.dateKey || 0).getTime();
-      const right = new Date(b?.created_at || b?.createdAt || b?.dateKey || 0).getTime();
-      return right - left;
-    });
-};
+
 
 const getWeeklyTrendService = () => createWeeklyTrendService({  });
 
