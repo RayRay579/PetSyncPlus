@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createFormatDiscoverDateTime } from './src/models/discover/formatDateTime';
 import { createCreateDefaultDiscoverShelterRegistration } from './src/models/discover/defaultShelterRegistration';
 import { createCreateDefaultDiscoverBusinessRegistration } from './src/models/discover/defaultBusinessRegistration';
 import { createCreateDiscoverPromotionForm } from './src/models/discover/promotionForm';
@@ -12367,17 +12368,10 @@ const formatDiscoverDate = (value, options = {}) => {
     ...options,
   });
 };
-const formatDiscoverDateTime = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-};
+const formatDiscoverDateTime = (...args) =>
+  createFormatDiscoverDateTime({})(...args);
+
+
 const getDiscoverInitial = (value) => String(value || '').trim().charAt(0).toUpperCase() || 'P';
 
 const formatDiscoverBusinessHours = (...args) =>
