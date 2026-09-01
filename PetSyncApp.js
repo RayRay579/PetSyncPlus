@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createBuildDiscoverMediaLookup } from './src/models/discoverMedia';
 import { recalculateCommunityCounts } from './src/models/communityCounts';
 import { CARE_ACTIVITY_TYPES, normalizeCareActivityType } from './src/models/careActivity';
 import { createRecipeService } from './src/services/recipes/recipeService';
@@ -12693,13 +12694,7 @@ const formatDiscoverDateTime = (value) => {
   });
 };
 const getDiscoverInitial = (value) => String(value || '').trim().charAt(0).toUpperCase() || 'P';
-const buildDiscoverMediaLookup = (rows = []) => rows.reduce((acc, row) => {
-  const petId = row?.adoptable_pet_id;
-  if (!petId) return acc;
-  if (!acc[petId]) acc[petId] = [];
-  acc[petId].push(row);
-  return acc;
-}, {});
+
 const formatDiscoverBusinessHours = (hoursJson) => {
   if (!hoursJson || typeof hoursJson !== 'object' || Array.isArray(hoursJson)) {
     return [];
