@@ -61,27 +61,34 @@ const extractDirect = ({ stage, name, outPath, importLine, message, dependencyNa
   if (fs.existsSync(path.join(ROOT,outPath))) { console.log(`SKIP Stage ${stage}: ${outPath} already exists.`); return; }
   const text = original.slice(d.start,d.end).trim();
   const deps = dependencyNames.filter(x => new RegExp(`\\b${x}\\b`).test(text));
-  const wrapper = deps.length
-    ? `export const create${name[0].toUpperCase()+name.slice(1)} = ({ ${deps.join(', ')} } = {}) => {\n${text}\n  return ${name};\n};\n`
+  const factory = `create${name[0].toUpperCase()+name.slice(1)}`;
+  const moduleSource = deps.length
+    ? `export const ${factory} = ({ ${deps.join(', ')} } = {}) => {\n${text}\n  return ${name};\n};\n`
     : `${text}\n\nexport { ${name} };\n`;
   const b = backup(stage, original);
   try {
-    const full = path.join(ROOT,outPath); fs.mkdirSync(path.dirname(full),{recursive:true}); fs.writeFileSync(full,wrapper,'utf8');
-    let next = original.slice(0,d.start) + original.slice(d.end);
+    const full = path.join(ROOT,outPath);
+    fs.mkdirSync(path.dirname(full),{recursive:true});
+    fs.writeFileSync(full,moduleSource,'utf8');
+
+    let next;
     if (!deps.length) {
+      next = original.slice(0,d.start) + original.slice(d.end);
       next = addImport(next, importLine);
     } else {
-      const factory = `create${name[0].toUpperCase()+name.slice(1)}`;
-      const serviceImport = importLine;
-      next = addImport(next, serviceImport);
       const replacement = `const ${name} = (...args) => ${factory}({ ${deps.join(', ')} })(...args);\n\n`;
-      next = next.slice(0,d.start) + replacement + next.slice(d.start);
+      next = original.slice(0,d.start) + replacement + original.slice(d.end);
+      next = addImport(next, importLine);
     }
-    fs.writeFileSync(APP,next,'utf8'); parseApp(next);
+
+    fs.writeFileSync(APP,next,'utf8');
+    parseApp(next);
     validateCommitPush(stage,[APP,outPath],message);
     console.log(`Hidden backup kept at: ${b}`);
   } catch(e) {
-    fs.writeFileSync(APP,original,'utf8'); fs.rmSync(path.join(ROOT,outPath),{force:true}); fs.rmSync(CHECK,{recursive:true,force:true});
+    fs.writeFileSync(APP,original,'utf8');
+    fs.rmSync(path.join(ROOT,outPath),{force:true});
+    fs.rmSync(CHECK,{recursive:true,force:true});
     throw e;
   }
 };
@@ -106,9 +113,11 @@ extractDirect({
 
 const stage21 = () => {
   const original = fs.readFileSync(APP,'utf8');
-  const map = declarations(original); const d = map.get('getWeeklyTrendSummaryForPet');
+  const map = declarations(original);
+  const d = map.get('getWeeklyTrendSummaryForPet');
   if (!d) { console.log('SKIP Stage 21: getWeeklyTrendSummaryForPet not present.'); return; }
-  const outPath = 'src/services/analytics/weeklyTrendService.js'; const full = path.join(ROOT,outPath);
+  const outPath = 'src/services/analytics/weeklyTrendService.js';
+  const full = path.join(ROOT,outPath);
   if (fs.existsSync(full)) { console.log(`SKIP Stage 21: ${outPath} already exists.`); return; }
   const text = original.slice(d.start,d.end).trim();
   const candidates = ['supabase','CURRENT_USER_OWNER_ID','normalizeCareActivityType','CARE_ACTIVITY_TYPES','toLocalDateKey','parseStoredDateKey','formatDate'];
@@ -117,15 +126,17 @@ const stage21 = () => {
   try {
     fs.mkdirSync(path.dirname(full),{recursive:true});
     fs.writeFileSync(full,`export const createWeeklyTrendService = ({ ${deps.join(', ')} } = {}) => {\n${text}\n  return { getWeeklyTrendSummaryForPet };\n};\n`,'utf8');
-    let next = original.slice(0,d.start) + original.slice(d.end);
-    next = addImport(next,"import { createWeeklyTrendService } from './src/services/analytics/weeklyTrendService';\n");
     const wrapper = `const getWeeklyTrendService = () => createWeeklyTrendService({ ${deps.join(', ')} });\n\nconst getWeeklyTrendSummaryForPet = (...args) =>\n  getWeeklyTrendService().getWeeklyTrendSummaryForPet(...args);\n\n`;
-    next = next.slice(0,d.start) + wrapper + next.slice(d.start);
-    fs.writeFileSync(APP,next,'utf8'); parseApp(next);
+    let next = original.slice(0,d.start) + wrapper + original.slice(d.end);
+    next = addImport(next,"import { createWeeklyTrendService } from './src/services/analytics/weeklyTrendService';\n");
+    fs.writeFileSync(APP,next,'utf8');
+    parseApp(next);
     validateCommitPush(21,[APP,outPath],'Stage 21: Extract weekly trend service');
     console.log(`Hidden backup kept at: ${b}`);
   } catch(e) {
-    fs.writeFileSync(APP,original,'utf8'); fs.rmSync(full,{force:true}); fs.rmSync(CHECK,{recursive:true,force:true});
+    fs.writeFileSync(APP,original,'utf8');
+    fs.rmSync(full,{force:true});
+    fs.rmSync(CHECK,{recursive:true,force:true});
     throw e;
   }
 };
