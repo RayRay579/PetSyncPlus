@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createFormatDiscoverListingStatus } from './src/models/discover/formatListingStatus';
 import { createFormatDiscoverEventStatus } from './src/models/discover/formatEventStatus';
 import { createFormatDiscoverPromotionStatus } from './src/models/discover/formatPromotionStatus';
 import { createFormatDiscoverListingDate } from './src/models/discover/formatListingDate';
@@ -12464,13 +12465,10 @@ const openExternalDiscoverLink = (url) => {
   Linking.openURL(nextUrl);
 };
 
-const formatDiscoverListingStatus = (value) => {
-  const status = String(value || 'pending').trim().toLowerCase();
-  if (status === 'approved') return 'Approved';
-  if (status === 'rejected') return 'Rejected';
-  if (status === 'suspended') return 'Suspended';
-  return 'Pending Review';
-};
+const formatDiscoverListingStatus = (...args) =>
+  createFormatDiscoverListingStatus({})(...args);
+
+
 
 const formatDiscoverPromotionStatus = (...args) =>
   createFormatDiscoverPromotionStatus({})(...args);
