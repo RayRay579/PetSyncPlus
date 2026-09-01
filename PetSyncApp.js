@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createGetStreakSummaryForPet } from './src/models/streakSummary';
 import { createGetStreakEventsForPet } from './src/models/streakEvents';
 import { createGetStreakDaysFromEvents } from './src/models/streakDays';
 import { createCalculateAgeLabelFromBirthday } from './src/models/petAge';
@@ -755,19 +756,10 @@ const getStreakDaysFromEvents = (...args) =>
 
 
 
-const getStreakSummaryForPet = (activityLogs, petId) => {
-  const careEvents = getStreakEventsForPet(activityLogs, petId);
-  const medicationEvents = getStreakEventsForPet(activityLogs, petId, ['medication']);
-  const walkEvents = getStreakEventsForPet(activityLogs, petId, ['walk']);
-  const reminderEvents = getStreakEventsForPet(activityLogs, petId, ['reminder_completed']);
+const getStreakSummaryForPet = (...args) =>
+  createGetStreakSummaryForPet({ getStreakDaysFromEvents, getStreakEventsForPet })(...args);
 
-  return {
-    care_streak: getStreakDaysFromEvents(careEvents),
-    medication_streak: getStreakDaysFromEvents(medicationEvents),
-    walk_streak: getStreakDaysFromEvents(walkEvents),
-    reminder_completion_streak: getStreakDaysFromEvents(reminderEvents),
-  };
-};
+
 
 const getStreakDaysForPet = (activityLogs, petId) => getStreakSummaryForPet(activityLogs, petId).care_streak;
 
