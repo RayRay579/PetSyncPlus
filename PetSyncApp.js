@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createFormatDiscoverDate } from './src/models/discover/formatDate';
 import { createFormatDiscoverDateTime } from './src/models/discover/formatDateTime';
 import { createCreateDefaultDiscoverShelterRegistration } from './src/models/discover/defaultShelterRegistration';
 import { createCreateDefaultDiscoverBusinessRegistration } from './src/models/discover/defaultBusinessRegistration';
@@ -12358,16 +12359,10 @@ const discoverMatches = (values, searchTerm) => {
   if (!normalizedTerm) return true;
   return values.some((value) => normalizeDiscoverSearch(value).includes(normalizedTerm));
 };
-const formatDiscoverDate = (value, options = {}) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    ...options,
-  });
-};
+const formatDiscoverDate = (...args) =>
+  createFormatDiscoverDate({})(...args);
+
+
 const formatDiscoverDateTime = (...args) =>
   createFormatDiscoverDateTime({})(...args);
 
