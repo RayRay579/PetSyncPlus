@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createCreateDefaultDiscoverShelterRegistration } from './src/models/discover/defaultShelterRegistration';
 import { createCreateDefaultDiscoverBusinessRegistration } from './src/models/discover/defaultBusinessRegistration';
 import { createCreateDiscoverPromotionForm } from './src/models/discover/promotionForm';
 import { createCreateDiscoverPartnerApplicationForm } from './src/models/discover/partnerApplicationForm';
@@ -12521,18 +12522,10 @@ const createDefaultDiscoverBusinessRegistration = (...args) =>
 
 
 
-const createDefaultDiscoverShelterRegistration = () => ({
-  name: '',
-  description: '',
-  phone: '',
-  email: '',
-  website: '',
-  donation_url: '',
-  address: '',
-  city: '',
-  state: '',
-  zip: '',
-});
+const createDefaultDiscoverShelterRegistration = (...args) =>
+  createCreateDefaultDiscoverShelterRegistration({})(...args);
+
+
 
 const createDiscoverBusinessEditForm = (...args) =>
   createCreateDiscoverBusinessEditForm({})(...args);
