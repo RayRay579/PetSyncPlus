@@ -84,10 +84,10 @@ let app = originalApp;
 
 const importAnchor = `import { createPetService } from './src/services/pets/petService';`;
 const accessImport = `import { createPetAccessService } from './src/services/pets/petAccessService';`;
+const guardStartMarker = `const isSharedPetForCurrentUser =`;
+const guardEndMarker = `const getPetService = () => createPetService({`;
 
-const oldGuardBlock = `const isSharedPetForCurrentUser = (pet, currentUserId = CURRENT_USER_OWNER_ID) => {\n  const ownerIdentity = getPetOwnerIdentity(pet);\n  const normalizedCurrentUserId = String(currentUserId || '').trim();\n\n  if (!ownerIdentity || !normalizedCurrentUserId) {\n    return false;\n  }\n\n  return ownerIdentity !== normalizedCurrentUserId;\n};\n\nconst ensureWritablePetByPetId = async (petId, actionLabel = 'modify this pet data') => {\n  const currentUserId = String(CURRENT_USER_OWNER_ID || '').trim();\n  if (!currentUserId || !petId) {\n    return true;\n  }\n\n  try {\n    const { data, error } = await supabase\n      .from('pets')\n      .select('user_id, owner_id, created_by_user_id')\n      .eq('id', petId)\n      .limit(1);\n\n    if (error) {\n      console.log(\`Pet write access lookup error while trying to \${actionLabel}:\`, error);\n      return false;\n    }\n\n    const petRow = Array.isArray(data) ? data[0] : data;\n    if (!petRow) {\n      return true;\n    }\n\n    if (isSharedPetForCurrentUser(petRow, currentUserId)) {\n      Alert.alert('Read-only pet', 'Family Shared pet: view-only access');\n      return false;\n    }\n\n    return true;\n  } catch (error) {\n    console.log('Pet write access guard error:', error);\n    return false;\n  }\n};\n\nconst ensureWritablePetByRecordId = async (tableName, recordId, actionLabel = 'modify this record') => {\n  if (!recordId) {\n    return true;\n  }\n\n  try {\n    const { data, error } = await supabase\n      .from(tableName)\n      .select('pet_id')\n      .eq('id', recordId)\n      .limit(1);\n\n    if (error) {\n      console.log(\`\${tableName} write access lookup error while trying to \${actionLabel}:\`, error);\n      return false;\n    }\n\n    const row = Array.isArray(data) ? data[0] : data;\n    if (!row?.pet_id) {\n      return true;\n    }\n\n    return await ensureWritablePetByPetId(row.pet_id, actionLabel);\n  } catch (error) {\n    console.log(\`\${tableName} write access guard error:\`, error);\n    return false;\n  }\n};`;
-
-const newGuardBlock = `const getPetAccessService = () => createPetAccessService({\n  supabase,\n  currentUserId: CURRENT_USER_OWNER_ID,\n  getPetOwnerIdentity,\n  showAlert: (...args) => Alert.alert(...args),\n});\n\nconst isSharedPetForCurrentUser = (...args) =>\n  getPetAccessService().isSharedPetForCurrentUser(...args);\n\nconst ensureWritablePetByPetId = (...args) =>\n  getPetAccessService().ensureWritablePetByPetId(...args);\n\nconst ensureWritablePetByRecordId = (...args) =>\n  getPetAccessService().ensureWritablePetByRecordId(...args);`;
+const newGuardBlock = `const getPetAccessService = () => createPetAccessService({\n  supabase,\n  currentUserId: CURRENT_USER_OWNER_ID,\n  getPetOwnerIdentity,\n  showAlert: (...args) => Alert.alert(...args),\n});\n\nconst isSharedPetForCurrentUser = (...args) =>\n  getPetAccessService().isSharedPetForCurrentUser(...args);\n\nconst ensureWritablePetByPetId = (...args) =>\n  getPetAccessService().ensureWritablePetByPetId(...args);\n\nconst ensureWritablePetByRecordId = (...args) =>\n  getPetAccessService().ensureWritablePetByRecordId(...args);\n\n`;
 
 const service = `export const createPetAccessService = ({\n  supabase,\n  currentUserId,\n  getPetOwnerIdentity,\n  showAlert,\n} = {}) => {\n  const isSharedPetForCurrentUser = (pet, currentUserIdOverride = currentUserId) => {\n    const ownerIdentity = getPetOwnerIdentity(pet);\n    const normalizedCurrentUserId = String(currentUserIdOverride || '').trim();\n\n    if (!ownerIdentity || !normalizedCurrentUserId) {\n      return false;\n    }\n\n    return ownerIdentity !== normalizedCurrentUserId;\n  };\n\n  const ensureWritablePetByPetId = async (petId, actionLabel = 'modify this pet data') => {\n    const normalizedCurrentUserId = String(currentUserId || '').trim();\n    if (!normalizedCurrentUserId || !petId) {\n      return true;\n    }\n\n    try {\n      const { data, error } = await supabase\n        .from('pets')\n        .select('user_id, owner_id, created_by_user_id')\n        .eq('id', petId)\n        .limit(1);\n\n      if (error) {\n        console.log(\`Pet write access lookup error while trying to \${actionLabel}:\`, error);\n        return false;\n      }\n\n      const petRow = Array.isArray(data) ? data[0] : data;\n      if (!petRow) {\n        return true;\n      }\n\n      if (isSharedPetForCurrentUser(petRow, normalizedCurrentUserId)) {\n        showAlert?.('Read-only pet', 'Family Shared pet: view-only access');\n        return false;\n      }\n\n      return true;\n    } catch (error) {\n      console.log('Pet write access guard error:', error);\n      return false;\n    }\n  };\n\n  const ensureWritablePetByRecordId = async (tableName, recordId, actionLabel = 'modify this record') => {\n    if (!recordId) {\n      return true;\n    }\n\n    try {\n      const { data, error } = await supabase\n        .from(tableName)\n        .select('pet_id')\n        .eq('id', recordId)\n        .limit(1);\n\n      if (error) {\n        console.log(\`\${tableName} write access lookup error while trying to \${actionLabel}:\`, error);\n        return false;\n      }\n\n      const row = Array.isArray(data) ? data[0] : data;\n      if (!row?.pet_id) {\n        return true;\n      }\n\n      return await ensureWritablePetByPetId(row.pet_id, actionLabel);\n    } catch (error) {\n      console.log(\`\${tableName} write access guard error:\`, error);\n      return false;\n    }\n  };\n\n  return {\n    isSharedPetForCurrentUser,\n    ensureWritablePetByPetId,\n    ensureWritablePetByRecordId,\n  };\n};\n`;
 
@@ -107,9 +107,6 @@ const assertStage10 = () => {
   if (!app.includes('getPetAccessService().ensureWritablePetByRecordId(...args)')) {
     throw new Error('Stage 10 record-id write guard wrapper is missing.');
   }
-  if (app.includes(oldGuardBlock)) {
-    throw new Error('Original inline Stage 10 guard block is still present.');
-  }
   if (!fs.existsSync(ACCESS_SERVICE_PATH)) {
     throw new Error('petAccessService.js was not created.');
   }
@@ -120,7 +117,7 @@ const assertStage10 = () => {
     'isSharedPetForCurrentUser',
     'ensureWritablePetByPetId',
     'ensureWritablePetByRecordId',
-    "Family Shared pet: view-only access",
+    'Family Shared pet: view-only access',
   ]) {
     if (!accessService.includes(required)) {
       throw new Error(`petAccessService.js is missing expected content: ${required}`);
@@ -132,12 +129,26 @@ try {
   if (!app.includes(importAnchor)) {
     throw new Error('Could not locate the petService import anchor. No source files were changed.');
   }
-  if (!app.includes(oldGuardBlock)) {
-    throw new Error('Could not locate the expected Stage 10 ownership/read-only guard block. No source files were changed.');
+
+  const guardStart = app.indexOf(guardStartMarker);
+  const guardEnd = app.indexOf(guardEndMarker, guardStart);
+  if (guardStart < 0 || guardEnd < 0 || guardEnd <= guardStart) {
+    throw new Error('Could not locate Stage 10 guard function boundaries. No source files were changed.');
+  }
+
+  const oldGuardBlock = app.slice(guardStart, guardEnd);
+  for (const required of [
+    'const isSharedPetForCurrentUser',
+    'const ensureWritablePetByPetId',
+    'const ensureWritablePetByRecordId',
+  ]) {
+    if (!oldGuardBlock.includes(required)) {
+      throw new Error(`Stage 10 guard block is missing expected function: ${required}`);
+    }
   }
 
   app = app.replace(importAnchor, `${importAnchor}\n${accessImport}`);
-  app = app.replace(oldGuardBlock, newGuardBlock);
+  app = app.slice(0, guardStart) + newGuardBlock + app.slice(guardEnd);
 
   fs.mkdirSync(path.dirname(ACCESS_SERVICE_PATH), { recursive: true });
   fs.writeFileSync(ACCESS_SERVICE_PATH, service, 'utf8');
