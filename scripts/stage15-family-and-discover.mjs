@@ -39,6 +39,14 @@ const capture = (command, args) => {
   return (result.stdout || '').trim();
 };
 
+const runExpoExport = () => {
+  const args = ['expo', 'export', '--platform', 'web', '--output-dir', '.petsync-refactor-web-check', '--clear'];
+  if (process.platform === 'win32') {
+    return run('cmd.exe', ['/d', '/s', '/c', 'npx', ...args]);
+  }
+  return run('npx', args);
+};
+
 const parseApp = (source) => parse(source, {
   sourceType: 'module',
   plugins: ['jsx', 'flow'],
@@ -104,14 +112,9 @@ try {
   }
 
   const insertionPoint = Math.min(...ordered.map((item) => item.start));
-  const removedBeforeInsertion = ordered
-    .filter((item) => item.end <= insertionPoint)
-    .reduce((sum, item) => sum + (item.end - item.start), 0);
-  const adjustedInsertionPoint = insertionPoint - removedBeforeInsertion;
-
   const wrappers = `const getFamilyService = () => createFamilyService({\n  supabase,\n  CURRENT_USER_OWNER_ID,\n  CURRENT_USER_EMAIL,\n  CURRENT_USER_NAME,\n  mapFamilyMemberRow,\n  normalizeFamilyMemberRole,\n  normalizeFamilyMemberStatus,\n});\n\n${FAMILY_FUNCTIONS.map((name) => `const ${name} = (...args) =>\n  getFamilyService().${name}(...args);`).join('\n\n')}\n\n`;
 
-  next = next.slice(0, adjustedInsertionPoint) + wrappers + next.slice(adjustedInsertionPoint);
+  next = next.slice(0, insertionPoint) + wrappers + next.slice(insertionPoint);
 
   const importLine = `import { createFamilyService } from './src/services/family/familyService';\n`;
   if (!next.includes("./src/services/family/familyService")) {
@@ -131,8 +134,7 @@ try {
   console.log('Stage 15 extracted Family Sharing service -> src/services/family/familyService.js');
   console.log('\nRunning Expo web export validation...');
   fs.rmSync(CHECK_DIR, { recursive: true, force: true });
-  const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const validation = run(npx, ['expo', 'export', '--platform', 'web', '--output-dir', '.petsync-refactor-web-check', '--clear']);
+  const validation = runExpoExport();
   if (validation.status !== 0) throw new Error('Expo web export validation failed.');
 
   fs.rmSync(CHECK_DIR, { recursive: true, force: true });
