@@ -155,8 +155,10 @@ try {
     throw new Error('Stage 10 guard section does not begin at a clean top-level boundary. No source files were changed.');
   }
 
+  // Replace using indexes from the original app first. Adding an import before this point
+  // would shift the indexes and could splice the replacement into unrelated JSX.
+  app = prefix + newGuardBlock + suffix;
   app = app.replace(importAnchor, `${importAnchor}\n${accessImport}`);
-  app = app.slice(0, guard1Start) + newGuardBlock + suffix;
 
   fs.mkdirSync(path.dirname(ACCESS_SERVICE_PATH), { recursive: true });
   fs.writeFileSync(ACCESS_SERVICE_PATH, service, 'utf8');
