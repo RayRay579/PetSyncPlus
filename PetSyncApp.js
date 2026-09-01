@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createCreateDefaultDiscoverBusinessRegistration } from './src/models/discover/defaultBusinessRegistration';
 import { createCreateDiscoverPromotionForm } from './src/models/discover/promotionForm';
 import { createCreateDiscoverPartnerApplicationForm } from './src/models/discover/partnerApplicationForm';
 import { createCreateDiscoverShelterEditForm } from './src/models/discover/shelterEditForm';
@@ -12515,18 +12516,10 @@ const formatDiscoverPetStatus = (value) => {
   return 'Available';
 };
 
-const createDefaultDiscoverBusinessRegistration = () => ({
-  name: '',
-  category_id: '',
-  description: '',
-  phone: '',
-  email: '',
-  website: '',
-  address: '',
-  city: '',
-  state: '',
-  zip: '',
-});
+const createDefaultDiscoverBusinessRegistration = (...args) =>
+  createCreateDefaultDiscoverBusinessRegistration({})(...args);
+
+
 
 const createDefaultDiscoverShelterRegistration = () => ({
   name: '',
