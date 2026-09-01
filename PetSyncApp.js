@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createCreateDiscoverPartnerApplicationForm } from './src/models/discover/partnerApplicationForm';
 import { createCreateDiscoverShelterEditForm } from './src/models/discover/shelterEditForm';
 import { createCreateDiscoverPetForm } from './src/models/discover/petForm';
 import { createCreateDiscoverEventForm } from './src/models/discover/eventForm';
@@ -12567,20 +12568,10 @@ const createDiscoverPromotionForm = (promotion = {}) => ({
   status: String(promotion.status || 'pending'),
 });
 
-const createDiscoverPartnerApplicationForm = (application = {}) => ({
-  business_name: String(application.business_name || ''),
-  organization_name: String(application.organization_name || ''),
-  contact_name: String(application.contact_name || ''),
-  email: String(application.email || ''),
-  phone: String(application.phone || ''),
-  website: String(application.website || ''),
-  category: String(application.category || ''),
-  city: String(application.city || ''),
-  state: String(application.state || ''),
-  short_description: String(application.short_description || ''),
-  partner_type: String(application.partner_type || 'shelter'),
-  status: String(application.status || 'pending'),
-});
+const createDiscoverPartnerApplicationForm = (...args) =>
+  createCreateDiscoverPartnerApplicationForm({})(...args);
+
+
 
 const createDiscoverEventForm = (...args) =>
   createCreateDiscoverEventForm({})(...args);
