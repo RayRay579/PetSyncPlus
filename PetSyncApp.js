@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createFormatDiscoverPromotionStatus } from './src/models/discover/formatPromotionStatus';
 import { createFormatDiscoverListingDate } from './src/models/discover/formatListingDate';
 import { createFormatDiscoverDate } from './src/models/discover/formatDate';
 import { createFormatDiscoverDateTime } from './src/models/discover/formatDateTime';
@@ -12470,14 +12471,10 @@ const formatDiscoverListingStatus = (value) => {
   return 'Pending Review';
 };
 
-const formatDiscoverPromotionStatus = (value) => {
-  const status = String(value || 'pending').trim().toLowerCase();
-  if (status === 'active') return 'Active';
-  if (status === 'paused') return 'Paused';
-  if (status === 'expired') return 'Expired';
-  if (status === 'rejected') return 'Rejected';
-  return 'Pending';
-};
+const formatDiscoverPromotionStatus = (...args) =>
+  createFormatDiscoverPromotionStatus({})(...args);
+
+
 
 const formatDiscoverEventStatus = (value) => {
   const status = String(value || 'pending').trim().toLowerCase();
