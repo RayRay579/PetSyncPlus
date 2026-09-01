@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createGetStreakDaysFromEvents } from './src/models/streakDays';
 import { createCalculateAgeLabelFromBirthday } from './src/models/petAge';
 import { createBuildStarterHealthRecords } from './src/models/starterHealthRecords';
 import { createBuildStarterReminders } from './src/models/starterReminders';
@@ -777,30 +778,10 @@ const getStreakEventsForPet = (activityLogs, petId, allowedTypes = null) => {
   });
 };
 
-const getStreakDaysFromEvents = (events) => {
-  if (!Array.isArray(events) || events.length === 0) return 0;
+const getStreakDaysFromEvents = (...args) =>
+  createGetStreakDaysFromEvents({})(...args);
 
-  const uniqueDays = [...new Set(events.map((event) => {
-    const eventDate = new Date(event?.created_at || event?.createdAt || event?.dateKey || 0);
-    if (Number.isNaN(eventDate.getTime())) return null;
-    return eventDate.toDateString();
-  }).filter(Boolean))];
 
-  let streakDays = 0;
-  for (let i = 0; i < uniqueDays.length; i += 1) {
-    const expected = new Date();
-    expected.setHours(0, 0, 0, 0);
-    expected.setDate(expected.getDate() - i);
-    const expectedDay = expected.toDateString();
-    if (uniqueDays.includes(expectedDay)) {
-      streakDays += 1;
-    } else {
-      break;
-    }
-  }
-
-  return streakDays;
-};
 
 const getStreakSummaryForPet = (activityLogs, petId) => {
   const careEvents = getStreakEventsForPet(activityLogs, petId);
