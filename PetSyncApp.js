@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createCommunityMediaStorageService } from './src/services/community/communityMediaStorageService';
 import { createPetService } from './src/services/pets/petService';
 import { createPetAccessService } from './src/services/pets/petAccessService';
 import { createCareReminderService } from './src/services/reminders/careReminderService';
@@ -348,64 +349,18 @@ const deleteCareReminderFromSupabase = (...args) =>
 const loadCareRemindersFromSupabase = (...args) =>
   getCareReminderService().loadCareRemindersFromSupabase(...args);
 
-const uploadCommunityPostMediaToStorage = async ({ uri, fileName, mimeType, mediaType, userId }) => {
-  if (!uri) {
-    return null;
-  }
+const getCommunityMediaStorageService = () => createCommunityMediaStorageService({
+  supabase,
+  bucket: COMMUNITY_MEDIA_BUCKET,
+  normalizeStorageFileName,
+  currentUserId: CURRENT_USER_OWNER_ID,
+});
 
-  try {
-    const response = await fetch(uri);
-    const arrayBuffer = await response.arrayBuffer();
-    const safeName = normalizeStorageFileName(fileName || `community-${Date.now()}.${mediaType === 'video' ? 'mp4' : 'jpg'}`);
-    const folder = `community-posts/${String(userId || CURRENT_USER_OWNER_ID || 'guest').trim() || 'guest'}`;
-    const filePath = `${folder}/${Date.now()}-${safeName}`;
+const uploadCommunityPostMediaToStorage = (...args) =>
+  getCommunityMediaStorageService().uploadCommunityPostMediaToStorage(...args);
 
-    const resolvedMimeType = mimeType || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg');
-
-    const { error } = await supabase.storage
-      .from(COMMUNITY_MEDIA_BUCKET)
-      .upload(filePath, arrayBuffer, {
-        contentType: resolvedMimeType,
-        upsert: true,
-      });
-
-    if (error) {
-      console.log('Community media upload error:', error);
-      return null;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from(COMMUNITY_MEDIA_BUCKET)
-      .getPublicUrl(filePath);
-
-    return {
-      filePath,
-      fileUrl: publicUrlData?.publicUrl || '',
-      mimeType: resolvedMimeType,
-    };
-  } catch (error) {
-    console.log('Community media upload error:', error);
-    return null;
-  }
-};
-
-const deleteCommunityPostMediaFromStorage = async (filePath) => {
-  if (!filePath) {
-    return;
-  }
-
-  try {
-    const { error } = await supabase.storage
-      .from(COMMUNITY_MEDIA_BUCKET)
-      .remove([filePath]);
-
-    if (error) {
-      console.log('Community media delete error:', error);
-    }
-  } catch (error) {
-    console.log('Community media delete error:', error);
-  }
-};
+const deleteCommunityPostMediaFromStorage = (...args) =>
+  getCommunityMediaStorageService().deleteCommunityPostMediaFromStorage(...args);
 
 const saveCommunityPostToSupabase = async (post, options = {}) => {
   const currentUserId = CURRENT_USER_OWNER_ID || '';
