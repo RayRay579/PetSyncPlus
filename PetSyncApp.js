@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { recalculateCommunityCounts } from './src/models/communityCounts';
 import { CARE_ACTIVITY_TYPES, normalizeCareActivityType } from './src/models/careActivity';
 import { createRecipeService } from './src/services/recipes/recipeService';
 import { createCommunityCommentService } from './src/services/community/communityCommentService';
@@ -512,16 +513,7 @@ const deleteCommunityCommentFromSupabase = (...args) =>
 
 
 
-const recalculateCommunityCounts = (items) => {
-  const counts = new Map();
 
-  items.forEach((item) => {
-    const key = `${item.parentType}:${item.parentId}`;
-    counts.set(key, (counts.get(key) || 0) + 1);
-  });
-
-  return counts;
-};
 
 const getRecipeService = () => createRecipeService({
   supabase,
