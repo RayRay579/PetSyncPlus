@@ -84,7 +84,10 @@ let app = originalApp;
 
 const importAnchor = `import { createPetService } from './src/services/pets/petService';`;
 const accessImport = `import { createPetAccessService } from './src/services/pets/petAccessService';`;
-const guardStartMarker = `const isSharedPetForCurrentUser =`;
+
+const guard1StartMarker = `const isSharedPetForCurrentUser =`;
+const guard2StartMarker = `const ensureWritablePetByPetId =`;
+const guard3StartMarker = `const ensureWritablePetByRecordId =`;
 const guardEndMarker = `const getPetService = () => createPetService({`;
 
 const newGuardBlock = `const getPetAccessService = () => createPetAccessService({\n  supabase,\n  currentUserId: CURRENT_USER_OWNER_ID,\n  getPetOwnerIdentity,\n  showAlert: (...args) => Alert.alert(...args),\n});\n\nconst isSharedPetForCurrentUser = (...args) =>\n  getPetAccessService().isSharedPetForCurrentUser(...args);\n\nconst ensureWritablePetByPetId = (...args) =>\n  getPetAccessService().ensureWritablePetByPetId(...args);\n\nconst ensureWritablePetByRecordId = (...args) =>\n  getPetAccessService().ensureWritablePetByRecordId(...args);\n\n`;
@@ -130,25 +133,30 @@ try {
     throw new Error('Could not locate the petService import anchor. No source files were changed.');
   }
 
-  const guardStart = app.indexOf(guardStartMarker);
-  const guardEnd = app.indexOf(guardEndMarker, guardStart);
-  if (guardStart < 0 || guardEnd < 0 || guardEnd <= guardStart) {
-    throw new Error('Could not locate Stage 10 guard function boundaries. No source files were changed.');
+  const guard1Start = app.indexOf(guard1StartMarker);
+  const guard2Start = app.indexOf(guard2StartMarker, guard1Start);
+  const guard3Start = app.indexOf(guard3StartMarker, guard2Start);
+  const guardEnd = app.indexOf(guardEndMarker, guard3Start);
+
+  if (
+    guard1Start < 0 ||
+    guard2Start < 0 ||
+    guard3Start < 0 ||
+    guardEnd < 0 ||
+    !(guard1Start < guard2Start && guard2Start < guard3Start && guard3Start < guardEnd)
+  ) {
+    throw new Error('Could not locate the three Stage 10 guard declarations in order. No source files were changed.');
   }
 
-  const oldGuardBlock = app.slice(guardStart, guardEnd);
-  for (const required of [
-    'const isSharedPetForCurrentUser',
-    'const ensureWritablePetByPetId',
-    'const ensureWritablePetByRecordId',
-  ]) {
-    if (!oldGuardBlock.includes(required)) {
-      throw new Error(`Stage 10 guard block is missing expected function: ${required}`);
-    }
+  const prefix = app.slice(0, guard1Start);
+  const suffix = app.slice(guardEnd);
+
+  if (!prefix.endsWith('\n\n') && !prefix.endsWith('\r\n\r\n')) {
+    throw new Error('Stage 10 guard section does not begin at a clean top-level boundary. No source files were changed.');
   }
 
   app = app.replace(importAnchor, `${importAnchor}\n${accessImport}`);
-  app = app.slice(0, guardStart) + newGuardBlock + app.slice(guardEnd);
+  app = app.slice(0, guard1Start) + newGuardBlock + suffix;
 
   fs.mkdirSync(path.dirname(ACCESS_SERVICE_PATH), { recursive: true });
   fs.writeFileSync(ACCESS_SERVICE_PATH, service, 'utf8');
