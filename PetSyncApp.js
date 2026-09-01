@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext, useMemo, useCallback } from 'react';
+import { createWeeklyTrendService } from './src/services/analytics/weeklyTrendService';
 import { createBuildDiscoverMediaLookup } from './src/models/discoverMedia';
 import { recalculateCommunityCounts } from './src/models/communityCounts';
 import { CARE_ACTIVITY_TYPES, normalizeCareActivityType } from './src/models/careActivity';
@@ -830,27 +831,12 @@ const getTrendEventsForPet = (activityLogs, petId) => {
     });
 };
 
-const getWeeklyTrendSummaryForPet = (activityLogs, petId) => {
-  const trendEvents = getTrendEventsForPet(activityLogs, petId);
-  const today = new Date();
-  const summary = Array.from({ length: 7 }, (_, offset) => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(today.getDate() - (6 - offset));
-    const key = date.toDateString();
-    const count = trendEvents.filter((event) => {
-      const eventDate = new Date(event?.created_at || event?.createdAt || event?.dateKey || 0);
-      return !Number.isNaN(eventDate.getTime()) && eventDate.toDateString() === key;
-    }).length;
-    return {
-      key,
-      label: date.toLocaleDateString([], { weekday: 'short' }),
-      count,
-    };
-  });
+const getWeeklyTrendService = () => createWeeklyTrendService({  });
 
-  return summary;
-};
+const getWeeklyTrendSummaryForPet = (...args) =>
+  getWeeklyTrendService().getWeeklyTrendSummaryForPet(...args);
+
+
 
 const getTrendActionBreakdownForPet = (activityLogs, petId) => {
   const breakdown = {
